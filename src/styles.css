@@ -6,7 +6,7 @@
 
 /*
  * Tempelia design system — industrial/utility.
- * Charcoal chrome, warm paper canvas, safety-orange primary action,
+ * Charcoal chrome, warm paper canvas, industrial-violet primary action,
  * steel-blue secondary, moss-green success. Barlow Condensed display,
  * Inter body, IBM Plex Mono for numerics / dispatch log.
  */
@@ -42,8 +42,8 @@
 
   --color-charcoal: var(--charcoal);
   --color-paper: var(--paper);
-  --color-orange: var(--safety-orange);
-  --color-orange-foreground: var(--safety-orange-foreground);
+  --color-orange: var(--industrial-violet);
+  --color-orange-foreground: var(--industrial-violet-foreground);
   --color-steel: var(--steel-blue);
   --color-steel-foreground: var(--steel-blue-foreground);
   --color-moss: var(--moss-green);
@@ -66,9 +66,9 @@
   --popover: oklch(0.985 0.008 85);
   --popover-foreground: oklch(0.22 0.008 160);
 
-  /* Primary = safety orange */
-  --primary: oklch(0.63 0.19 40);              /* #E2572B */
-  --primary-foreground: oklch(0.985 0.008 85);
+  /* Primary = industrial violet */
+  --primary: oklch(0.78 0.12 290);              /* #c4b5fd */
+  --primary-foreground: oklch(0.22 0.008 160);
 
   /* Secondary = steel blue */
   --secondary: oklch(0.44 0.05 235);           /* #3B5A6B */
@@ -82,13 +82,13 @@
   --destructive-foreground: oklch(0.985 0.008 85);
   --border: oklch(0.82 0.01 85);
   --input: oklch(0.88 0.012 85);
-  --ring: oklch(0.63 0.19 40);
+  --ring: oklch(0.78 0.12 290);
 
   /* Named brand tokens */
   --charcoal: oklch(0.22 0.008 160);
   --paper: oklch(0.965 0.012 85);
-  --safety-orange: oklch(0.63 0.19 40);
-  --safety-orange-foreground: oklch(0.985 0.008 85);
+  --industrial-violet: oklch(0.78 0.12 290);   /* #c4b5fd */
+  --industrial-violet-foreground: oklch(0.22 0.008 160);
   --steel-blue: oklch(0.44 0.05 235);
   --steel-blue-foreground: oklch(0.985 0.008 85);
   --moss-green: oklch(0.51 0.08 150);          /* #4C7A5C */
@@ -103,7 +103,7 @@
   --card-foreground: oklch(0.965 0.012 85);
   --popover: oklch(0.26 0.008 160);
   --popover-foreground: oklch(0.965 0.012 85);
-  --primary: oklch(0.68 0.19 40);
+  --primary: oklch(0.82 0.12 290);
   --primary-foreground: oklch(0.22 0.008 160);
   --secondary: oklch(0.5 0.05 235);
   --secondary-foreground: oklch(0.965 0.012 85);
@@ -115,7 +115,7 @@
   --destructive-foreground: oklch(0.965 0.012 85);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.68 0.19 40);
+  --ring: oklch(0.82 0.12 290);
 }
 
 @layer base {
