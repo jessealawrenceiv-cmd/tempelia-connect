@@ -48,7 +48,7 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
 
     const { data: profiles, error: profErr } = await supabaseAdmin
       .from("profiles")
-      .select("id, business_name, email, twilio_phone_number, twilio_provisioned_at")
+      .select("id, business_name, email, twilio_phone_number, twilio_provisioned_at, subscription_status")
       .not("twilio_phone_number", "is", null)
       .order("twilio_provisioned_at", { ascending: false });
     if (profErr) throw new Error(profErr.message);
@@ -71,21 +71,34 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
       counts.set(l.user_id, (counts.get(l.user_id) ?? 0) + 1);
     }
 
-    const rows: TenantNumberRow[] = (profiles ?? []).map((p) => ({
-      userId: p.id,
-      businessName: p.business_name || "(unnamed)",
-      email: p.email,
-      phoneNumber: p.twilio_phone_number!,
-      provisionedAt: p.twilio_provisioned_at,
-      messagesThisMonth: counts.get(p.id) ?? 0,
-      estimatedMonthlyUsd: BASE_MONTHLY_USD,
-    }));
+    const rows: TenantNumberRow[] = (profiles ?? []).map((p) => {
+      const status = p.subscription_status ?? "unknown";
+      return {
+        userId: p.id,
+        businessName: p.business_name || "(unnamed)",
+        email: p.email,
+        phoneNumber: p.twilio_phone_number!,
+        provisionedAt: p.twilio_provisioned_at,
+        messagesThisMonth: counts.get(p.id) ?? 0,
+        estimatedMonthlyUsd: BASE_MONTHLY_USD,
+        subscriptionStatus: status,
+        isChurned: CHURNED_STATUSES.has(status),
+      };
+    });
+
+    // Sort churned to the top so operators see reclaim candidates first.
+    rows.sort((a, b) => Number(b.isChurned) - Number(a.isChurned));
 
     const totalMessages = rows.reduce((n, r) => n + r.messagesThisMonth, 0);
+    const churnedCount = rows.filter((r) => r.isChurned).length;
+    const activeCount = rows.length - churnedCount;
 
     return {
       numberCount: rows.length,
+      activeCount,
+      churnedCount,
       totalEstimatedMonthlyUsd: rows.length * BASE_MONTHLY_USD,
+      churnedMonthlyWasteUsd: churnedCount * BASE_MONTHLY_USD,
       totalMessagesThisMonth: totalMessages,
       baseMonthlyUsd: BASE_MONTHLY_USD,
       rows,
