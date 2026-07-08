@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
 import { Route as AuthenticatedDashboardMissedCallsRouteImport } from './routes/_authenticated/dashboard/missed-calls'
+import { Route as AuthenticatedDashboardDeadLeadsRouteImport } from './routes/_authenticated/dashboard/dead-leads'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -48,10 +49,17 @@ const AuthenticatedDashboardMissedCallsRoute =
     path: '/dashboard/missed-calls',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardDeadLeadsRoute =
+  AuthenticatedDashboardDeadLeadsRouteImport.update({
+    id: '/dashboard/dead-leads',
+    path: '/dashboard/dead-leads',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -59,6 +67,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
@@ -68,6 +77,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/_authenticated/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/dashboard/dead-leads'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
     | '/dashboard/'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/dashboard/dead-leads'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
     | '/dashboard'
@@ -92,6 +104,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/dashboard/dead-leads'
     | '/_authenticated/dashboard/missed-calls'
     | '/_authenticated/dashboard/reviews'
     | '/_authenticated/dashboard/'
@@ -147,16 +160,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardMissedCallsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/dead-leads': {
+      id: '/_authenticated/dashboard/dead-leads'
+      path: '/dashboard/dead-leads'
+      fullPath: '/dashboard/dead-leads'
+      preLoaderRoute: typeof AuthenticatedDashboardDeadLeadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardDeadLeadsRoute: typeof AuthenticatedDashboardDeadLeadsRoute
   AuthenticatedDashboardMissedCallsRoute: typeof AuthenticatedDashboardMissedCallsRoute
   AuthenticatedDashboardReviewsRoute: typeof AuthenticatedDashboardReviewsRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardDeadLeadsRoute: AuthenticatedDashboardDeadLeadsRoute,
   AuthenticatedDashboardMissedCallsRoute:
     AuthenticatedDashboardMissedCallsRoute,
   AuthenticatedDashboardReviewsRoute: AuthenticatedDashboardReviewsRoute,

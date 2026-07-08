@@ -64,7 +64,7 @@ function DeadLeadsPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr className="text-left">
-                <Th>Customer</Th><Th>Phone</Th><Th>Last service</Th><Th>Consent</Th><Th></Th>
+                <Th>Customer</Th><Th>Phone</Th><Th>Last service</Th><Th>Consent</Th><Th> </Th>
               </tr>
             </thead>
             <tbody className="mono divide-y divide-border">
