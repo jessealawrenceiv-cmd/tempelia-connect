@@ -49,6 +49,7 @@ const logRows: Array<{ time: string; dot: string; msg: string }> = [
 ];
 
 function Landing() {
+  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-charcoal text-paper">
