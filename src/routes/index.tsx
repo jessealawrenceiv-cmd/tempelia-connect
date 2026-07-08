@@ -154,9 +154,32 @@ function Landing() {
                   <span className="mono text-xs text-muted-foreground">/mo</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{t.blurb}</p>
+                <button
+                  type="button"
+                  onClick={() => openCheckout({ priceId: t.priceId, returnUrl: `${window.location.origin}/dashboard` })}
+                  className="mt-2 w-full rounded-sm bg-orange px-4 py-2 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90 disabled:opacity-50"
+                  disabled={isOpen}
+                >
+                  Subscribe
+                </button>
               </div>
             ))}
           </div>
+          {isOpen && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between">
+                <div className="label-eyebrow">Checkout</div>
+                <button
+                  type="button"
+                  onClick={closeCheckout}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Close
+                </button>
+              </div>
+              {checkoutElement}
+            </div>
+          )}
         </div>
       </section>
 
