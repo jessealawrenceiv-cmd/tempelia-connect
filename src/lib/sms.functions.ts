@@ -43,7 +43,7 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
     }
 
     try {
-      const res = await sendTwilioSms(cust.phone_number, message);
+      const res = await sendTwilioSms(from, cust.phone_number, message);
       await supabase.from("customers").update({
         last_service_date: new Date().toISOString().slice(0, 10),
       }).eq("id", cust.id);
@@ -73,6 +73,11 @@ export const sendReactivation = createServerFn({ method: "POST" })
     if (custErr) throw new Error(custErr.message);
     if (!cust) throw new Error("Customer not found");
 
+    const { data: prof } = await supabase.from("profiles")
+      .select("twilio_phone_number").eq("id", userId).maybeSingle();
+    const from = prof?.twilio_phone_number;
+    if (!from) throw new Error("Provision your Tempelia number in Settings before sending.");
+
     const message = `Hi ${cust.first_name || "there"}, it's been a while! Want us to swing by for a seasonal check-up?${STOP_SUFFIX}`;
 
     if (!cust.opt_in_consent) {
@@ -84,7 +89,7 @@ export const sendReactivation = createServerFn({ method: "POST" })
     }
 
     try {
-      const res = await sendTwilioSms(cust.phone_number, message);
+      const res = await sendTwilioSms(from, cust.phone_number, message);
       await supabase.from("customers").update({ last_reactivation_at: new Date().toISOString() }).eq("id", cust.id);
       await supabase.from("logs").insert({
         user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
