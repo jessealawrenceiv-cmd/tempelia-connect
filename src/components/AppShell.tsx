@@ -1,8 +1,10 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { getIsAdmin } from "@/lib/admin.functions";
 import {
-  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench,
+  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield,
 } from "lucide-react";
 
 const NAV = [
@@ -18,6 +20,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [businessName, setBusinessName] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const getIsAdminFn = useServerFn(getIsAdmin);
 
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
@@ -27,8 +31,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       if (!u.user) return;
       const { data } = await supabase.from("profiles").select("business_name").eq("id", u.user.id).maybeSingle();
       setBusinessName(data?.business_name || u.user.email || "");
+      try {
+        const r = await getIsAdminFn();
+        setIsAdmin(r.isAdmin);
+      } catch {
+        /* non-admin — hide the link */
+      }
     })();
-  }, []);
+  }, [getIsAdminFn]);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -87,6 +97,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             </nav>
 
             <div className="border-t border-paper/10 p-3">
+              {isAdmin && (
+                <Link
+                  to="/dashboard/admin/numbers"
+                  className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-orange hover:bg-paper/10"
+                >
+                  <Shield size={14} /> Admin · Numbers
+                </Link>
+              )}
               <Link
                 to="/onboarding"
                 className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-paper/70 hover:bg-paper/10"
