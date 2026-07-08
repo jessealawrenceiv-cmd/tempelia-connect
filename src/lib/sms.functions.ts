@@ -24,9 +24,12 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
     if (custErr) throw new Error(custErr.message);
     if (!cust) throw new Error("Customer not found");
 
-    const { data: prof } = await supabase.from("profiles").select("business_name").eq("id", userId).maybeSingle();
+    const { data: prof } = await supabase.from("profiles")
+      .select("business_name, twilio_phone_number").eq("id", userId).maybeSingle();
     const { data: intg } = await supabase.from("integrations").select("google_review_url").eq("user_id", userId).maybeSingle();
     const biz = prof?.business_name || "our team";
+    const from = prof?.twilio_phone_number;
+    if (!from) throw new Error("Provision your Tempelia number in Settings before sending.");
     const url = intg?.google_review_url || "";
     const linkLine = url ? ` ${url}` : "";
     const message = `Thanks for choosing ${biz}! Mind leaving us a quick review?${linkLine}${STOP_SUFFIX}`;
