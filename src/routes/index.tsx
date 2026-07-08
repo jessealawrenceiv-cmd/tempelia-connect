@@ -28,6 +28,15 @@ const tiers = [
   { name: "Premium", price: "299", blurb: "Multi-location. 5 lines, custom flows." },
 ];
 
+const logRows: Array<{ time: string; dot: string; msg: string }> = [
+  { time: "08:41:22", dot: "bg-moss", msg: "MISSED_CALL_TEXT → +1•555•0142 · 'sorry we missed you'" },
+  { time: "09:03:07", dot: "bg-steel", msg: "REVIEW_REQUEST → Jordan · google review link sent" },
+  { time: "09:15:44", dot: "bg-orange", msg: "MISSED_CALL_TEXT → +1•555•0198 · new customer created" },
+  { time: "09:47:12", dot: "bg-moss", msg: "REVIEW_REQUEST → Priya · delivered" },
+  { time: "10:02:55", dot: "bg-steel", msg: "REACTIVATION_TEXT → Marcus · 7 mo dormant" },
+  { time: "10:18:31", dot: "bg-moss", msg: "MISSED_CALL_TEXT → +1•555•0117 · delivered" },
+];
+
 function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -38,14 +47,10 @@ function Landing() {
             <span className="font-display text-xl font-bold uppercase tracking-wider">Tempelia</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link to="/auth" className="text-sm uppercase tracking-wider text-paper/80 hover:text-paper">Sign in</Link>
-            <Link
-              to="/auth"
-              search={{ mode: "signup" }}
-              className="rounded-sm bg-orange px-4 py-2 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90"
-            >
+            <a href="/auth" className="text-sm uppercase tracking-wider text-paper/80 hover:text-paper">Sign in</a>
+            <a href="/auth?mode=signup" className="rounded-sm bg-orange px-4 py-2 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90">
               Start trial
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -64,19 +69,12 @@ function Landing() {
               re-activates dead leads on schedule — for plumbers, HVAC, salons and contractors.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to="/auth"
-                search={{ mode: "signup" }}
-                className="rounded-sm bg-orange px-5 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90"
-              >
+              <a href="/auth?mode=signup" className="rounded-sm bg-orange px-5 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90">
                 Start 30-day trial
-              </Link>
-              <Link
-                to="/auth"
-                className="rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium uppercase tracking-wider text-foreground hover:bg-accent"
-              >
+              </a>
+              <a href="/auth" className="rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium uppercase tracking-wider text-foreground hover:bg-accent">
                 Sign in
-              </Link>
+              </a>
             </div>
             <div className="mono mt-6 text-xs text-muted-foreground">
               Card required · Cancel anytime · SMS opt-out on every message
@@ -92,18 +90,11 @@ function Landing() {
               </span>
             </div>
             <ul className="mono mt-4 space-y-2 text-xs">
-              {[
-                ["08:41:22", "moss", "MISSED_CALL_TEXT → +1•555•0142 · 'sorry we missed you'"],
-                ["09:03:07", "steel", "REVIEW_REQUEST → Jordan · google review link sent"],
-                ["09:15:44", "orange", "MISSED_CALL_TEXT → +1•555•0198 · new customer created"],
-                ["09:47:12", "moss", "REVIEW_REQUEST → Priya · delivered"],
-                ["10:02:55", "steel", "REACTIVATION_TEXT → Marcus · 7 mo dormant"],
-                ["10:18:31", "moss", "MISSED_CALL_TEXT → +1•555•0117 · delivered"],
-              ].map(([t, c, msg]) => (
-                <li key={t} className="grid grid-cols-[auto_auto_1fr] items-start gap-2">
-                  <span className="text-muted-foreground">{t}</span>
-                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-full bg-${c}`} />
-                  <span className="text-foreground/90">{msg}</span>
+              {logRows.map((r) => (
+                <li key={r.time} className="grid grid-cols-[auto_auto_1fr] items-start gap-2">
+                  <span className="text-muted-foreground">{r.time}</span>
+                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${r.dot}`} />
+                  <span className="text-foreground/90">{r.msg}</span>
                 </li>
               ))}
             </ul>
