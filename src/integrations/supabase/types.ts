@@ -14,7 +14,152 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          created_at: string
+          first_name: string
+          id: string
+          last_reactivation_at: string | null
+          last_service_date: string | null
+          opt_in_consent: boolean
+          phone_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_reactivation_at?: string | null
+          last_service_date?: string | null
+          opt_in_consent?: boolean
+          phone_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_reactivation_at?: string | null
+          last_service_date?: string | null
+          opt_in_consent?: boolean
+          phone_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      integrations: {
+        Row: {
+          created_at: string
+          google_review_url: string | null
+          id: string
+          twilio_account_sid: string | null
+          twilio_auth_token: string | null
+          twilio_phone_number: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          google_review_url?: string | null
+          id?: string
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          google_review_url?: string | null
+          id?: string
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          message_sent: string | null
+          status: string
+          twilio_message_sid: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          message_sent?: string | null
+          status?: string
+          twilio_message_sid?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          message_sent?: string | null
+          status?: string
+          twilio_message_sid?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          business_name: string
+          created_at: string
+          email: string | null
+          id: string
+          stripe_customer_id: string | null
+          subscription_status: string
+          subscription_tier: string
+          tos_accepted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_name?: string
+          created_at?: string
+          email?: string | null
+          id: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          subscription_tier?: string
+          tos_accepted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          subscription_tier?: string
+          tos_accepted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
