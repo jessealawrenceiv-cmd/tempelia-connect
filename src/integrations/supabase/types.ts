@@ -55,9 +55,6 @@ export type Database = {
           created_at: string
           google_review_url: string | null
           id: string
-          twilio_account_sid: string | null
-          twilio_auth_token: string | null
-          twilio_phone_number: string | null
           updated_at: string
           user_id: string
         }
@@ -65,9 +62,6 @@ export type Database = {
           created_at?: string
           google_review_url?: string | null
           id?: string
-          twilio_account_sid?: string | null
-          twilio_auth_token?: string | null
-          twilio_phone_number?: string | null
           updated_at?: string
           user_id: string
         }
@@ -75,9 +69,6 @@ export type Database = {
           created_at?: string
           google_review_url?: string | null
           id?: string
-          twilio_account_sid?: string | null
-          twilio_auth_token?: string | null
-          twilio_phone_number?: string | null
           updated_at?: string
           user_id?: string
         }
