@@ -125,6 +125,9 @@ export type Database = {
           subscription_status: string
           subscription_tier: string
           tos_accepted_at: string | null
+          twilio_phone_number: string | null
+          twilio_phone_sid: string | null
+          twilio_provisioned_at: string | null
           updated_at: string
         }
         Insert: {
@@ -136,6 +139,9 @@ export type Database = {
           subscription_status?: string
           subscription_tier?: string
           tos_accepted_at?: string | null
+          twilio_phone_number?: string | null
+          twilio_phone_sid?: string | null
+          twilio_provisioned_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -147,6 +153,9 @@ export type Database = {
           subscription_status?: string
           subscription_tier?: string
           tos_accepted_at?: string | null
+          twilio_phone_number?: string | null
+          twilio_phone_sid?: string | null
+          twilio_provisioned_at?: string | null
           updated_at?: string
         }
         Relationships: []
