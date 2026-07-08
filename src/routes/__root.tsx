@@ -125,6 +125,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <PaymentTestModeBanner />
       <Outlet />
       <Toaster position="top-right" theme="light" />
     </QueryClientProvider>
