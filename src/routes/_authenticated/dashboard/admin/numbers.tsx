@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader } from "@/components/AppShell";
 import { listProvisionedNumbers } from "@/lib/admin.functions";
-import { Shield, Phone, MessageSquare, DollarSign, ExternalLink } from "lucide-react";
+import { Shield, Phone, MessageSquare, DollarSign, ExternalLink, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/numbers")({
   component: AdminNumbersPage,
