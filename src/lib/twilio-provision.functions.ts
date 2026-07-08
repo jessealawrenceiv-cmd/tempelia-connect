@@ -2,25 +2,28 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 interface ProvisionInput {
-  areaCode: string;
+  areaCode?: string;
 }
 
 function validateInput(data: unknown): ProvisionInput {
-  if (!data || typeof data !== "object") throw new Error("Invalid input");
+  if (data === undefined || data === null) return {};
+  if (typeof data !== "object") throw new Error("Invalid input");
   const { areaCode } = data as { areaCode?: unknown };
+  if (areaCode === undefined || areaCode === null || areaCode === "") return {};
   if (typeof areaCode !== "string" || !/^\d{3}$/.test(areaCode)) {
     throw new Error("Area code must be exactly 3 digits.");
   }
   return { areaCode };
 }
 
+// Idempotent auto-provisioning: if this tenant already has a number, return it.
+// Otherwise buy the first available US local number (optionally scoped to an area code).
 export const provisionTenantNumber = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(validateInput)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Refuse if this tenant already has a number.
     const { data: prof, error: profErr } = await supabase
       .from("profiles").select("twilio_phone_number").eq("id", userId).maybeSingle();
     if (profErr) throw new Error(profErr.message);
@@ -45,7 +48,7 @@ export const provisionTenantNumber = createServerFn({ method: "POST" })
       user_id: userId,
       action_type: "number_provisioned",
       status: "sent",
-      message_sent: `Provisioned ${phoneNumber} (${phoneSid})`,
+      message_sent: `Auto-provisioned ${phoneNumber} (${phoneSid})`,
     });
 
     return { ok: true, phoneNumber, alreadyProvisioned: false };

@@ -47,17 +47,19 @@ export interface ProvisionedNumber {
   phoneSid: string;
 }
 
-// Search available local US numbers by area code and buy the first match.
+// Search available local US numbers (optionally by area code) and buy the first match.
 // Webhooks are configured to point back at this project's public routes.
-export async function purchaseLocalNumber(areaCode: string): Promise<ProvisionedNumber> {
+export async function purchaseLocalNumber(areaCode?: string): Promise<ProvisionedNumber> {
   const { sid, auth } = twilioCreds();
-  if (!/^\d{3}$/.test(areaCode)) throw new Error("Area code must be 3 digits (e.g. 415).");
+  if (areaCode && !/^\d{3}$/.test(areaCode)) {
+    throw new Error("Area code must be 3 digits (e.g. 415).");
+  }
 
-  // 1. Search for an available local number in that area code.
+  // 1. Search for an available local number.
   const searchUrl = new URL(
     `https://api.twilio.com/2010-04-01/Accounts/${sid}/AvailablePhoneNumbers/US/Local.json`,
   );
-  searchUrl.searchParams.set("AreaCode", areaCode);
+  if (areaCode) searchUrl.searchParams.set("AreaCode", areaCode);
   searchUrl.searchParams.set("SmsEnabled", "true");
   searchUrl.searchParams.set("VoiceEnabled", "true");
   searchUrl.searchParams.set("PageSize", "5");
@@ -69,7 +71,7 @@ export async function purchaseLocalNumber(areaCode: string): Promise<Provisioned
     available_phone_numbers: Array<{ phone_number: string }>;
   };
   const candidate = searchJson.available_phone_numbers?.[0]?.phone_number;
-  if (!candidate) throw new Error(`No available numbers found in area code ${areaCode}.`);
+  if (!candidate) throw new Error(areaCode ? `No numbers available in area code ${areaCode}.` : "No local US numbers available right now.");
 
   // 2. Purchase it, wiring up SMS + Voice webhooks in the same call.
   const buyUrl = `https://api.twilio.com/2010-04-01/Accounts/${sid}/IncomingPhoneNumbers.json`;
