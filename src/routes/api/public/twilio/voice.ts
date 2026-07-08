@@ -31,6 +31,27 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           return twiml("<Say>Sorry, this line is not configured.</Say><Hangup/>");
         }
 
+        // Check exclusion list — skip auto-text if caller is excluded
+        const { data: excluded } = await supabaseAdmin
+          .from("excluded_numbers")
+          .select("id, label")
+          .eq("user_id", tenant.id)
+          .eq("phone_number", from)
+          .maybeSingle();
+
+        if (excluded) {
+          await supabaseAdmin.from("logs").insert({
+            user_id: tenant.id,
+            action_type: "missed_call_excluded",
+            status: "skipped",
+            message_sent: `Caller ${from} on exclusion list${excluded.label ? ` (${excluded.label})` : ""} — auto-text skipped.`,
+          });
+          return twiml(
+            `<Say voice="alice">Thanks for calling ${tenant.business_name || "our team"}. We can't come to the phone right now. Please try again later.</Say><Hangup/>`,
+          );
+        }
+
+
         const biz = tenant.business_name || "our team";
 
         // Fire the auto-text before returning the TwiML. The caller hears the

@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
+import { ExcludedNumbersPanel } from "@/components/ExcludedNumbersPanel";
+
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -99,7 +101,10 @@ function SettingsPage() {
           </p>
         </div>
 
+        <ExcludedNumbersPanel />
+
         <div className="panel p-6 md:col-span-2">
+
           <div className="label-eyebrow">Compliance</div>
           <ul className="mono mt-3 space-y-2 text-xs text-muted-foreground">
             <li>· Every outbound SMS ends with "Reply STOP to unsubscribe."</li>
