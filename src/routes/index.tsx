@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,9 +34,9 @@ const features = [
 ];
 
 const tiers = [
-  { name: "Starter", price: "99", blurb: "Solo operator. 1 phone line." },
-  { name: "Standard", price: "199", blurb: "Small crew. 2 lines, priority support.", featured: true },
-  { name: "Premium", price: "299", blurb: "Multi-location. 5 lines, custom flows." },
+  { name: "Starter", price: "99", blurb: "Solo operator. 1 phone line.", priceId: "starter_monthly" },
+  { name: "Standard", price: "199", blurb: "Small crew. 2 lines, priority support.", featured: true, priceId: "standard_monthly" },
+  { name: "Premium", price: "299", blurb: "Multi-location. 5 lines, custom flows.", priceId: "premium_monthly" },
 ];
 
 const logRows: Array<{ time: string; dot: string; msg: string }> = [
@@ -48,6 +49,7 @@ const logRows: Array<{ time: string; dot: string; msg: string }> = [
 ];
 
 function Landing() {
+  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-charcoal text-paper">
@@ -152,9 +154,32 @@ function Landing() {
                   <span className="mono text-xs text-muted-foreground">/mo</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{t.blurb}</p>
+                <button
+                  type="button"
+                  onClick={() => openCheckout({ priceId: t.priceId, returnUrl: `${window.location.origin}/dashboard` })}
+                  className="mt-2 w-full rounded-sm bg-orange px-4 py-2 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90 disabled:opacity-50"
+                  disabled={isOpen}
+                >
+                  Subscribe
+                </button>
               </div>
             ))}
           </div>
+          {isOpen && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between">
+                <div className="label-eyebrow">Checkout</div>
+                <button
+                  type="button"
+                  onClick={closeCheckout}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Close
+                </button>
+              </div>
+              {checkoutElement}
+            </div>
+          )}
         </div>
       </section>
 
