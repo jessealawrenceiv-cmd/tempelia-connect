@@ -83,12 +83,16 @@ function Landing() {
               re-activates dead leads on schedule — for plumbers, HVAC, salons and contractors.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="/auth?mode=signup" className="rounded-sm bg-orange px-5 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90">
+              <Link
+                to="/auth"
+                search={{ mode: "signup" }}
+                className="rounded-sm bg-orange px-5 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90"
+              >
                 Start 30-day trial
-              </a>
-              <a href="/auth" className="rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium uppercase tracking-wider text-foreground hover:bg-accent">
+              </Link>
+              <Link to="/auth" className="rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium uppercase tracking-wider text-foreground hover:bg-accent">
                 Sign in
-              </a>
+              </Link>
             </div>
             <div className="mono mt-6 text-xs text-muted-foreground">
               Card required · Cancel anytime · SMS opt-out on every message
