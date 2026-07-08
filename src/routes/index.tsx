@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Tempelia — Communication automation for local service pros" },
+      { name: "description", content: "Missed-call auto-texts, review boosting, and dead-lead re-activation for plumbers, HVAC, salons and contractors." },
+      { property: "og:title", content: "Tempelia — Communication automation for local service pros" },
+      { property: "og:description", content: "Never miss a lead. Auto-text missed calls, boost Google reviews, and re-engage dormant customers." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Landing,
 });
 
@@ -47,10 +57,14 @@ function Landing() {
             <span className="font-display text-xl font-bold uppercase tracking-wider">Tempelia</span>
           </Link>
           <div className="flex items-center gap-3">
-            <a href="/auth" className="text-sm uppercase tracking-wider text-paper/80 hover:text-paper">Sign in</a>
-            <a href="/auth?mode=signup" className="rounded-sm bg-orange px-4 py-2 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90">
+            <Link to="/auth" className="text-sm uppercase tracking-wider text-paper/80 hover:text-paper">Sign in</Link>
+            <Link
+              to="/auth"
+              search={{ mode: "signup" }}
+              className="rounded-sm bg-orange px-4 py-2 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90"
+            >
               Start trial
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -69,12 +83,16 @@ function Landing() {
               re-activates dead leads on schedule — for plumbers, HVAC, salons and contractors.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="/auth?mode=signup" className="rounded-sm bg-orange px-5 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90">
+              <Link
+                to="/auth"
+                search={{ mode: "signup" }}
+                className="rounded-sm bg-orange px-5 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90"
+              >
                 Start 30-day trial
-              </a>
-              <a href="/auth" className="rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium uppercase tracking-wider text-foreground hover:bg-accent">
+              </Link>
+              <Link to="/auth" className="rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium uppercase tracking-wider text-foreground hover:bg-accent">
                 Sign in
-              </a>
+              </Link>
             </div>
             <div className="mono mt-6 text-xs text-muted-foreground">
               Card required · Cancel anytime · SMS opt-out on every message
