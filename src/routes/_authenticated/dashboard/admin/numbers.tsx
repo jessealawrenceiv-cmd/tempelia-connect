@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader } from "@/components/AppShell";
 import { listProvisionedNumbers } from "@/lib/admin.functions";
-import { Shield, Phone, MessageSquare, DollarSign, ExternalLink } from "lucide-react";
+import { Shield, Phone, MessageSquare, DollarSign, ExternalLink, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/numbers")({
   component: AdminNumbersPage,
@@ -60,8 +60,15 @@ function AdminNumbersPage() {
         }
       />
 
-      <div className="grid gap-4 p-5 md:grid-cols-3 md:p-8">
-        <StatCard icon={<Phone size={18} />} label="Numbers" value={data?.numberCount ?? 0} sub="active tenants" />
+      <div className="grid gap-4 p-5 md:grid-cols-4 md:p-8">
+        <StatCard icon={<Phone size={18} />} label="Numbers" value={data?.numberCount ?? 0} sub={data ? `${data.activeCount} active` : "active tenants"} />
+        <StatCard
+          icon={<AlertTriangle size={18} />}
+          label="Churned"
+          value={data?.churnedCount ?? 0}
+          sub={data ? `${fmtUsd(data.churnedMonthlyWasteUsd)}/mo waste` : ""}
+          tone={data && data.churnedCount > 0 ? "warn" : undefined}
+        />
         <StatCard
           icon={<DollarSign size={18} />}
           label="Est. monthly base"
@@ -92,6 +99,7 @@ function AdminNumbersPage() {
                 <thead>
                   <tr className="border-b border-border bg-background">
                     <Th>Business</Th>
+                    <Th>Status</Th>
                     <Th>Number</Th>
                     <Th>Provisioned</Th>
                     <Th className="text-right">Msgs MTD</Th>
@@ -100,11 +108,15 @@ function AdminNumbersPage() {
                 </thead>
                 <tbody>
                   {data!.rows.map((r) => (
-                    <tr key={r.userId} className="border-b border-border/50 last:border-0">
+                    <tr
+                      key={r.userId}
+                      className={`border-b border-border/50 last:border-0 ${r.isChurned ? "bg-orange/5" : ""}`}
+                    >
                       <Td>
                         <div className="font-display text-base uppercase">{r.businessName}</div>
                         <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{r.email ?? "—"}</div>
                       </Td>
+                      <Td><StatusBadge status={r.subscriptionStatus} churned={r.isChurned} /></Td>
                       <Td><span className="mono">{r.phoneNumber}</span></Td>
                       <Td><span className="mono text-xs">{fmtDate(r.provisionedAt)}</span></Td>
                       <Td className="text-right"><span className="mono">{r.messagesThisMonth}</span></Td>
@@ -117,19 +129,33 @@ function AdminNumbersPage() {
           )}
         </div>
         <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-          Base cost is an estimate (US local number ≈ $1.15/mo). Per-message fees, carrier surcharges, and voice minutes are billed by Twilio — see the console for actuals.
+          Churned rows are still incurring Twilio rental until released. Base cost estimate ≈ $1.15/mo per US local number — Twilio console is the billing source of truth.
         </p>
       </div>
     </div>
   );
 }
 
-function StatCard({
-  icon, label, value, sub,
-}: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string }) {
+function StatusBadge({ status, churned }: { status: string; churned: boolean }) {
+  const label = status.replace(/_/g, " ");
+  const cls = churned
+    ? "border-orange/50 bg-orange/10 text-orange"
+    : status === "active"
+    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+    : "border-border bg-card text-muted-foreground";
   return (
-    <div className="panel p-5">
-      <div className="flex items-center gap-2 text-muted-foreground">
+    <span className={`mono inline-block rounded-sm border px-2 py-0.5 text-[10px] uppercase tracking-widest ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function StatCard({
+  icon, label, value, sub, tone,
+}: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string; tone?: "warn" }) {
+  return (
+    <div className={`panel p-5 ${tone === "warn" ? "border-orange/40 bg-orange/5" : ""}`}>
+      <div className={`flex items-center gap-2 ${tone === "warn" ? "text-orange" : "text-muted-foreground"}`}>
         {icon}
         <span className="label-eyebrow">{label}</span>
       </div>
