@@ -18,6 +18,7 @@ import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_au
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
 import { Route as AuthenticatedDashboardMissedCallsRouteImport } from './routes/_authenticated/dashboard/missed-calls'
 import { Route as AuthenticatedDashboardDeadLeadsRouteImport } from './routes/_authenticated/dashboard/dead-leads'
+import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -68,6 +69,11 @@ const AuthenticatedDashboardDeadLeadsRoute =
     path: '/dashboard/dead-leads',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicTwilioSmsRoute = ApiPublicTwilioSmsRouteImport.update({
+  id: '/api/public/twilio/sms',
+  path: '/api/public/twilio/sms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
+  '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
     | '/dashboard/reviews'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/api/public/twilio/sms'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/dashboard/reviews'
     | '/dashboard/settings'
     | '/dashboard'
+    | '/api/public/twilio/sms'
   id:
     | '__root__'
     | '/'
@@ -133,12 +144,14 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/reviews'
     | '/_authenticated/dashboard/settings'
     | '/_authenticated/dashboard/'
+    | '/api/public/twilio/sms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardDeadLeadsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/twilio/sms': {
+      id: '/api/public/twilio/sms'
+      path: '/api/public/twilio/sms'
+      fullPath: '/api/public/twilio/sms'
+      preLoaderRoute: typeof ApiPublicTwilioSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -235,6 +255,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -35,7 +35,7 @@ function MissedCallsPage() {
             <tbody className="mono divide-y divide-border">
               {isLoading && <tr><td colSpan={4} className="p-5 text-muted-foreground">Loading…</td></tr>}
               {!isLoading && data?.length === 0 && (
-                <tr><td colSpan={4} className="p-5 text-muted-foreground">No missed calls yet. Connect Twilio in Onboarding to start capturing.</td></tr>
+                <tr><td colSpan={4} className="p-5 text-muted-foreground">No missed calls yet. Missed-call auto-text captures once a caller is added to your customer list.</td></tr>
               )}
               {data?.map((row: any) => (
                 <tr key={row.id}>
