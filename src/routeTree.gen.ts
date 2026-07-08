@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard/settings'
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
@@ -31,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardIndexRoute =
   AuthenticatedDashboardIndexRouteImport.update({
@@ -66,6 +72,7 @@ const AuthenticatedDashboardDeadLeadsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/_authenticated/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/onboarding'
     | '/dashboard/dead-leads'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/onboarding'
     | '/dashboard/dead-leads'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/onboarding'
     | '/_authenticated/dashboard/dead-leads'
     | '/_authenticated/dashboard/missed-calls'
     | '/_authenticated/dashboard/reviews'
@@ -151,6 +163,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard/': {
       id: '/_authenticated/dashboard/'
@@ -191,6 +210,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedDashboardDeadLeadsRoute: typeof AuthenticatedDashboardDeadLeadsRoute
   AuthenticatedDashboardMissedCallsRoute: typeof AuthenticatedDashboardMissedCallsRoute
   AuthenticatedDashboardReviewsRoute: typeof AuthenticatedDashboardReviewsRoute
@@ -199,6 +219,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedDashboardDeadLeadsRoute: AuthenticatedDashboardDeadLeadsRoute,
   AuthenticatedDashboardMissedCallsRoute:
     AuthenticatedDashboardMissedCallsRoute,
