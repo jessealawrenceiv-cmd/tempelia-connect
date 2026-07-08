@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { sendReviewRequest } from "@/lib/sms.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/reviews")({
   component: ReviewsPage,
@@ -41,37 +43,10 @@ function ReviewsPage() {
   const [newPhone, setNewPhone] = useState("");
   const [newConsent, setNewConsent] = useState(true);
 
+  const sendReviewFn = useServerFn(sendReviewRequest);
   const complete = useMutation({
-    mutationFn: async (chosenId: string) => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const { data: cust } = await supabase.from("customers").select("*").eq("id", chosenId).maybeSingle();
-      if (!cust) throw new Error("Customer not found");
-      const { data: intg } = await supabase.from("integrations").select("google_review_url").eq("user_id", u.user.id).maybeSingle();
-      const { data: prof } = await supabase.from("profiles").select("business_name").eq("id", u.user.id).maybeSingle();
-      const biz = prof?.business_name || "our team";
-      const url = intg?.google_review_url || "[set your Google review link in Settings]";
-      const msg = `Thanks for choosing ${biz}! Mind leaving us a quick review? ${url}\n\nReply STOP to unsubscribe.`;
-
-      if (!cust.opt_in_consent) {
-        await supabase.from("logs").insert({
-          user_id: u.user.id, customer_id: cust.id, action_type: "review_request",
-          message_sent: msg, status: "needs_consent",
-        });
-        throw new Error(`${cust.first_name || "Customer"} has not opted in. Flagged as needs-consent.`);
-      }
-
-      // Mark last_service_date = today so reactivation clock resets
-      await supabase.from("customers").update({ last_service_date: new Date().toISOString().slice(0, 10) }).eq("id", cust.id);
-      await supabase.from("logs").insert({
-        user_id: u.user.id, customer_id: cust.id, action_type: "review_request",
-        message_sent: msg, status: "queued",
-      });
-    },
-    onSuccess: () => {
-      toast.success("Review request queued.");
-      qc.invalidateQueries();
-    },
+    mutationFn: (chosenId: string) => sendReviewFn({ data: { customerId: chosenId } }),
+    onSuccess: () => { toast.success("Review request sent."); qc.invalidateQueries(); },
     onError: (e: Error) => toast.error(e.message),
   });
 

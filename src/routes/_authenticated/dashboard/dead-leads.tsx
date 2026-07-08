@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
+import { sendReactivation } from "@/lib/sms.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/dead-leads")({
   component: DeadLeadsPage,
@@ -26,29 +28,10 @@ function DeadLeadsPage() {
     },
   });
 
+  const sendFn = useServerFn(sendReactivation);
   const send = useMutation({
-    mutationFn: async (id: string) => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const { data: cust } = await supabase.from("customers").select("*").eq("id", id).maybeSingle();
-      if (!cust) throw new Error("Not found");
-      const msg = `Hi ${cust.first_name || "there"}, it's been a while! Want us to swing by for a seasonal check-up?\n\nReply STOP to unsubscribe.`;
-
-      if (!cust.opt_in_consent) {
-        await supabase.from("logs").insert({
-          user_id: u.user.id, customer_id: id, action_type: "reactivation_text",
-          message_sent: msg, status: "needs_consent",
-        });
-        throw new Error(`${cust.first_name || "Customer"} needs consent — flagged.`);
-      }
-
-      await supabase.from("customers").update({ last_reactivation_at: new Date().toISOString() }).eq("id", id);
-      await supabase.from("logs").insert({
-        user_id: u.user.id, customer_id: id, action_type: "reactivation_text",
-        message_sent: msg, status: "queued",
-      });
-    },
-    onSuccess: () => { toast.success("Reactivation text queued."); qc.invalidateQueries(); },
+    mutationFn: (id: string) => sendFn({ data: { customerId: id } }),
+    onSuccess: () => { toast.success("Reactivation text sent."); qc.invalidateQueries(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
