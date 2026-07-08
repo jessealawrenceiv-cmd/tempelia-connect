@@ -49,13 +49,13 @@ function SettingsPage() {
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
-      const payload: Record<string, string | null | undefined> = {
+      const payload = {
         user_id: u.user.id,
         twilio_account_sid: sid || null,
         twilio_phone_number: phone || null,
         google_review_url: reviewUrl || null,
+        ...(token ? { twilio_auth_token: token } : {}),
       };
-      if (token) payload.twilio_auth_token = token;
       const { error } = await supabase.from("integrations").upsert(payload, { onConflict: "user_id" });
       if (error) throw error;
     },
