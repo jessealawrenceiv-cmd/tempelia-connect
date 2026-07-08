@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
+import { ExcludedNumbersPanel } from "@/components/ExcludedNumbersPanel";
+
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
