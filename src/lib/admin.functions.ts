@@ -13,15 +13,24 @@ export interface TenantNumberRow {
   provisionedAt: string | null;
   messagesThisMonth: number;
   estimatedMonthlyUsd: number;
+  subscriptionStatus: string;
+  isChurned: boolean;
 }
 
 export interface FleetSummary {
   numberCount: number;
+  activeCount: number;
+  churnedCount: number;
   totalEstimatedMonthlyUsd: number;
+  churnedMonthlyWasteUsd: number;
   totalMessagesThisMonth: number;
   baseMonthlyUsd: number;
   rows: TenantNumberRow[];
 }
+
+// Subscription states considered "no longer paying" — number is still on the
+// account and billing, but the tenant has churned. Reclaim candidates.
+const CHURNED_STATUSES = new Set(["canceled", "cancelled", "past_due", "unpaid", "incomplete_expired"]);
 
 export const listProvisionedNumbers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
