@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Tempelia — Communication automation for local service pros" },
+      { name: "description", content: "Missed-call auto-texts, review boosting, and dead-lead re-activation for plumbers, HVAC, salons and contractors." },
+      { property: "og:title", content: "Tempelia — Communication automation for local service pros" },
+      { property: "og:description", content: "Never miss a lead. Auto-text missed calls, boost Google reviews, and re-engage dormant customers." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Landing,
 });
 
