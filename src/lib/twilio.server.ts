@@ -71,7 +71,7 @@ export async function purchaseLocalNumber(areaCode?: string): Promise<Provisione
     available_phone_numbers: Array<{ phone_number: string }>;
   };
   const candidate = searchJson.available_phone_numbers?.[0]?.phone_number;
-  if (!candidate) throw new Error(`No available numbers found in area code ${areaCode}.`);
+  if (!candidate) throw new Error(areaCode ? `No numbers available in area code ${areaCode}.` : "No local US numbers available right now.");
 
   // 2. Purchase it, wiring up SMS + Voice webhooks in the same call.
   const buyUrl = `https://api.twilio.com/2010-04-01/Accounts/${sid}/IncomingPhoneNumbers.json`;

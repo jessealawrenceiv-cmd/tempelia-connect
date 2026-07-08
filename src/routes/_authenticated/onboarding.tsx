@@ -1,51 +1,57 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/AppShell";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { provisionTenantNumber, getTenantNumber } from "@/lib/twilio-provision.functions";
+import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: OnboardingPage,
 });
 
+type ProvisionState =
+  | { status: "idle" }
+  | { status: "working" }
+  | { status: "ready"; phoneNumber: string }
+  | { status: "error"; message: string };
+
 function OnboardingPage() {
   const navigate = useNavigate();
   const [reviewUrl, setReviewUrl] = useState("");
-  const [areaCode, setAreaCode] = useState("");
   const [saving, setSaving] = useState(false);
-  const [provisioning, setProvisioning] = useState(false);
-  const [tenantNumber, setTenantNumber] = useState<string | null>(null);
+  const [prov, setProv] = useState<ProvisionState>({ status: "idle" });
+  const started = useRef(false);
 
   const provisionFn = useServerFn(provisionTenantNumber);
-  const getNumberFn = useServerFn(getTenantNumber);
 
+  // Auto-provision on mount — no user input required.
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       const { data } = await supabase.from("integrations").select("*").eq("user_id", u.user.id).maybeSingle();
       if (data) setReviewUrl(data.google_review_url ?? "");
+
+      setProv({ status: "working" });
       try {
-        const info = await getNumberFn();
-        setTenantNumber(info.phoneNumber);
-      } catch {
-        /* noop */
+        const res = await provisionFn({ data: {} });
+        setProv({ status: "ready", phoneNumber: res.phoneNumber });
+      } catch (e) {
+        setProv({ status: "error", message: (e as Error).message });
       }
     })();
-  }, [getNumberFn]);
+  }, [provisionFn]);
 
-  async function provision() {
-    setProvisioning(true);
+  async function retry() {
+    setProv({ status: "working" });
     try {
-      const res = await provisionFn({ data: { areaCode } });
-      setTenantNumber(res.phoneNumber);
-      toast.success(res.alreadyProvisioned ? "Number already provisioned." : `Your number: ${res.phoneNumber}`);
+      const res = await provisionFn({ data: {} });
+      setProv({ status: "ready", phoneNumber: res.phoneNumber });
     } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setProvisioning(false);
+      setProv({ status: "error", message: (e as Error).message });
     }
   }
 
@@ -59,7 +65,7 @@ function OnboardingPage() {
         { onConflict: "user_id" },
       );
       if (error) throw error;
-      toast.success("Onboarding complete.");
+      toast.success("You're all set.");
       navigate({ to: "/dashboard" });
     } catch (e) {
       toast.error((e as Error).message);
@@ -70,42 +76,41 @@ function OnboardingPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Setup" title="Get your Tempelia number" />
+      <PageHeader eyebrow="Setup" title="Welcome to Tempelia" />
       <div className="mx-auto max-w-2xl space-y-5 p-5 md:p-8">
         <div className="panel p-6">
           <div className="label-eyebrow">Step 1 · Dedicated number</div>
-          <h2 className="mt-1 text-xl">Provision your business line</h2>
+          <h2 className="mt-1 text-xl">Your Tempelia line</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            We'll buy a local Twilio number under Tempelia's master account and wire it up for
-            missed-call auto-texts, review requests, and STOP/START compliance. One number per business.
+            We automatically buy a local Twilio number under Tempelia's master account and wire it up
+            for missed-call auto-texts, review requests, and STOP/START compliance.
           </p>
-          {tenantNumber ? (
+
+          {prov.status === "working" && (
+            <div className="mono mt-4 flex items-center gap-3 rounded-sm border border-border bg-background p-4 text-xs uppercase tracking-wider text-muted-foreground">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-orange" />
+              Provisioning your number…
+            </div>
+          )}
+
+          {prov.status === "ready" && (
             <div className="mt-4 rounded-sm border border-moss/40 bg-moss/10 p-4">
               <div className="label-eyebrow text-moss">Provisioned</div>
-              <div className="mono mt-1 text-lg">{tenantNumber}</div>
+              <div className="mono mt-1 text-lg">{prov.phoneNumber}</div>
               <p className="mt-2 text-xs text-muted-foreground">
                 Forward missed calls from your business line to this number in your carrier settings.
               </p>
             </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              <label className="block">
-                <span className="label-eyebrow">Preferred area code</span>
-                <input
-                  value={areaCode}
-                  onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
-                  placeholder="415"
-                  inputMode="numeric"
-                  className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
-                />
-              </label>
+          )}
+
+          {prov.status === "error" && (
+            <div className="mt-4 rounded-sm border border-orange/40 bg-orange/10 p-4">
+              <div className="label-eyebrow text-orange">Provisioning failed</div>
+              <p className="mono mt-2 text-xs text-muted-foreground">{prov.message}</p>
               <button
-                onClick={provision}
-                disabled={provisioning || areaCode.length !== 3}
-                className="w-full rounded-sm bg-orange px-4 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90 disabled:opacity-50"
-              >
-                {provisioning ? "Searching Twilio…" : "Provision number"}
-              </button>
+                onClick={retry}
+                className="mt-3 rounded-sm border border-border bg-card px-3 py-2 text-xs uppercase tracking-wider hover:bg-accent"
+              >Retry</button>
             </div>
           )}
         </div>
