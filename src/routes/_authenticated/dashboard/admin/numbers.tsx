@@ -151,11 +151,11 @@ function StatusBadge({ status, churned }: { status: string; churned: boolean }) 
 }
 
 function StatCard({
-  icon, label, value, sub,
-}: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string }) {
+  icon, label, value, sub, tone,
+}: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string; tone?: "warn" }) {
   return (
-    <div className="panel p-5">
-      <div className="flex items-center gap-2 text-muted-foreground">
+    <div className={`panel p-5 ${tone === "warn" ? "border-orange/40 bg-orange/5" : ""}`}>
+      <div className={`flex items-center gap-2 ${tone === "warn" ? "text-orange" : "text-muted-foreground"}`}>
         {icon}
         <span className="label-eyebrow">{label}</span>
       </div>
