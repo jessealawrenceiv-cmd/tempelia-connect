@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { PhoneMissed, Star, ThumbsUp, Snowflake } from "lucide-react";
 import { DispatchLog } from "@/components/DispatchLog";
+import { useEffect, useRef } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: OverviewPage,
@@ -11,6 +14,28 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
 
 function OverviewPage() {
   const qc = useQueryClient();
+  const backfilled = useRef(false);
+  const provisionFn = useServerFn(provisionTenantNumber);
+
+  // Silent safety-net: if a tenant reached the dashboard without a number
+  // (skipped onboarding, older account), buy one in the background.
+  useEffect(() => {
+    if (backfilled.current) return;
+    backfilled.current = true;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: prof } = await supabase
+        .from("profiles").select("twilio_phone_number").eq("id", u.user.id).maybeSingle();
+      if (prof?.twilio_phone_number) return;
+      try {
+        await provisionFn({ data: {} });
+      } catch {
+        /* onboarding page surfaces the error; keep the dashboard quiet */
+      }
+    })();
+  }, [provisionFn]);
+
   const { data: stats } = useQuery({
     queryKey: ["stats"],
     queryFn: async () => {
