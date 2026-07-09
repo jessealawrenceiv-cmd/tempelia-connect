@@ -124,8 +124,8 @@ function Landing() {
 
       <section className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-16">
-          <div className="label-eyebrow">Three tools, one subscription</div>
-          <h2 className="mt-2 text-3xl md:text-4xl">The bundle</h2>
+          <div className="label-eyebrow">Three automations, one full calendar</div>
+          <h2 className="mt-2 text-3xl md:text-4xl">The booking engine</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {features.map((f) => (
               <div key={f.tag} className="panel flex flex-col gap-3 p-6">
@@ -141,7 +141,7 @@ function Landing() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-16">
           <div className="label-eyebrow">Pricing</div>
-          <h2 className="mt-2 text-3xl md:text-4xl">Pick a tier. 30 days free.</h2>
+          <h2 className="mt-2 text-3xl md:text-4xl">Pick a plan. 30 days free.</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {tiers.map((t) => (
               <div
