@@ -20,6 +20,11 @@ function twilioCreds() {
   if (!sid || !token) {
     throw new Error("Twilio not configured (missing TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN).");
   }
+  if (!sid.startsWith("AC")) {
+    throw new Error(
+      `TWILIO_ACCOUNT_SID must be your Account SID (starts with "AC"), got "${sid.slice(0, 2)}…". If you have an API Key (SK…), set TWILIO_ACCOUNT_SID to your AC… Account SID and TWILIO_AUTH_TOKEN to the API Key secret, or use the Auth Token directly.`,
+    );
+  }
   return { sid, token, auth: "Basic " + Buffer.from(`${sid}:${token}`).toString("base64") };
 }
 
