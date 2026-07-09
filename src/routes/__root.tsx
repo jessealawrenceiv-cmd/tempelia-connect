@@ -130,7 +130,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <PaymentTestModeBanner />
       <Outlet />
-      <Toaster position="top-right" theme="light" />
+      <Toaster position="top-right" theme="dark" />
     </QueryClientProvider>
   );
 }
