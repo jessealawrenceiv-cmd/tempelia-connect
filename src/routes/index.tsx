@@ -90,14 +90,14 @@ function Landing() {
                 search={{ mode: "signup" }}
                 className="rounded-sm bg-orange px-5 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90"
               >
-                Start 30-day trial
+                Start your quiet trial
               </Link>
               <Link to="/auth" className="rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium uppercase tracking-wider text-foreground hover:bg-accent">
                 Sign in
               </Link>
             </div>
             <div className="mono mt-6 text-xs text-muted-foreground">
-              Card required · Cancel anytime · SMS opt-out on every message
+              30 days free · Cancel anytime · Works with your existing business line
             </div>
           </div>
 
