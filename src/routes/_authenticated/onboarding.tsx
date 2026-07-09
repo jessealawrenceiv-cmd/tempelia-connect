@@ -38,6 +38,10 @@ function OnboardingPage() {
       setProv({ status: "working" });
       try {
         const res = await provisionFn({ data: {} });
+        if (!res.ok) {
+          setProv({ status: "error", message: res.message });
+          return;
+        }
         setProv({ status: "ready", phoneNumber: res.phoneNumber });
       } catch (e) {
         setProv({ status: "error", message: (e as Error).message });
@@ -49,6 +53,10 @@ function OnboardingPage() {
     setProv({ status: "working" });
     try {
       const res = await provisionFn({ data: {} });
+      if (!res.ok) {
+        setProv({ status: "error", message: res.message });
+        return;
+      }
       setProv({ status: "ready", phoneNumber: res.phoneNumber });
     } catch (e) {
       setProv({ status: "error", message: (e as Error).message });
