@@ -74,15 +74,15 @@ function Landing() {
       <section className="border-b border-border">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.3fr_1fr] md:py-24">
           <div>
-            <div className="label-eyebrow">Dispatch · Local service ops</div>
+            <div className="label-eyebrow">Your business line, automated</div>
             <h1 className="mt-4 text-5xl leading-[0.95] md:text-7xl">
               The quiet line<br />
               that keeps your<br />
               <span className="text-orange">business booked.</span>
             </h1>
             <p className="mt-6 max-w-lg text-base text-muted-foreground">
-              Tempelia auto-texts every missed call, requests reviews after every job, and
-              re-activates dead leads on schedule — for plumbers, HVAC, salons and contractors.
+              Tempelia runs behind your existing business line — auto-texting missed calls, asking
+              happy customers for reviews, and re-engaging old leads so your calendar stays full.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
