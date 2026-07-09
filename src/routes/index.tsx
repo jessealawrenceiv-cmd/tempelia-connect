@@ -4,10 +4,10 @@ import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Tempelia — Communication automation for local service pros" },
-      { name: "description", content: "Missed-call auto-texts, review boosting, and dead-lead re-activation for plumbers, HVAC, salons and contractors." },
-      { property: "og:title", content: "Tempelia — Communication automation for local service pros" },
-      { property: "og:description", content: "Never miss a lead. Auto-text missed calls, boost Google reviews, and re-engage dormant customers." },
+      { title: "Tempelia — The quiet line that keeps your business booked" },
+      { name: "description", content: "Tempelia auto-texts missed calls, requests Google reviews, and re-engages dormant customers so your calendar stays full." },
+      { property: "og:title", content: "Tempelia — The quiet line that keeps your business booked" },
+      { property: "og:description", content: "Auto-text missed calls, boost Google reviews, and re-engage old leads so your schedule never empties." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -18,23 +18,23 @@ export const Route = createFileRoute("/")({
 const features = [
   {
     tag: "01 · Missed-Call Auto-Text",
-    title: "Catch the call you couldn't answer.",
-    body: "Within 30 seconds of a missed call to your business line, Tempelia texts the caller from the same number. No lead left hanging.",
+    title: "Every missed call becomes a booked call.",
+    body: "When a customer calls and you can't pick up, Tempelia texts them back within 30 seconds from the same number. Most callers reply and book.",
   },
   {
     tag: "02 · Review Booster",
-    title: "Turn every finished job into a review.",
-    body: "Mark a job complete on the dashboard — we text the customer a Google review link. Same message every time. No review gating.",
+    title: "More reviews, more bookings.",
+    body: "After every job, Tempelia sends your customer a Google review link. More five-star reviews mean more calls and more appointments on the calendar.",
   },
   {
     tag: "03 · Dead-Lead Re-Activator",
-    title: "Wake up your dormant customer list.",
-    body: "Any customer 6+ months out gets a friendly seasonal check-in text. Runs daily on autopilot — override or send manually anytime.",
+    title: "Old leads, new bookings.",
+    body: "Customers who haven't booked in 6+ months get a friendly seasonal check-in. Stay top-of-mind so they call you first.",
   },
 ];
 
 const tiers = [
-  { name: "Starter", price: "99", blurb: "Solo operator. 1 phone line.", priceId: "starter_monthly" },
+  { name: "Starter", price: "99", blurb: "Solo operator. 1 line. Keep every missed call.", priceId: "starter_monthly" },
   { name: "Standard", price: "199", blurb: "Small crew. 2 lines, priority support.", featured: true, priceId: "standard_monthly" },
   { name: "Premium", price: "299", blurb: "Multi-location. 5 lines, custom flows.", priceId: "premium_monthly" },
 ];
@@ -74,15 +74,15 @@ function Landing() {
       <section className="border-b border-border">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.3fr_1fr] md:py-24">
           <div>
-            <div className="label-eyebrow">Dispatch · Local service ops</div>
+            <div className="label-eyebrow">Your business line, automated</div>
             <h1 className="mt-4 text-5xl leading-[0.95] md:text-7xl">
               The quiet line<br />
               that keeps your<br />
               <span className="text-orange">business booked.</span>
             </h1>
             <p className="mt-6 max-w-lg text-base text-muted-foreground">
-              Tempelia auto-texts every missed call, requests reviews after every job, and
-              re-activates dead leads on schedule — for plumbers, HVAC, salons and contractors.
+              Tempelia runs behind your existing business line — auto-texting missed calls, asking
+              happy customers for reviews, and re-engaging old leads so your calendar stays full.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -124,8 +124,8 @@ function Landing() {
 
       <section className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-16">
-          <div className="label-eyebrow">Three tools, one subscription</div>
-          <h2 className="mt-2 text-3xl md:text-4xl">The bundle</h2>
+          <div className="label-eyebrow">Three automations, one full calendar</div>
+          <h2 className="mt-2 text-3xl md:text-4xl">The booking engine</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {features.map((f) => (
               <div key={f.tag} className="panel flex flex-col gap-3 p-6">
@@ -141,7 +141,7 @@ function Landing() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-16">
           <div className="label-eyebrow">Pricing</div>
-          <h2 className="mt-2 text-3xl md:text-4xl">Pick a tier. 30 days free.</h2>
+          <h2 className="mt-2 text-3xl md:text-4xl">Pick a plan. 30 days free.</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {tiers.map((t) => (
               <div
