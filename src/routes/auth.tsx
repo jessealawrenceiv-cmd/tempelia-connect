@@ -60,7 +60,7 @@ function AuthPage() {
           toast.error(parsed.error.issues[0]?.message ?? "Check your inputs");
           return;
         }
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
@@ -72,6 +72,10 @@ function AuthPage() {
           },
         });
         if (error) { toast.error(error.message); return; }
+        if (!data.session) {
+          toast.success("Check your email to confirm your account.", { duration: 8000 });
+          return;
+        }
         toast.success("Account created. Welcome aboard.");
         navigate({ to: "/onboarding" });
       } else {
