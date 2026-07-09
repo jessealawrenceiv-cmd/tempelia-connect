@@ -18,23 +18,23 @@ export const Route = createFileRoute("/")({
 const features = [
   {
     tag: "01 · Missed-Call Auto-Text",
-    title: "Catch the call you couldn't answer.",
-    body: "Within 30 seconds of a missed call to your business line, Tempelia texts the caller from the same number. No lead left hanging.",
+    title: "Every missed call becomes a booked call.",
+    body: "When a customer calls and you can't pick up, Tempelia texts them back within 30 seconds from the same number. Most callers reply and book.",
   },
   {
     tag: "02 · Review Booster",
-    title: "Turn every finished job into a review.",
-    body: "Mark a job complete on the dashboard — we text the customer a Google review link. Same message every time. No review gating.",
+    title: "More reviews, more bookings.",
+    body: "After every job, Tempelia sends your customer a Google review link. More five-star reviews mean more calls and more appointments on the calendar.",
   },
   {
     tag: "03 · Dead-Lead Re-Activator",
-    title: "Wake up your dormant customer list.",
-    body: "Any customer 6+ months out gets a friendly seasonal check-in text. Runs daily on autopilot — override or send manually anytime.",
+    title: "Old leads, new bookings.",
+    body: "Customers who haven't booked in 6+ months get a friendly seasonal check-in. Stay top-of-mind so they call you first.",
   },
 ];
 
 const tiers = [
-  { name: "Starter", price: "99", blurb: "Solo operator. 1 phone line.", priceId: "starter_monthly" },
+  { name: "Starter", price: "99", blurb: "Solo operator. 1 line. Keep every missed call.", priceId: "starter_monthly" },
   { name: "Standard", price: "199", blurb: "Small crew. 2 lines, priority support.", featured: true, priceId: "standard_monthly" },
   { name: "Premium", price: "299", blurb: "Multi-location. 5 lines, custom flows.", priceId: "premium_monthly" },
 ];
