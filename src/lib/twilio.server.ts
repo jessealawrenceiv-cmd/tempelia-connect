@@ -71,6 +71,11 @@ export async function purchaseLocalNumber(areaCode?: string): Promise<Provisione
 
   const searchRes = await fetch(searchUrl, { headers: { Authorization: auth } });
   const searchText = await searchRes.text();
+  if (searchRes.status === 401) {
+    throw new Error(
+      `Twilio rejected the credentials for phone-number search (401). Check that TWILIO_ACCOUNT_SID is your main Account SID (AC…), TWILIO_AUTH_TOKEN is the matching Auth Token, and — if the account is a trial — that it has been upgraded so it can purchase numbers. Raw: ${searchText}`,
+    );
+  }
   if (!searchRes.ok) throw new Error(`Twilio search ${searchRes.status}: ${searchText}`);
   const searchJson = JSON.parse(searchText) as {
     available_phone_numbers: Array<{ phone_number: string }>;
