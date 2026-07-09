@@ -51,7 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border bg-charcoal text-paper md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center bg-orange text-orange-foreground font-display text-base font-bold">T</span>
+            <img src="/logo-icon.png" alt="" className="h-7 w-auto" />
             <span className="font-display text-lg font-bold uppercase tracking-wider">Tempelia</span>
           </div>
           <button onClick={() => setOpen(!open)} aria-label="Menu" className="rounded-sm p-1.5 hover:bg-paper/10">
@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <div className="flex h-full flex-col border-r border-border bg-charcoal text-paper">
             <div className="hidden items-center gap-2 border-b border-paper/10 px-5 py-4 md:flex">
-              <span className="grid h-8 w-8 place-items-center bg-orange text-orange-foreground font-display text-lg font-bold">T</span>
+              <img src="/logo-icon.png" alt="" className="h-8 w-auto" />
               <span className="font-display text-xl font-bold uppercase tracking-wider">Tempelia</span>
             </div>
 

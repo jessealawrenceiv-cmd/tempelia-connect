@@ -55,7 +55,7 @@ function Landing() {
       <header className="border-b border-border bg-charcoal text-paper">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 shrink-0 place-items-center bg-orange text-orange-foreground font-display text-lg font-bold">T</span>
+            <img src="/logo-icon.png" alt="" className="h-9 w-auto" />
             <span className="font-display text-xl font-bold uppercase tracking-wider">Tempelia</span>
           </Link>
           <div className="flex items-center gap-3">
