@@ -5,6 +5,10 @@ interface ProvisionInput {
   areaCode?: string;
 }
 
+type ProvisionResult =
+  | { ok: true; phoneNumber: string; alreadyProvisioned: boolean }
+  | { ok: false; errorCode: "twilio_setup" | "no_numbers" | "twilio_unavailable"; message: string };
+
 function validateInput(data: unknown): ProvisionInput {
   if (data === undefined || data === null) return {};
   if (typeof data !== "object") throw new Error("Invalid input");
@@ -21,7 +25,7 @@ function validateInput(data: unknown): ProvisionInput {
 export const provisionTenantNumber = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(validateInput)
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<ProvisionResult> => {
     const { supabase, userId } = context;
 
     const { data: prof, error: profErr } = await supabase
@@ -32,7 +36,35 @@ export const provisionTenantNumber = createServerFn({ method: "POST" })
     }
 
     const { purchaseLocalNumber } = await import("./twilio.server");
-    const { phoneNumber, phoneSid } = await purchaseLocalNumber(data.areaCode);
+    let phoneNumber: string;
+    let phoneSid: string;
+    try {
+      const purchased = await purchaseLocalNumber(data.areaCode);
+      phoneNumber = purchased.phoneNumber;
+      phoneSid = purchased.phoneSid;
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message : "Twilio provisioning failed.";
+      console.error("Twilio provisioning failed", rawMessage);
+
+      if (rawMessage.includes("401") || rawMessage.includes("Policy evaluation failed") || rawMessage.includes("TWILIO_ACCOUNT_SID")) {
+        return {
+          ok: false,
+          errorCode: "twilio_setup",
+          message:
+            "Tempelia couldn't provision a number because Twilio rejected the saved credentials. Update the Twilio Account SID/Auth Token and make sure the account can buy phone numbers, then retry.",
+        };
+      }
+
+      if (rawMessage.includes("No numbers available") || rawMessage.includes("Area code")) {
+        return { ok: false, errorCode: "no_numbers", message: rawMessage };
+      }
+
+      return {
+        ok: false,
+        errorCode: "twilio_unavailable",
+        message: "Tempelia couldn't provision a number right now. Please retry in a moment.",
+      };
+    }
 
     const { error: updErr } = await supabase
       .from("profiles")
