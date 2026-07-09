@@ -76,9 +76,9 @@ function Landing() {
           <div>
             <div className="label-eyebrow">Dispatch · Local service ops</div>
             <h1 className="mt-4 text-5xl leading-[0.95] md:text-7xl">
-              The comms channel<br />
-              your service business<br />
-              <span className="text-orange">doesn't miss.</span>
+              The quiet line<br />
+              that keeps your<br />
+              <span className="text-orange">business booked.</span>
             </h1>
             <p className="mt-6 max-w-lg text-base text-muted-foreground">
               Tempelia auto-texts every missed call, requests reviews after every job, and
