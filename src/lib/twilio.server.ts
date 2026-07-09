@@ -20,6 +20,11 @@ function twilioCreds() {
   if (!sid || !token) {
     throw new Error("Twilio not configured (missing TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN).");
   }
+  if (!sid.startsWith("AC")) {
+    throw new Error(
+      `TWILIO_ACCOUNT_SID must be your Account SID (starts with "AC"), got "${sid.slice(0, 2)}…". If you have an API Key (SK…), set TWILIO_ACCOUNT_SID to your AC… Account SID and TWILIO_AUTH_TOKEN to the API Key secret, or use the Auth Token directly.`,
+    );
+  }
   return { sid, token, auth: "Basic " + Buffer.from(`${sid}:${token}`).toString("base64") };
 }
 
@@ -66,6 +71,11 @@ export async function purchaseLocalNumber(areaCode?: string): Promise<Provisione
 
   const searchRes = await fetch(searchUrl, { headers: { Authorization: auth } });
   const searchText = await searchRes.text();
+  if (searchRes.status === 401) {
+    throw new Error(
+      `Twilio rejected the credentials for phone-number search (401). Check that TWILIO_ACCOUNT_SID is your main Account SID (AC…), TWILIO_AUTH_TOKEN is the matching Auth Token, and — if the account is a trial — that it has been upgraded so it can purchase numbers. Raw: ${searchText}`,
+    );
+  }
   if (!searchRes.ok) throw new Error(`Twilio search ${searchRes.status}: ${searchText}`);
   const searchJson = JSON.parse(searchText) as {
     available_phone_numbers: Array<{ phone_number: string }>;
