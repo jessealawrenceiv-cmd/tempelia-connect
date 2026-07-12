@@ -53,6 +53,19 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const toggleReviews = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({ review_requests_enabled: enabled }).eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   return (
     <div>
       <PageHeader eyebrow="Config" title="Settings" />
