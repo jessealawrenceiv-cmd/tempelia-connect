@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/AppShell";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { sendReviewRequest } from "@/lib/sms.functions";
+import { completeJob } from "@/lib/sms.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/reviews")({
   component: ReviewsPage,
