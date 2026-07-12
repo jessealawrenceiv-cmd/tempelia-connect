@@ -1,47 +1,41 @@
-# Tempelia — Build Plan
+## Plan: Connect Tempelia to GitHub
 
-Multi-tenant SaaS with a lot of moving parts (Supabase, Stripe, Twilio, cron, webhooks). I'll build it in staged phases so you get a working, testable app at each step instead of one giant unverifiable drop.
+### Goal
+Back up the Tempelia codebase and enable two-way sync with a GitHub repository so you can collaborate, review code, and optionally deploy externally.
 
-## Phase 1 — Foundation (this turn)
-- Enable Lovable Cloud (Supabase: Postgres + Auth + RLS).
-- Design system in `src/styles.css`: charcoal `#1F2421`, paper `#F6F3EC`, safety-orange `#E2572B`, steel-blue `#3B5A6B`, moss-green `#4C7A5C`. Fonts: Barlow Condensed (display), Inter (body), IBM Plex Mono (numbers/log). Industrial/utility feel — sharp corners, thin rules, dispatch-log styling.
-- DB migration: `users` (profile linked to `auth.users`), `integrations`, `customers`, `logs` — all with RLS scoped to `auth.uid()`, GRANTs, and a `handle_new_user` trigger.
-- Auth: email/password signup with business name + ToS checkbox, login, protected `_authenticated` layout.
-- Dashboard shell + routes: Overview, Missed Calls, Reviews, Dead Leads, Settings, Onboarding. Mobile-first, scales to desktop admin.
-- Overview cards + dispatch-log activity feed reading from `logs`.
-- Reviews screen: pick/add customer → "Mark complete" → insert log (SMS wiring comes in Phase 3).
-- Dead Leads screen: query customers with `last_service_date < now() - 6 months` and no reactivation log in last 30 days.
+### Background
+The project is currently only stored in Lovable's internal git storage. No GitHub remote is configured. The codebase is a TanStack Start + Supabase app with Stripe, Twilio, and role-based admin features.
 
-At the end of Phase 1 the app is fully usable end-to-end with mock/no SMS — you can sign up, onboard, add customers, mark jobs complete, and see logs. Nothing texts out yet.
+### Steps
 
-## Phase 2 — Stripe billing
-- Recommend + enable Lovable's built-in Stripe Payments.
-- Three products: Starter $99, Standard $199, Premium $299 (monthly, 30-day trial, card required).
-- Checkout on signup, customer portal link in Settings, webhook updates `subscription_status` / `subscription_tier`.
+1. **Open the GitHub connection flow in Lovable**
+   - In the Lovable editor, click the **Plus (+) menu** in the chat input (bottom left).
+   - Choose **GitHub → Connect project**.
 
-## Phase 3 — Twilio (SMS + missed-call webhook)
-- Onboarding form stores Twilio SID / auth token / phone number in `integrations` (encrypted at rest via pgsodium or a `vault`-style pattern; token never returned to client after save).
-- Server function `sendSms` — checks `opt_in_consent`, appends "Reply STOP to unsubscribe.", logs to `logs`.
-- Public route `/api/public/twilio/voice` — TwiML that rings the business, on no-answer/voicemail fires missed-call auto-text within 30s, creates customer if new (consent=false → flagged "needs consent" until they reply).
-- Public route `/api/public/twilio/sms` — inbound handler for STOP/START (flips `opt_in_consent`) and first-reply consent capture on missed-call flow.
-- "Send now" buttons on Reviews and Dead Leads call `sendSms`.
+2. **Authorize the Lovable GitHub App**
+   - You will be redirected to GitHub to authorize the Lovable GitHub App.
+   - Grant access to the account or organization where you want the repo created.
 
-## Phase 4 — Scheduled reactivation
-- pg_cron daily job hits `/api/public/cron/reactivate` (shared-secret header), scans stale customers, sends reactivation SMS via same `sendSms` path.
+3. **Select target account and create repository**
+   - Choose the GitHub account/organization.
+   - Name the repository (suggested: `tempelia`).
+   - Click **Create Repository** in Lovable.
 
-## Compliance (enforced from Phase 1 schema, active from Phase 3)
-- Every SMS ends with "Reply STOP to unsubscribe."
-- No send unless `opt_in_consent = true`; otherwise row appears in a "needs consent" list.
-- ToS checkbox required on signup, timestamp stored.
-- No review gating — same message to every customer.
+4. **Verify initial sync**
+   - Lovable will push the current codebase to the new GitHub repo.
+   - Open the repo on GitHub and confirm all files are present.
 
-## Technical notes
-- Stack: TanStack Start (already scaffolded), Supabase via Lovable Cloud, `createServerFn` for all app-internal writes, TSS server routes under `/api/public/*` for Twilio/Stripe webhooks and cron.
-- RLS on every table: `user_id = auth.uid()`. Webhooks use service-role admin client, loaded inside handler after signature/secret verification.
-- Secrets: `TWILIO_ACCOUNT_SID` etc. per-tenant live in `integrations` (server reads them via service role after auth check); Stripe/webhook signing secrets via `add_secret`.
+5. **Post-connection recommendations**
+   - Enable branch switching in Lovable if needed: Account Settings → Labs → GitHub Branch Switching.
+   - Decide on external hosting (optional): the code can be deployed outside Lovable after GitHub sync, but environment variables and Lovable Cloud backend would need to be reconfigured elsewhere.
 
-## What I need from you before Phase 3
-- Confirm you want Lovable's built-in Stripe Payments (no Stripe account setup needed) vs. bring-your-own Stripe keys.
-- For Twilio: each tenant brings their own Twilio number/credentials via Onboarding (per your spec) — confirm.
+### Notes / considerations
+- This is **Git sync**, not the GitHub connector for app automations.
+- No code changes are required in the project to enable sync.
+- Secrets (Twilio, Stripe, Supabase service role) are **not** synced to GitHub. You will need to reconfigure them in any external hosting environment.
+- Database data is exported separately via Cloud → Advanced settings → Export data if needed.
 
-Reply "go" to start Phase 1, or tell me what to change.
+### Success criteria
+- A GitHub repository exists with the Tempelia codebase.
+- Future edits in Lovable push to GitHub automatically.
+- Future pushes to GitHub sync back to Lovable.
