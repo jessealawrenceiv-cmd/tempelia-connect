@@ -3,13 +3,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 interface SendInput {
   customerId: string;
+  jobValue?: number;
+  intakeSubmissionId?: string;
 }
 
 function validateInput(data: unknown): SendInput {
   if (!data || typeof data !== "object") throw new Error("Invalid input");
-  const { customerId } = data as { customerId?: unknown };
+  const { customerId, jobValue, intakeSubmissionId } = data as {
+    customerId?: unknown;
+    jobValue?: unknown;
+    intakeSubmissionId?: unknown;
+  };
   if (typeof customerId !== "string" || customerId.length < 8) throw new Error("Invalid customerId");
-  return { customerId };
+  if (jobValue !== undefined && (typeof jobValue !== "number" || jobValue < 0)) throw new Error("Invalid jobValue");
+  if (intakeSubmissionId !== undefined && typeof intakeSubmissionId !== "string") throw new Error("Invalid intakeSubmissionId");
+  return { customerId, jobValue, intakeSubmissionId };
 }
 
 export const sendReviewRequest = createServerFn({ method: "POST" })
@@ -34,11 +42,22 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
     const linkLine = url ? ` ${url}` : "";
     const message = `Thanks for choosing ${biz}! Mind leaving us a quick review?${linkLine}${STOP_SUFFIX}`;
 
+    const { data: job, error: jobErr } = await supabase.from("jobs").insert({
+      user_id: userId,
+      customer_id: cust.id,
+      intake_submission_id: data.intakeSubmissionId || null,
+      job_value: data.jobValue ?? null,
+      completed_at: new Date().toISOString(),
+      status: "pending",
+    }).select().single();
+    if (jobErr) throw new Error(jobErr.message);
+
     if (!cust.opt_in_consent) {
       await supabase.from("logs").insert({
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: message, status: "needs_consent",
       });
+      await supabase.from("jobs").update({ status: "needs_consent" }).eq("id", job.id);
       throw new Error(`${cust.first_name || "Customer"} has not opted in. Flagged as needs-consent.`);
     }
 
@@ -51,12 +70,14 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: message, status: "sent", twilio_message_sid: res.sid,
       });
-      return { ok: true, sid: res.sid };
+      await supabase.from("jobs").update({ status: "review_requested" }).eq("id", job.id);
+      return { ok: true, sid: res.sid, jobId: job.id };
     } catch (e) {
       await supabase.from("logs").insert({
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: message, status: "failed",
       });
+      await supabase.from("jobs").update({ status: "failed" }).eq("id", job.id);
       throw e;
     }
   });
