@@ -77,6 +77,57 @@ export type Database = {
         }
         Relationships: []
       }
+      intake_submissions: {
+        Row: {
+          created_at: string
+          customer_business_name: string | null
+          customer_email: string | null
+          customer_first_name: string
+          customer_last_name: string
+          customer_phone: string
+          id: string
+          photo_urls: string[]
+          responses: Json
+          source: string
+          status: string
+          submitted_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_business_name?: string | null
+          customer_email?: string | null
+          customer_first_name: string
+          customer_last_name: string
+          customer_phone: string
+          id?: string
+          photo_urls?: string[]
+          responses?: Json
+          source?: string
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_business_name?: string | null
+          customer_email?: string | null
+          customer_first_name?: string
+          customer_last_name?: string
+          customer_phone?: string
+          id?: string
+          photo_urls?: string[]
+          responses?: Json
+          source?: string
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           created_at: string
