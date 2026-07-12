@@ -67,19 +67,24 @@ function ReviewsPage() {
   const [newPhone, setNewPhone] = useState("");
   const [newConsent, setNewConsent] = useState(true);
 
-  const sendReviewFn = useServerFn(sendReviewRequest);
+  const completeJobFn = useServerFn(completeJob);
   const complete = useMutation({
     mutationFn: async (chosenId: string) => {
       const value = jobValue.trim() ? Number(jobValue) : undefined;
-      return sendReviewFn({ data: { customerId: chosenId, jobValue: value } });
+      return completeJobFn({ data: { customerId: chosenId, jobValue: value } });
     },
-    onSuccess: () => {
-      toast.success("Job marked complete and review request sent.");
+    onSuccess: (res: any) => {
+      if (res?.sent) toast.success("Job recorded and review request sent.");
+      else if (res?.reason === "disabled") toast.success("Job recorded. Review requests are turned off.");
+      else if (res?.reason === "excluded") toast.success("Job recorded. Number is on your exclusion list — no text sent.");
+      else if (res?.reason === "needs_consent") toast.success("Job recorded. Customer needs SMS consent — flagged.");
+      else toast.success("Job recorded.");
       setJobValue("");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const addCustomer = useMutation({
     mutationFn: async () => {
