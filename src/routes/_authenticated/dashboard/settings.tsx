@@ -53,6 +53,19 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const toggleReviews = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({ review_requests_enabled: enabled }).eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   return (
     <div>
       <PageHeader eyebrow="Config" title="Settings" />
@@ -79,8 +92,28 @@ function SettingsPage() {
               disabled={save.isPending}
               className="w-full rounded-sm bg-orange px-4 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90 disabled:opacity-50"
             >{save.isPending ? "Saving…" : "Save"}</button>
+
+            <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+              <div>
+                <div className="label-eyebrow">Auto review requests</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  When off, completed jobs are still recorded for revenue, but no review text is sent.
+                </p>
+              </div>
+              <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  checked={profile?.review_requests_enabled ?? true}
+                  disabled={toggleReviews.isPending}
+                  onChange={(e) => toggleReviews.mutate(e.target.checked)}
+                />
+                {profile?.review_requests_enabled === false ? "Off" : "On"}
+              </label>
+            </div>
           </div>
         </div>
+
 
         <div className="panel p-6">
           <div className="label-eyebrow">Billing</div>

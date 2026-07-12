@@ -250,6 +250,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          review_requests_enabled: boolean
           stripe_customer_id: string | null
           subscription_status: string
           subscription_tier: string
@@ -264,6 +265,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id: string
+          review_requests_enabled?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: string
@@ -278,6 +280,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          review_requests_enabled?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: string

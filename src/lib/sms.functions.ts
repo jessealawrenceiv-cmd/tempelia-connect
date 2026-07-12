@@ -20,7 +20,12 @@ function validateInput(data: unknown): SendInput {
   return { customerId, jobValue, intakeSubmissionId };
 }
 
-export const sendReviewRequest = createServerFn({ method: "POST" })
+// Normalize a phone number to digits-only for comparison with excluded_numbers.
+function normalizePhone(p: string | null | undefined): string {
+  return (p || "").replace(/\D+/g, "");
+}
+
+export const completeJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(validateInput)
   .handler(async ({ data, context }) => {
@@ -33,24 +38,51 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
     if (!cust) throw new Error("Customer not found");
 
     const { data: prof } = await supabase.from("profiles")
-      .select("business_name, twilio_phone_number").eq("id", userId).maybeSingle();
-    const { data: intg } = await supabase.from("integrations").select("google_review_url").eq("user_id", userId).maybeSingle();
-    const biz = prof?.business_name || "our team";
-    const from = prof?.twilio_phone_number;
-    if (!from) throw new Error("Provision your Tempelia number in Settings before sending.");
-    const url = intg?.google_review_url || "";
-    const linkLine = url ? ` ${url}` : "";
-    const message = `Thanks for choosing ${biz}! Mind leaving us a quick review?${linkLine}${STOP_SUFFIX}`;
+      .select("business_name, twilio_phone_number, review_requests_enabled").eq("id", userId).maybeSingle();
 
+    // 1. Always record the completed job for revenue tracking.
     const { data: job, error: jobErr } = await supabase.from("jobs").insert({
       user_id: userId,
       customer_id: cust.id,
       intake_submission_id: data.intakeSubmissionId || null,
       job_value: data.jobValue ?? null,
       completed_at: new Date().toISOString(),
-      status: "pending",
+      status: "completed",
     }).select().single();
     if (jobErr) throw new Error(jobErr.message);
+
+    // 2. Gate: is the review-request feature turned on for this business?
+    if (prof?.review_requests_enabled === false) {
+      await supabase.from("logs").insert({
+        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        message_sent: null, status: "skipped_disabled",
+      });
+      await supabase.from("jobs").update({ status: "completed_no_request" }).eq("id", job.id);
+      return { ok: true, jobId: job.id, sent: false, reason: "disabled" as const };
+    }
+
+    // 3. Gate: is this number on the exclusion list?
+    const custDigits = normalizePhone(cust.phone_number);
+    const { data: excluded } = await supabase.from("excluded_numbers")
+      .select("phone_number").eq("user_id", userId);
+    const isExcluded = (excluded ?? []).some((r) => normalizePhone(r.phone_number) === custDigits);
+    if (isExcluded) {
+      await supabase.from("logs").insert({
+        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        message_sent: null, status: "skipped_excluded",
+      });
+      await supabase.from("jobs").update({ status: "completed_no_request" }).eq("id", job.id);
+      return { ok: true, jobId: job.id, sent: false, reason: "excluded" as const };
+    }
+
+    // 4. Gate: has the customer opted in?
+    const biz = prof?.business_name || "our team";
+    const from = prof?.twilio_phone_number;
+    const { data: intg } = await supabase.from("integrations")
+      .select("google_review_url").eq("user_id", userId).maybeSingle();
+    const url = intg?.google_review_url || "";
+    const linkLine = url ? ` ${url}` : "";
+    const message = `Thanks for choosing ${biz}! Mind leaving us a quick review?${linkLine}${STOP_SUFFIX}`;
 
     if (!cust.opt_in_consent) {
       await supabase.from("logs").insert({
@@ -58,9 +90,19 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
         message_sent: message, status: "needs_consent",
       });
       await supabase.from("jobs").update({ status: "needs_consent" }).eq("id", job.id);
-      throw new Error(`${cust.first_name || "Customer"} has not opted in. Flagged as needs-consent.`);
+      return { ok: true, jobId: job.id, sent: false, reason: "needs_consent" as const };
     }
 
+    if (!from) {
+      await supabase.from("logs").insert({
+        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        message_sent: message, status: "failed",
+      });
+      await supabase.from("jobs").update({ status: "failed" }).eq("id", job.id);
+      throw new Error("Provision your Tempelia number in Settings before sending.");
+    }
+
+    // 5. Send.
     try {
       const res = await sendTwilioSms(from, cust.phone_number, message);
       await supabase.from("customers").update({
@@ -71,7 +113,7 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
         message_sent: message, status: "sent", twilio_message_sid: res.sid,
       });
       await supabase.from("jobs").update({ status: "review_requested" }).eq("id", job.id);
-      return { ok: true, sid: res.sid, jobId: job.id };
+      return { ok: true, jobId: job.id, sent: true, sid: res.sid };
     } catch (e) {
       await supabase.from("logs").insert({
         user_id: userId, customer_id: cust.id, action_type: "review_request",
@@ -81,6 +123,9 @@ export const sendReviewRequest = createServerFn({ method: "POST" })
       throw e;
     }
   });
+
+// Kept for backwards compatibility; delegates to completeJob.
+export const sendReviewRequest = completeJob;
 
 export const sendReactivation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -98,6 +143,19 @@ export const sendReactivation = createServerFn({ method: "POST" })
       .select("twilio_phone_number").eq("id", userId).maybeSingle();
     const from = prof?.twilio_phone_number;
     if (!from) throw new Error("Provision your Tempelia number in Settings before sending.");
+
+    // Respect excluded_numbers for reactivations too.
+    const custDigits = normalizePhone(cust.phone_number);
+    const { data: excluded } = await supabase.from("excluded_numbers")
+      .select("phone_number").eq("user_id", userId);
+    const isExcluded = (excluded ?? []).some((r) => normalizePhone(r.phone_number) === custDigits);
+    if (isExcluded) {
+      await supabase.from("logs").insert({
+        user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
+        message_sent: null, status: "skipped_excluded",
+      });
+      throw new Error(`${cust.first_name || "Customer"} is on your exclusion list — skipped.`);
+    }
 
     const message = `Hi ${cust.first_name || "there"}, it's been a while! Want us to swing by for a seasonal check-up?${STOP_SUFFIX}`;
 
