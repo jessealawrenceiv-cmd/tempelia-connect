@@ -14,7 +14,9 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const form = await request.formData();
+        const { verifyTwilioRequest } = await import("@/lib/twilio-verify.server");
+        const { ok, form } = await verifyTwilioRequest(request);
+        if (!ok) return new Response("Forbidden", { status: 403 });
         const from = String(form.get("From") ?? "").trim();
         const to = String(form.get("To") ?? "").trim();
         const body = String(form.get("Body") ?? "").trim();
