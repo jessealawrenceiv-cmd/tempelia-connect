@@ -30,7 +30,7 @@ function statusBadge(status: string) {
     case "pending":
       return <span className="rounded-sm bg-steel/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-steel-foreground">Pending</span>;
     case "needs_consent":
-      return <span className="rounded-sm bg-orange-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-orange-500">Needs consent</span>;
+      return <span className="rounded-sm bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary-foreground">Needs consent</span>;
     case "failed":
       return <span className="rounded-sm bg-destructive/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-destructive-foreground">Failed</span>;
     default:
