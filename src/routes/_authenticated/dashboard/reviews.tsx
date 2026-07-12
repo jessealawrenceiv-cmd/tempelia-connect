@@ -13,6 +13,30 @@ export const Route = createFileRoute("/_authenticated/dashboard/reviews")({
 });
 
 const phoneSchema = z.string().trim().regex(/^\+?[1-9]\d{7,14}$/, "Use E.164 format e.g. +15551234567");
+const moneySchema = z.union([
+  z.string().trim().regex(/^\d+(\.\d{1,2})?$/),
+  z.number().nonnegative(),
+]);
+
+function formatCurrency(n: number | null | undefined) {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+}
+
+function statusBadge(status: string) {
+  switch (status) {
+    case "review_requested":
+      return <span className="rounded-sm bg-moss/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-moss-foreground">Requested</span>;
+    case "pending":
+      return <span className="rounded-sm bg-steel/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-steel-foreground">Pending</span>;
+    case "needs_consent":
+      return <span className="rounded-sm bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary-foreground">Needs consent</span>;
+    case "failed":
+      return <span className="rounded-sm bg-destructive/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-destructive-foreground">Failed</span>;
+    default:
+      return <span className="rounded-sm bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">{status}</span>;
+  }
+}
 
 function ReviewsPage() {
   const qc = useQueryClient();
@@ -25,28 +49,35 @@ function ReviewsPage() {
     },
   });
 
-  const { data: recent } = useQuery({
-    queryKey: ["review-logs"],
+  const { data: jobs } = useQuery({
+    queryKey: ["jobs"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("logs")
-        .select("id, message_sent, created_at, customers(first_name, phone_number)")
-        .eq("action_type", "review_request")
-        .order("created_at", { ascending: false })
+        .from("jobs")
+        .select("id, customer_id, job_value, status, completed_at, customers(first_name, phone_number)")
+        .order("completed_at", { ascending: false })
         .limit(50);
       return data ?? [];
     },
   });
 
   const [customerId, setCustomerId] = useState<string>("");
+  const [jobValue, setJobValue] = useState<string>("");
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newConsent, setNewConsent] = useState(true);
 
   const sendReviewFn = useServerFn(sendReviewRequest);
   const complete = useMutation({
-    mutationFn: (chosenId: string) => sendReviewFn({ data: { customerId: chosenId } }),
-    onSuccess: () => { toast.success("Review request sent."); qc.invalidateQueries(); },
+    mutationFn: async (chosenId: string) => {
+      const value = jobValue.trim() ? Number(jobValue) : undefined;
+      return sendReviewFn({ data: { customerId: chosenId, jobValue: value } });
+    },
+    onSuccess: () => {
+      toast.success("Job marked complete and review request sent.");
+      setJobValue("");
+      qc.invalidateQueries();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -69,6 +100,8 @@ function ReviewsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const totalJobValue = jobs?.reduce((sum, j) => sum + (j.job_value ?? 0), 0) ?? 0;
 
   return (
     <div>
@@ -94,10 +127,27 @@ function ReviewsPage() {
                 ))}
               </select>
             </label>
+
+            <label className="block">
+              <span className="label-eyebrow">Job value (optional)</span>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={jobValue}
+                  onChange={(e) => setJobValue(e.target.value)}
+                  placeholder="0.00"
+                  className="mono block w-full rounded-sm border border-border bg-background py-2 pl-7 pr-3 text-sm"
+                />
+              </div>
+            </label>
+
             <button
               disabled={!customerId || complete.isPending}
               onClick={() => complete.mutate(customerId)}
-              className="w-full rounded-sm bg-orange px-4 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-sm bg-primary px-4 py-3 text-sm font-medium uppercase tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
               {complete.isPending ? "Sending…" : "Mark complete & send"}
             </button>
@@ -110,7 +160,7 @@ function ReviewsPage() {
               <input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="+15551234567" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
             </div>
             <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={newConsent} onChange={(e) => setNewConsent(e.target.checked)} className="h-4 w-4 accent-orange" />
+              <input type="checkbox" checked={newConsent} onChange={(e) => setNewConsent(e.target.checked)} className="h-4 w-4 accent-primary" />
               Customer has verbally opted in to SMS
             </label>
             <button
@@ -124,17 +174,25 @@ function ReviewsPage() {
         </div>
 
         <div className="panel p-5">
-          <div className="label-eyebrow">Recent review requests</div>
+          <div className="flex items-center justify-between">
+            <div className="label-eyebrow">Completed jobs</div>
+            <div className="mono text-xs text-muted-foreground">Total: {formatCurrency(totalJobValue)}</div>
+          </div>
           <ul className="mono mt-4 max-h-[560px] divide-y divide-border overflow-y-auto text-xs">
-            {recent?.length === 0 && <li className="py-4 text-muted-foreground">Nothing sent yet.</li>}
-            {recent?.map((r: any) => (
-              <li key={r.id} className="py-3">
+            {jobs?.length === 0 && <li className="py-4 text-muted-foreground">No completed jobs yet.</li>}
+            {jobs?.map((j: any) => (
+              <li key={j.id} className="py-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold">{r.customers?.first_name || "Customer"}</span>
-                  <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
+                  <span className="font-semibold">{j.customers?.first_name || "Customer"}</span>
+                  {statusBadge(j.status)}
                 </div>
-                <div className="text-muted-foreground">{r.customers?.phone_number}</div>
-                <div className="mt-1 line-clamp-2 text-foreground/80">{r.message_sent}</div>
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>{j.customers?.phone_number}</span>
+                  <span>{formatCurrency(j.job_value)}</span>
+                </div>
+                <div className="mt-1 text-muted-foreground">
+                  {j.completed_at ? new Date(j.completed_at).toLocaleString() : "—"}
+                </div>
               </li>
             ))}
           </ul>

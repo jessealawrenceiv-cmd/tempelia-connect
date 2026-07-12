@@ -152,6 +152,57 @@ export type Database = {
         }
         Relationships: []
       }
+      jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          intake_submission_id: string | null
+          job_value: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          intake_submission_id?: string | null
+          job_value?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          intake_submission_id?: string | null
+          job_value?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_intake_submission_id_fkey"
+            columns: ["intake_submission_id"]
+            isOneToOne: false
+            referencedRelation: "intake_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       logs: {
         Row: {
           action_type: string
