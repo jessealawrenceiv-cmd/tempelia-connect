@@ -67,7 +67,10 @@ function IntakesPage() {
       <PageHeader eyebrow="Feature 04" title="Project intakes" />
       <div className="p-5 md:p-8 space-y-5">
         <div className="panel p-4">
-          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">// public intake URL</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">// public intake URL</div>
+            <IntakeEnabledToggle />
+          </div>
           <div className="mt-2 flex items-center gap-2">
             <input readOnly value={publicUrl} className="flex-1 rounded-sm border border-border bg-background px-3 py-2 text-sm mono" />
             <button
