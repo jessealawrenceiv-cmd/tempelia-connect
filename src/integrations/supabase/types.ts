@@ -351,6 +351,7 @@ export type Database = {
           created_at: string
           customer_business_name: string | null
           customer_first_name: string
+          customer_id: string | null
           customer_last_name: string | null
           customer_phone: string
           description: string | null
@@ -374,6 +375,7 @@ export type Database = {
           created_at?: string
           customer_business_name?: string | null
           customer_first_name: string
+          customer_id?: string | null
           customer_last_name?: string | null
           customer_phone: string
           description?: string | null
@@ -397,6 +399,7 @@ export type Database = {
           created_at?: string
           customer_business_name?: string | null
           customer_first_name?: string
+          customer_id?: string | null
           customer_last_name?: string | null
           customer_phone?: string
           description?: string | null
@@ -415,7 +418,15 @@ export type Database = {
           user_id?: string
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
