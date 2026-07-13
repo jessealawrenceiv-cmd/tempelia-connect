@@ -149,17 +149,31 @@ export const submitIntake = createServerFn({ method: "POST" })
     if (!prof) throw new Error("Business not found");
     if (!prof.intake_enabled) throw new Error("This intake form is not accepting submissions");
 
-    // Rate limit: N submissions per (business, IP) per window
+    // Rate limit #1: per (business, IP) — catches a single spammer
     const ipHash = hashIp(clientIp());
     const windowStart = new Date(Date.now() - INTAKE_LIMITS.RATE_LIMIT_WINDOW_MIN * 60_000).toISOString();
-    const { count } = await supabaseAdmin
+    const { count: perIpCount } = await supabaseAdmin
       .from("intake_rate_limits")
       .select("id", { count: "exact", head: true })
       .eq("user_id", data.userId)
       .eq("ip_hash", ipHash)
       .gte("submitted_at", windowStart);
-    if ((count ?? 0) >= INTAKE_LIMITS.RATE_LIMIT_MAX) {
+    if ((perIpCount ?? 0) >= INTAKE_LIMITS.RATE_LIMIT_MAX) {
       throw new Error("Too many submissions. Please try again later.");
+    }
+
+    // Rate limit #2: global per-business ceiling across ALL IPs — floor against
+    // distributed / botnet spam that rotates source IPs.
+    const ceilingWindowStart = new Date(
+      Date.now() - INTAKE_LIMITS.BUSINESS_CEILING_WINDOW_MIN * 60_000,
+    ).toISOString();
+    const { count: perBizCount } = await supabaseAdmin
+      .from("intake_rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", data.userId)
+      .gte("submitted_at", ceilingWindowStart);
+    if ((perBizCount ?? 0) >= INTAKE_LIMITS.BUSINESS_CEILING_MAX) {
+      throw new Error("This form is temporarily paused due to unusual traffic. Try again later.");
     }
 
     // ── Photo validation + server-side upload ──────────────────
