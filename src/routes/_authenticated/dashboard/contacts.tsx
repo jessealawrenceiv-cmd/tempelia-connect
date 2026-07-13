@@ -236,12 +236,12 @@ function ContactsPage() {
                 const last = lastReviewByContact?.get(c.id);
                 const isOpen = expanded.has(c.id);
                 return (
-                  <>
+                  <FragmentRow key={c.id}>
                     <tr
-                      key={c.id}
                       className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
                       onClick={() => toggleExpand(c.id)}
                     >
+
                       <td className="px-2 py-3 text-center mono text-xs text-muted-foreground select-none">
                         {isOpen ? "▾" : "▸"}
                       </td>
