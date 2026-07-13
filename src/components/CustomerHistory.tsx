@@ -14,10 +14,13 @@ type QuoteRow = {
   id: string;
   customer_first_name: string;
   customer_last_name: string | null;
+  po_number: string | null;
   job_site_address: string;
+  billing_address: string | null;
   description: string | null;
   line_items: Array<{ key?: string; label?: string; description?: string; amount?: number | string }> | null;
   subtotal: number | string | null;
+  tax_rate: number | string | null;
   tax_amount: number | string | null;
   total_amount: number | string;
   status: string;
@@ -75,7 +78,7 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_first_name, customer_last_name, job_site_address, description, line_items, subtotal, tax_amount, total_amount, status, job_type, tax_exempt, valid_until, created_at")
+        .select("id, customer_first_name, customer_last_name, po_number, job_site_address, billing_address, description, line_items, subtotal, tax_rate, tax_amount, total_amount, status, job_type, tax_exempt, valid_until, created_at")
         .eq("customer_id", customerId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -153,6 +156,12 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
                     </span>
                   </div>
                   <div className="mono text-xs text-paper mt-1">{q.job_site_address}</div>
+                  {(q.po_number || q.billing_address) && (
+                    <div className="mono mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {q.po_number && <span>PO# {q.po_number}</span>}
+                      {q.billing_address && <span>bill to: {q.billing_address}</span>}
+                    </div>
+                  )}
                   {q.description && (
                     <div className="mono text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{q.description}</div>
                   )}
@@ -170,7 +179,11 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
                   )}
                   <div className="mono mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                     <span>subtotal {fmtMoney(q.subtotal)}</span>
-                    <span>tax {fmtMoney(q.tax_amount)}{q.tax_exempt ? " (exempt)" : ""}</span>
+                    <span>
+                      tax {fmtMoney(q.tax_amount)}
+                      {q.tax_rate != null && Number(q.tax_rate) > 0 ? ` @ ${(Number(q.tax_rate) * 100).toFixed(2)}%` : ""}
+                      {q.tax_exempt ? " (exempt)" : ""}
+                    </span>
                     <span className="text-paper">total {fmtMoney(q.total_amount)}</span>
                   </div>
                 </div>
@@ -199,6 +212,13 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
                       {r.status}
                     </span>
                   </div>
+                  {(r.customer_business_name || r.customer_phone || r.customer_email) && (
+                    <div className="mono mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {r.customer_business_name && <span>{r.customer_business_name}</span>}
+                      {r.customer_phone && <span>{r.customer_phone}</span>}
+                      {r.customer_email && <span>{r.customer_email}</span>}
+                    </div>
+                  )}
                   <dl className="mt-2 grid gap-x-4 gap-y-1 text-xs md:grid-cols-2">
                     {Object.entries(resp).map(([k, v]) => (
                       <div key={k}>
