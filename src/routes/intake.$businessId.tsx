@@ -69,42 +69,56 @@ function IntakeForm() {
     desiredFinish: FINISHES[0] as (typeof FINISHES)[number],
     timing: TIMING[0] as (typeof TIMING)[number],
     description: "",
+    website: "", // honeypot — hidden from real users
   });
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+
+  // Mirror of server enforcement — see src/lib/intake.functions.ts INTAKE_LIMITS
+  const MAX_PHOTOS = 5;
+  const MAX_BYTES_PER_PHOTO = 5 * 1024 * 1024;      // 5 MB
+  const MAX_BYTES_PER_SUBMISSION = 20 * 1024 * 1024; // 20 MB
+  const ALLOWED_EXT_HINT = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
   function upd<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
   function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const list = Array.from(e.target.files ?? []).slice(0, 5);
-    const valid = list.filter((f) => f.size <= 8 * 1024 * 1024 && f.type.startsWith("image/"));
-    if (valid.length < list.length) toast.error("Some files were skipped (must be images, <8MB).");
+    const list = Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS);
+    const valid: File[] = [];
+    let total = 0;
+    for (const f of list) {
+      if (!ALLOWED_EXT_HINT.includes(f.type)) { toast.error(`${f.name}: only JPEG/PNG/WebP/HEIC allowed`); continue; }
+      if (f.size > MAX_BYTES_PER_PHOTO) { toast.error(`${f.name}: exceeds 5 MB per-photo limit`); continue; }
+      if (total + f.size > MAX_BYTES_PER_SUBMISSION) { toast.error("Total photo size exceeds 20 MB"); break; }
+      total += f.size;
+      valid.push(f);
+    }
     setFiles(valid);
   }
 
-  async function uploadPhotos(): Promise<string[]> {
-    const paths: string[] = [];
-    for (const file of files) {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${businessId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("intake-photos").upload(path, file, {
-        contentType: file.type,
-      });
-      if (error) throw new Error(`Photo upload failed: ${error.message}`);
-      paths.push(path);
-    }
-    return paths;
+  async function fileToBase64(file: File): Promise<string> {
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const photoPaths = await uploadPhotos();
-      await submit({ data: { userId: businessId, ...form, photoPaths } });
+      const photos = await Promise.all(
+        files.map(async (f) => ({
+          filename: f.name,
+          contentType: f.type,
+          dataBase64: await fileToBase64(f),
+        })),
+      );
+      await submit({ data: { userId: businessId, ...form, photos } });
       setDone(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Submission failed");
