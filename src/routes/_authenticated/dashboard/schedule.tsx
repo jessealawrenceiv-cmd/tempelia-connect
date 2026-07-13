@@ -86,6 +86,10 @@ function SchedulePage() {
   const [title, setTitle] = useState(search.title ?? "");
   const [date, setDate] = useState<string>(ymd(new Date()));
   const [time, setTime] = useState<string>("09:00");
+  const [durationMinutes, setDurationMinutes] = useState<number>(60);
+  const [customDuration, setCustomDuration] = useState<string>("");
+  const isCustomDuration = !DURATION_PRESETS.some((p) => p.value === durationMinutes);
+  const isAllDay = durationMinutes === 0;
   const [notes, setNotes] = useState<string>(search.address ? `Location: ${search.address}` : "");
   const [customerId, setCustomerId] = useState<string | null>(search.customerId ?? null);
   const quoteIdParam = search.quoteId ?? null;
