@@ -35,13 +35,14 @@ const CHURNED_STATUSES = new Set(["canceled", "cancelled", "past_due", "unpaid",
 export const listProvisionedNumbers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<FleetSummary> => {
-    const { supabase, userId } = context;
+    const { supabase } = context;
 
     // Gate: caller must be an admin.
     const { data: isAdmin, error: roleErr } = await supabase
-      .rpc("has_role", { _user_id: userId, _role: "admin" });
+      .rpc("has_role", { _role: "admin" });
     if (roleErr) throw new Error(roleErr.message);
     if (!isAdmin) throw new Error("Forbidden");
+
 
     // Elevate to service-role for the cross-tenant read.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
