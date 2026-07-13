@@ -88,6 +88,17 @@ function SettingsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const setDeclineMode = useMutation({
+    mutationFn: async (mode: "off" | "manual" | "auto") => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({ decline_followup_mode: mode }).eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
 
   return (
