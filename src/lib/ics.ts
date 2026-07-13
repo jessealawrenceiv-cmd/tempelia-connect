@@ -56,6 +56,7 @@ export type IcsAppointment = {
   notes: string | null;
   createdAt: string;             // ISO timestamp
   location?: string | null;
+  durationMinutes?: number | null; // 0 or null with no time => all-day; otherwise timed length
 };
 
 export function buildIcs(a: IcsAppointment, prodId = "-//Tempelia//Schedule//EN"): string {
@@ -64,14 +65,18 @@ export function buildIcs(a: IcsAppointment, prodId = "-//Tempelia//Schedule//EN"
   let dtEnd: string;
   let allDay = false;
 
-  if (a.time && /^\d{2}:\d{2}/.test(a.time)) {
-    const [hh, mm] = a.time.split(":").map(Number);
+  const dur = a.durationMinutes ?? null;
+  const timed = !!a.time && /^\d{2}:\d{2}/.test(a.time) && (dur === null || dur > 0);
+
+  if (timed) {
+    const [hh, mm] = a.time!.split(":").map(Number);
     const start = new Date(y, m - 1, d, hh, mm, 0);
-    const end = new Date(start.getTime() + 60 * 60 * 1000); // default 1h
+    const minutes = dur && dur > 0 ? dur : 60;
+    const end = new Date(start.getTime() + minutes * 60 * 1000);
     dtStart = fmtLocal(start);
     dtEnd = fmtLocal(end);
   } else {
-    // all-day event
+    // all-day event: DATE value type, DTEND is exclusive (next day)
     allDay = true;
     const start = new Date(y, m - 1, d);
     const end = new Date(y, m - 1, d + 1);
