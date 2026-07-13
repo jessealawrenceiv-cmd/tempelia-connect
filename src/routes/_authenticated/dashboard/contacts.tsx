@@ -39,6 +39,21 @@ function fmtDate(s: string | null | undefined) {
   return s ? new Date(s).toLocaleDateString() : "—";
 }
 
+function useCopy() {
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(text);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied((prev) => (prev === text ? null : prev)), 1500);
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+  return { copied, copy };
+}
+
 function sourceBadge(src: string) {
   const map: Record<string, string> = {
     intake: "bg-violet/20 text-paper",
