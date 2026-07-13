@@ -220,6 +220,7 @@ function ContactsPage() {
           <table className="w-full text-sm">
             <thead className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
               <tr className="border-b border-border">
+                <th className="px-2 py-3 w-6"></th>
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Phone</th>
                 <th className="px-4 py-3 text-left hidden md:table-cell">Email</th>
@@ -233,60 +234,79 @@ function ContactsPage() {
             <tbody>
               {filtered.map((c) => {
                 const last = lastReviewByContact?.get(c.id);
+                const isOpen = expanded.has(c.id);
                 return (
-                  <tr key={c.id} className="border-b border-border/50 hover:bg-accent/30">
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{[c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed"}</div>
-                      {c.last_service_date && (
-                        <div className="mono text-[10px] text-muted-foreground">last job {fmtDate(c.last_service_date)}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 mono text-xs">{c.phone_number}</td>
-                    <td className="px-4 py-3 mono text-xs hidden md:table-cell">
-                      <div>{c.email || "—"}</div>
-                      {emailUpdateByContact?.get(c.id) && (
-                        <div
-                          className="mono text-[10px] text-violet"
-                          title={`Was: ${emailUpdateByContact.get(c.id)!.old ?? "—"} → Now: ${emailUpdateByContact.get(c.id)!.new ?? "—"}`}
-                        >
-                          ⚠ email updated via quote, {fmtDate(emailUpdateByContact.get(c.id)!.at)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{sourceBadge(c.source)}</td>
-                    <td className="px-4 py-3">
-                      {c.opt_in_consent ? (
-                        <div>
-                          <span className="mono text-[10px] uppercase tracking-wider text-moss">opted in</span>
-                          <div className="mono text-[10px] text-muted-foreground">{fmtDate(c.sms_opt_in_at)}</div>
-                        </div>
-                      ) : (
-                        <span className="mono text-[10px] uppercase tracking-wider text-muted-foreground">no consent</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      {c.consent_form_signed ? (
-                        <div>
-                          <span className="mono text-[10px] uppercase tracking-wider text-moss">signed</span>
-                          <div className="mono text-[10px] text-muted-foreground">{fmtDate(c.consent_form_signed_at)}</div>
-                        </div>
-                      ) : (
-                        <span className="mono text-[10px] uppercase tracking-wider text-muted-foreground">unsigned</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell mono text-[10px] text-muted-foreground">
-                      {last ? `review ${last.status} · ${fmtDate(last.at)}` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => setEditing(c)} className="mono text-[10px] uppercase tracking-wider text-primary hover:underline">edit</button>
-                      <button
-                        onClick={() => confirm(`Delete ${c.first_name || "contact"}?`) && del.mutate(c.id)}
-                        className="mono text-[10px] uppercase tracking-wider text-destructive hover:underline ml-3"
-                      >del</button>
-                    </td>
-                  </tr>
+                  <>
+                    <tr
+                      key={c.id}
+                      className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                      onClick={() => toggleExpand(c.id)}
+                    >
+                      <td className="px-2 py-3 text-center mono text-xs text-muted-foreground select-none">
+                        {isOpen ? "▾" : "▸"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{[c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed"}</div>
+                        {c.last_service_date && (
+                          <div className="mono text-[10px] text-muted-foreground">last job {fmtDate(c.last_service_date)}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 mono text-xs">{c.phone_number}</td>
+                      <td className="px-4 py-3 mono text-xs hidden md:table-cell">
+                        <div>{c.email || "—"}</div>
+                        {emailUpdateByContact?.get(c.id) && (
+                          <div
+                            className="mono text-[10px] text-violet"
+                            title={`Was: ${emailUpdateByContact.get(c.id)!.old ?? "—"} → Now: ${emailUpdateByContact.get(c.id)!.new ?? "—"}`}
+                          >
+                            ⚠ email updated via quote, {fmtDate(emailUpdateByContact.get(c.id)!.at)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{sourceBadge(c.source)}</td>
+                      <td className="px-4 py-3">
+                        {c.opt_in_consent ? (
+                          <div>
+                            <span className="mono text-[10px] uppercase tracking-wider text-moss">opted in</span>
+                            <div className="mono text-[10px] text-muted-foreground">{fmtDate(c.sms_opt_in_at)}</div>
+                          </div>
+                        ) : (
+                          <span className="mono text-[10px] uppercase tracking-wider text-muted-foreground">no consent</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {c.consent_form_signed ? (
+                          <div>
+                            <span className="mono text-[10px] uppercase tracking-wider text-moss">signed</span>
+                            <div className="mono text-[10px] text-muted-foreground">{fmtDate(c.consent_form_signed_at)}</div>
+                          </div>
+                        ) : (
+                          <span className="mono text-[10px] uppercase tracking-wider text-muted-foreground">unsigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell mono text-[10px] text-muted-foreground">
+                        {last ? `review ${last.status} · ${fmtDate(last.at)}` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setEditing(c)} className="mono text-[10px] uppercase tracking-wider text-primary hover:underline">edit</button>
+                        <button
+                          onClick={() => confirm(`Delete ${c.first_name || "contact"}?`) && del.mutate(c.id)}
+                          className="mono text-[10px] uppercase tracking-wider text-destructive hover:underline ml-3"
+                        >del</button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="border-b border-border/50 bg-background/40">
+                        <td></td>
+                        <td colSpan={8} className="px-4 py-4">
+                          <CustomerHistory customerId={c.id} />
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
+
             </tbody>
           </table>
         </div>
