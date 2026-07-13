@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -60,6 +60,7 @@ function ContactsPage() {
 
   const { data: contacts, isLoading } = useQuery({
     queryKey: ["contacts"],
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("customers")
@@ -69,6 +70,19 @@ function ContactsPage() {
       return (data ?? []) as unknown as Contact[];
     },
   });
+
+  // Live updates: reflect new/changed contacts (including auto-promoted intakes) instantly.
+  useEffect(() => {
+    const channel = supabase
+      .channel("customers:dashboard")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "customers" },
+        () => qc.invalidateQueries({ queryKey: ["contacts"] }),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
 
   // Pull last review-request activity per contact
   const { data: lastReviewByContact } = useQuery({

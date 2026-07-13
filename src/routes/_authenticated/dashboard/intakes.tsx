@@ -29,6 +29,7 @@ function IntakesPage() {
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ["intake-submissions"],
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("intake_submissions")
@@ -38,6 +39,20 @@ function IntakesPage() {
       return data ?? [];
     },
   });
+
+  // Live updates: push new/changed intake rows into the list without a reload.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("intake_submissions:dashboard")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "intake_submissions", filter: `user_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: ["intake-submissions"] }),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, qc]);
 
   const allPaths = useMemo(
     () => (rows ?? []).flatMap((r) => r.photo_urls ?? []),
