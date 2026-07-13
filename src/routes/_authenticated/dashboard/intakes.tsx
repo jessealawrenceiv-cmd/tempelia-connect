@@ -67,7 +67,10 @@ function IntakesPage() {
       <PageHeader eyebrow="Feature 04" title="Project intakes" />
       <div className="p-5 md:p-8 space-y-5">
         <div className="panel p-4">
-          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">// public intake URL</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">// public intake URL</div>
+            <IntakeEnabledToggle />
+          </div>
           <div className="mt-2 flex items-center gap-2">
             <input readOnly value={publicUrl} className="flex-1 rounded-sm border border-border bg-background px-3 py-2 text-sm mono" />
             <button
@@ -138,5 +141,42 @@ function IntakesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function IntakeEnabledToggle() {
+  const qc = useQueryClient();
+  const { data: enabled } = useQuery({
+    queryKey: ["intake-enabled"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return true;
+      const { data } = await supabase.from("profiles").select("intake_enabled").eq("id", u.user.id).maybeSingle();
+      return data?.intake_enabled ?? true;
+    },
+  });
+  const mut = useMutation({
+    mutationFn: async (next: boolean) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles").update({ intake_enabled: next }).eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["intake-enabled"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <label className="flex items-center gap-2 text-xs mono uppercase tracking-wider cursor-pointer">
+      <span className={enabled ? "text-moss" : "text-muted-foreground"}>{enabled ? "accepting" : "paused"}</span>
+      <input
+        type="checkbox"
+        checked={!!enabled}
+        onChange={(e) => mut.mutate(e.target.checked)}
+        className="h-4 w-4 accent-violet"
+      />
+    </label>
   );
 }
