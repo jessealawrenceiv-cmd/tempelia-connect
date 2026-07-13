@@ -148,6 +148,30 @@ function SettingsPage() {
             </div>
 
             <div className="mt-6 border-t border-border pt-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="label-eyebrow">Declined-quote follow-up</div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    When a customer declines a quote: <span className="mono">off</span> = do nothing;
+                    <span className="mono"> manual</span> = show an "Ask why" button in the dashboard;
+                    <span className="mono"> auto</span> = text them automatically asking for a reason.
+                    Their reply is captured on the quote.
+                  </p>
+                </div>
+                <select
+                  value={profile?.decline_followup_mode ?? "off"}
+                  disabled={setDeclineMode.isPending}
+                  onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
+                  className="mono rounded-sm border border-border bg-background px-3 py-2 text-xs uppercase tracking-wider"
+                >
+                  <option value="off">Off</option>
+                  <option value="manual">Manual</option>
+                  <option value="auto">Auto</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="label-eyebrow">Voicemail on missed calls</div>
