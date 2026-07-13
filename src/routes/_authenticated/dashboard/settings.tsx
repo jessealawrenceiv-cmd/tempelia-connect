@@ -40,6 +40,10 @@ function SettingsPage() {
     if (intg) setReviewUrl(intg.google_review_url ?? "");
   }, [intg]);
 
+  useEffect(() => {
+    if (profile) setOwnerPhone(profile.owner_phone ?? "");
+  }, [profile]);
+
   const save = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -49,8 +53,27 @@ function SettingsPage() {
         { onConflict: "user_id" },
       );
       if (error) throw error;
+      const { error: e2 } = await supabase.from("profiles")
+        .update({ owner_phone: ownerPhone.trim() || null }).eq("id", u.user.id);
+      if (e2) throw e2;
     },
-    onSuccess: () => { toast.success("Settings saved."); qc.invalidateQueries({ queryKey: ["integrations"] }); },
+    onSuccess: () => {
+      toast.success("Settings saved.");
+      qc.invalidateQueries({ queryKey: ["integrations"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleVoicemail = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({ voicemail_enabled: enabled }).eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
