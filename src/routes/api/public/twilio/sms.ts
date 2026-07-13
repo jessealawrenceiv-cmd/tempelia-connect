@@ -94,6 +94,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
 
         await supabaseAdmin.from("logs").insert(logRow("received"));
         return twiml("");
+      },
     },
   },
 });
