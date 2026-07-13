@@ -50,7 +50,10 @@ function QuotesListPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [askingId, setAskingId] = useState<string | null>(null);
   const sendSmsFn = useServerFn(sendQuoteSms);
+  const askWhyFn = useServerFn(sendDeclineFollowup);
+  const qc = useQueryClient();
   const toggle = (id: string) => setExpanded((prev) => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
