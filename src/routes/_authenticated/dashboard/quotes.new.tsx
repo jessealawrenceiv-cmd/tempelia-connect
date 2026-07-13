@@ -176,6 +176,14 @@ function NewQuotePage() {
       if (!firstName.trim()) throw new Error("First name required");
       if (!phone.trim()) throw new Error("Phone required");
       if (!jobSite.trim()) throw new Error("Job site address required");
+      // Never persist garbage — blocks BOTH draft and sent.
+      if (hasInvalidInput) {
+        throw new Error("Fix the highlighted amount fields before saving");
+      }
+      // Completeness — only blocks "sent"; drafts may be incomplete.
+      if (status === "sent" && !hasAnyValidLine) {
+        throw new Error("Add at least one line item with an amount greater than $0 before sending");
+      }
 
       // Build line_items array from checked categories (+ labor)
       const line_items: Array<Record<string, string | number>> = [];
