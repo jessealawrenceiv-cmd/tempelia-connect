@@ -105,17 +105,7 @@ function clientIp(): string {
   return parts[parts.length - 1] || "0.0.0.0";
 }
 
-// Debug: returns what clientIp() resolves to for the current request. Safe (no PII, no writes).
-export const debugClientIp = createServerFn({ method: "GET" }).handler(async () => {
-  return {
-    resolved: clientIp(),
-    headers: {
-      "cf-connecting-ip": getRequestHeader("cf-connecting-ip") || null,
-      "x-real-ip": getRequestHeader("x-real-ip") || null,
-      "x-forwarded-for": getRequestHeader("x-forwarded-for") || null,
-    },
-  };
-});
+
 
 export const getIntakeBusinessInfo = createServerFn({ method: "GET" })
   .inputValidator((d: { userId: string }) => z.object({ userId: z.string().uuid() }).parse(d))
