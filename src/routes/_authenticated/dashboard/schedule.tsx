@@ -41,12 +41,29 @@ type Appointment = {
   title: string;
   date: string;
   time: string | null;
+  duration_minutes: number;
   notes: string | null;
   created_at: string;
 };
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// duration in minutes: 0 => all-day; otherwise timed length
+const DURATION_PRESETS: Array<{ label: string; value: number }> = [
+  { label: "30m", value: 30 },
+  { label: "1h", value: 60 },
+  { label: "2h", value: 120 },
+  { label: "4h", value: 240 },
+  { label: "All day", value: 0 },
+];
+
+function addMinutesHHMM(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  const wrapped = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
 }
 
 function SchedulePage() {
