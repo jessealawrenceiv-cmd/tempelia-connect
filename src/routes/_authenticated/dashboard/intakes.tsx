@@ -119,13 +119,29 @@ function IntakesPage() {
                       {r.customer_business_name && ` · ${r.customer_business_name}`}
                     </div>
                   </div>
-                  <select
-                    value={r.status}
-                    onChange={(e) => updateStatus.mutate({ id: r.id, status: e.target.value })}
-                    className="rounded-sm border border-border bg-background px-2 py-1 text-xs uppercase tracking-wider mono"
-                  >
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to="/dashboard/schedule"
+                      search={{
+                        intakeId: r.id,
+                        customerId: r.customer_id ?? undefined,
+                        firstName: r.customer_first_name,
+                        lastName: r.customer_last_name,
+                        phone: r.customer_phone,
+                        title: `Site visit — ${r.customer_first_name} ${r.customer_last_name}`.trim(),
+                      }}
+                      className="mono rounded-sm border border-moss/60 px-2 py-1 text-[10px] uppercase tracking-wider text-moss hover:bg-moss hover:text-charcoal"
+                    >
+                      schedule visit
+                    </Link>
+                    <select
+                      value={r.status}
+                      onChange={(e) => updateStatus.mutate({ id: r.id, status: e.target.value })}
+                      className="rounded-sm border border-border bg-background px-2 py-1 text-xs uppercase tracking-wider mono"
+                    >
+                      {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm md:grid-cols-2">
