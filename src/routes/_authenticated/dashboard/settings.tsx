@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 function SettingsPage() {
   const qc = useQueryClient();
   const [reviewUrl, setReviewUrl] = useState("");
+  const [ownerPhone, setOwnerPhone] = useState("");
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],

@@ -26,6 +26,7 @@ import { Route as AuthenticatedDashboardContactsRouteImport } from './routes/_au
 import { Route as AuthenticatedDashboardQuotesIndexRouteImport } from './routes/_authenticated/dashboard/quotes.index'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
+import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio/recording'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_authenticated/dashboard/quotes.new'
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
@@ -124,6 +125,12 @@ const ApiPublicTwilioSmsRoute = ApiPublicTwilioSmsRouteImport.update({
   path: '/api/public/twilio/sms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioRecordingRoute =
+  ApiPublicTwilioRecordingRouteImport.update({
+    id: '/api/public/twilio/recording',
+    path: '/api/public/twilio/recording',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -166,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
@@ -188,6 +196,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/dashboard/quotes': typeof AuthenticatedDashboardQuotesIndexRoute
@@ -212,6 +221,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/_authenticated/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/_authenticated/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
     | '/api/public/payments/webhook'
+    | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/dashboard/quotes/'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
     | '/api/public/payments/webhook'
+    | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/dashboard/quotes'
@@ -281,6 +293,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/admin/numbers'
     | '/_authenticated/dashboard/quotes/new'
     | '/api/public/payments/webhook'
+    | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/_authenticated/dashboard/quotes/'
@@ -294,6 +307,7 @@ export interface RootRouteChildren {
   IntakeBusinessIdRoute: typeof IntakeBusinessIdRoute
   QuoteQuoteIdRoute: typeof QuoteQuoteIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
 }
@@ -419,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTwilioSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio/recording': {
+      id: '/api/public/twilio/recording'
+      path: '/api/public/twilio/recording'
+      fullPath: '/api/public/twilio/recording'
+      preLoaderRoute: typeof ApiPublicTwilioRecordingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -496,6 +517,7 @@ const rootRouteChildren: RootRouteChildren = {
   IntakeBusinessIdRoute: IntakeBusinessIdRoute,
   QuoteQuoteIdRoute: QuoteQuoteIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
 }
