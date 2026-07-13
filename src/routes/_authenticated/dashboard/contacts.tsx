@@ -7,6 +7,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { toast } from "sonner";
 import { z } from "zod";
+import { Copy, Check } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
   component: ContactsPage,
