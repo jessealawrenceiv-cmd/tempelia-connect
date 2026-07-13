@@ -16,7 +16,7 @@ type QuoteRow = {
   customer_last_name: string | null;
   job_site_address: string;
   description: string | null;
-  line_items: Array<{ description?: string; amount?: number | string }> | null;
+  line_items: Array<{ key?: string; label?: string; description?: string; amount?: number | string }> | null;
   subtotal: number | string | null;
   tax_amount: number | string | null;
   total_amount: number | string;
