@@ -358,6 +358,7 @@ export type Database = {
       }
       quotes: {
         Row: {
+          archived_at: string | null
           billing_address: string | null
           created_at: string
           customer_business_name: string | null
@@ -373,6 +374,7 @@ export type Database = {
           po_number: string | null
           status: string
           subtotal: number
+          superseded_by_id: string | null
           tax_amount: number
           tax_exempt: boolean
           tax_rate: number
@@ -382,6 +384,7 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          archived_at?: string | null
           billing_address?: string | null
           created_at?: string
           customer_business_name?: string | null
@@ -397,6 +400,7 @@ export type Database = {
           po_number?: string | null
           status?: string
           subtotal?: number
+          superseded_by_id?: string | null
           tax_amount?: number
           tax_exempt?: boolean
           tax_rate?: number
@@ -406,6 +410,7 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          archived_at?: string | null
           billing_address?: string | null
           created_at?: string
           customer_business_name?: string | null
@@ -421,6 +426,7 @@ export type Database = {
           po_number?: string | null
           status?: string
           subtotal?: number
+          superseded_by_id?: string | null
           tax_amount?: number
           tax_exempt?: boolean
           tax_rate?: number
@@ -435,6 +441,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]

@@ -17,11 +17,11 @@ type QuoteRow = {
   customer_business_name: string | null;
   job_site_address: string;
   total_amount: number;
-  status: "draft" | "sent" | "accepted" | "declined" | "expired";
+  status: "draft" | "sent" | "accepted" | "declined" | "expired" | "archived";
   created_at: string;
   valid_until: string | null;
+  superseded_by_id: string | null;
 };
-
 
 const STATUS_STYLES: Record<QuoteRow["status"], string> = {
   draft: "bg-muted text-muted-foreground",
@@ -29,6 +29,7 @@ const STATUS_STYLES: Record<QuoteRow["status"], string> = {
   accepted: "bg-moss/30 text-paper",
   declined: "bg-destructive/20 text-paper",
   expired: "bg-orange/20 text-paper",
+  archived: "bg-muted/40 text-muted-foreground line-through",
 };
 
 function fmtMoney(n: number) {
@@ -40,6 +41,7 @@ function fmtDate(s: string | null) {
 
 function QuotesListPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showArchived, setShowArchived] = useState(false);
   const toggle = (id: string) => setExpanded((prev) => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -52,13 +54,15 @@ function QuotesListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until")
+        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as QuoteRow[];
     },
   });
 
+  const visible = (quotes ?? []).filter((q) => showArchived || q.status !== "archived");
+  const archivedCount = (quotes ?? []).filter((q) => q.status === "archived").length;
 
   return (
     <div>
@@ -75,14 +79,24 @@ function QuotesListPage() {
         }
       />
       <div className="p-5 md:p-8 space-y-5">
+        {archivedCount > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowArchived((v) => !v)}
+              className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:border-primary hover:text-primary"
+            >
+              {showArchived ? "▾ hide archived" : "▸ show archived"} ({archivedCount})
+            </button>
+          </div>
+        )}
         {isLoading && <div className="text-muted-foreground">Loading…</div>}
-        {!isLoading && (quotes?.length ?? 0) === 0 && (
+        {!isLoading && visible.length === 0 && (
           <div className="panel p-6 text-sm text-muted-foreground">
             No quotes yet. Hit <span className="mono">+ Create Quote</span> to build your first one.
           </div>
         )}
 
-        {(quotes?.length ?? 0) > 0 && (
+        {visible.length > 0 && (
           <div className="panel overflow-hidden">
             <table className="w-full text-sm">
               <thead className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -94,10 +108,11 @@ function QuotesListPage() {
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left hidden lg:table-cell">Valid until</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Created</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {quotes!.map((q) => {
+                {visible.map((q) => {
                   const name = [q.customer_first_name, q.customer_last_name].filter(Boolean).join(" ");
                   const isOpen = expanded.has(q.id);
                   return (
@@ -114,6 +129,9 @@ function QuotesListPage() {
                           {q.customer_business_name && (
                             <div className="mono text-[10px] text-muted-foreground">{q.customer_business_name}</div>
                           )}
+                          {q.superseded_by_id && (
+                            <div className="mono text-[10px] text-orange">// superseded by newer revision</div>
+                          )}
                         </td>
                         <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
                         <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
@@ -124,11 +142,32 @@ function QuotesListPage() {
                         </td>
                         <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden lg:table-cell">{fmtDate(q.valid_until)}</td>
                         <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden md:table-cell">{fmtDate(q.created_at)}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="inline-flex gap-1">
+                            {q.status !== "archived" && (
+                              <Link
+                                to="/dashboard/quotes/new"
+                                search={{ edit: q.id }}
+                                className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-primary"
+                              >
+                                edit
+                              </Link>
+                            )}
+                            <a
+                              href={`/dashboard/quotes/${q.id}/print`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-primary"
+                            >
+                              export
+                            </a>
+                          </div>
+                        </td>
                       </tr>
                       {isOpen && (
                         <tr className="border-b border-border/50 bg-background/40">
                           <td></td>
-                          <td colSpan={6} className="px-4 py-4">
+                          <td colSpan={7} className="px-4 py-4">
                             <div className="label-eyebrow mb-3">
                               Quote detail + customer history {name ? `· ${name}` : ""}
                             </div>
@@ -147,4 +186,3 @@ function QuotesListPage() {
     </div>
   );
 }
-

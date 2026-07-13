@@ -1,12 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
 
+type QuoteSearch = { edit?: string };
+
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/new")({
   component: NewQuotePage,
+  validateSearch: (s: Record<string, unknown>): QuoteSearch => ({
+    edit: typeof s.edit === "string" ? s.edit : undefined,
+  }),
 });
 
 // ─── Category catalog ────────────────────────────────────────────
@@ -100,6 +105,25 @@ function money(n: number) {
 
 function NewQuotePage() {
   const navigate = useNavigate();
+  const { edit: editId } = Route.useSearch();
+  const isEdit = !!editId;
+
+  // Load existing quote when editing
+  const { data: existingQuote } = useQuery({
+    queryKey: ["quote-edit", editId],
+    enabled: !!editId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("id", editId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const [seeded, setSeeded] = useState(false);
+  const originalStatus = existingQuote?.status as string | undefined;
 
   // Customer
   const [firstName, setFirstName] = useState("");
@@ -154,6 +178,64 @@ function NewQuotePage() {
   const [taxExempt, setTaxExempt] = useState(false);
   const [taxRateInput, setTaxRateInput] = useState("9.5");
   const [validUntil, setValidUntil] = useState<string>("");
+
+  // Seed all state from existingQuote once loaded
+  useEffect(() => {
+    if (!existingQuote || seeded) return;
+    const q = existingQuote as any;
+    setFirstName(q.customer_first_name ?? "");
+    setLastName(q.customer_last_name ?? "");
+    setBusinessName(q.customer_business_name ?? "");
+    setPhone(q.customer_phone ?? "");
+    setPoNumber(q.po_number ?? "");
+    setJobSite(q.job_site_address ?? "");
+    setBilling(q.billing_address ?? "");
+    setDescription(q.description ?? "");
+    setJobType(q.job_type ?? "existing_building");
+    setTaxExempt(!!q.tax_exempt);
+    setTaxRateInput(q.tax_rate != null ? String(q.tax_rate) : "9.5");
+    setValidUntil(q.valid_until ?? "");
+
+    const items: Array<any> = Array.isArray(q.line_items) ? q.line_items : [];
+    setCategories((prev) =>
+      prev.map((c) => {
+        const found = items.find((li) => li.key === c.key);
+        if (!found) return c;
+        const next: CategoryState = {
+          ...c,
+          checked: true,
+          amount: String(found.amount ?? ""),
+        };
+        if (c.key === "surface_prep" || c.key === "desired_finish") {
+          if (found.label) next.variant = found.label;
+        }
+        if (c.key === "other" && found.label) next.freeLabel = found.label;
+        return next;
+      }),
+    );
+    const labor = items.find((li) => li.key === "labor");
+    if (labor) {
+      setLaborChecked(true);
+      setLaborMode(labor.labor_mode === "percent" ? "percent" : "flat");
+      setLaborInput(String(labor.labor_input ?? labor.amount ?? ""));
+    }
+    if (q.customer_id) {
+      supabase
+        .from("customers")
+        .select("email, opt_in_consent, consent_form_signed")
+        .eq("id", q.customer_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setEmail(data.email ?? "");
+            setSmsOptIn(!!data.opt_in_consent);
+            setConsentSigned(!!data.consent_form_signed);
+          }
+        });
+    }
+    setSeeded(true);
+  }, [existingQuote, seeded]);
+
 
   // ─── VALIDATION ────────────────────────────────────────────────
   // Per-row inline errors for every checked category (incl. Other) and
@@ -323,32 +405,58 @@ function NewQuotePage() {
         });
       }
 
+      const payload = {
+        user_id: u.user.id,
+        customer_id: customerRow.id,
+        customer_first_name: firstName.trim(),
+        customer_last_name: lastName.trim() || null,
+        customer_business_name: businessName.trim() || null,
+        customer_phone: phoneTrim,
+        po_number: poNumber.trim() || null,
+        job_site_address: jobSite.trim(),
+        billing_address: billing.trim() || null,
+        description: description.trim() || null,
+        line_items,
+        subtotal,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        total_amount: total,
+        job_type: jobType,
+        tax_exempt: taxExempt,
+        valid_until: validUntil || null,
+        status,
+      };
+
+      // Edit-in-place for drafts; archive-and-branch for anything else.
+      if (isEdit && editId && originalStatus === "draft") {
+        const { data, error } = await supabase
+          .from("quotes")
+          .update(payload)
+          .eq("id", editId)
+          .select("id")
+          .single();
+        if (error) throw error;
+        return data.id as string;
+      }
+
       const { data, error } = await supabase
         .from("quotes")
-        .insert({
-          user_id: u.user.id,
-          customer_id: customerRow.id,
-          customer_first_name: firstName.trim(),
-          customer_last_name: lastName.trim() || null,
-          customer_business_name: businessName.trim() || null,
-          customer_phone: phoneTrim,
-          po_number: poNumber.trim() || null,
-          job_site_address: jobSite.trim(),
-          billing_address: billing.trim() || null,
-          description: description.trim() || null,
-          line_items,
-          subtotal,
-          tax_rate: taxRate,
-          tax_amount: taxAmount,
-          total_amount: total,
-          job_type: jobType,
-          tax_exempt: taxExempt,
-          valid_until: validUntil || null,
-          status,
-        })
+        .insert(payload)
         .select("id")
         .single();
       if (error) throw error;
+
+      if (isEdit && editId && originalStatus && originalStatus !== "draft") {
+        const { error: archErr } = await supabase
+          .from("quotes")
+          .update({
+            status: "archived",
+            archived_at: new Date().toISOString(),
+            superseded_by_id: data.id,
+          })
+          .eq("id", editId);
+        if (archErr) throw archErr;
+      }
       return data.id as string;
     },
     onSuccess: () => {
@@ -360,7 +468,12 @@ function NewQuotePage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Estimates" title="Create Quote" />
+      <PageHeader eyebrow="Estimates" title={isEdit ? (originalStatus === "draft" ? "Edit Draft Quote" : `Revise Quote (archives ${originalStatus})`) : "Create Quote"} />
+      {isEdit && originalStatus && originalStatus !== "draft" && (
+        <div className="mx-5 mt-4 md:mx-8 rounded-sm border border-orange/40 bg-orange/10 px-3 py-2 mono text-[11px] text-paper">
+          // saving will create a NEW quote and archive the original ({originalStatus}) — history preserved
+        </div>
+      )}
       <div className="p-5 md:p-8 space-y-5 max-w-5xl">
         {/* Customer */}
         <section className="panel p-5 space-y-3">
