@@ -39,18 +39,26 @@ function fmtDate(s: string | null) {
 }
 
 function QuotesListPage() {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setExpanded((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["quotes"],
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until")
+        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as QuoteRow[];
     },
   });
+
 
   return (
     <div>
