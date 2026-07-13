@@ -210,6 +210,7 @@ function NewQuotePage() {
       // otherwise create a new one. Consent columns intentionally omitted so an
       // existing opted-in contact isn't downgraded.
       const phoneTrim = phone.trim();
+      const emailTrim = email.trim();
       const { data: customerRow, error: custErr } = await supabase
         .from("customers")
         .upsert(
@@ -218,6 +219,9 @@ function NewQuotePage() {
             first_name: firstName.trim(),
             last_name: lastName.trim() || null,
             phone_number: phoneTrim,
+            // Only set email when provided so we don't clobber an
+            // existing contact's email with null on dedup collision.
+            ...(emailTrim ? { email: emailTrim } : {}),
             source: "quote",
           },
           { onConflict: "user_id,phone_number" },
