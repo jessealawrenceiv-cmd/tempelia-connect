@@ -369,8 +369,25 @@ function NewQuotePage() {
             <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name *" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
             <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
             <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business name (optional)" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone *" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={(e) => prefillConsentFromPhone(e.target.value)} placeholder="Phone *" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)" type="email" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
+            <div className="sm:col-span-2 space-y-2 rounded-sm border border-border bg-background/50 p-3">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">// consent on file</div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={smsOptIn} onChange={(e) => setSmsOptIn(e.target.checked)} className="h-4 w-4 accent-primary" />
+                Customer has opted in to SMS
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={consentSigned} onChange={(e) => setConsentSigned(e.target.checked)} className="h-4 w-4 accent-primary" />
+                Signed consent form on file
+              </label>
+              {consentLookupNote && (
+                <div className="mono text-[10px] text-muted-foreground">{consentLookupNote}</div>
+              )}
+              <div className="mono text-[10px] text-muted-foreground">
+                // unchecking never revokes an existing contact's consent — only checking upgrades it
+              </div>
+            </div>
             <input value={poNumber} onChange={(e) => setPoNumber(e.target.value)} placeholder="PO # (optional)" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
             <input value={jobSite} onChange={(e) => setJobSite(e.target.value)} placeholder="Job site address *" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
             <input value={billing} onChange={(e) => setBilling(e.target.value)} placeholder="Billing address (if different)" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
