@@ -70,7 +70,7 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
 
       // Flip draft → sent so status flow stays consistent. Non-draft (already
       // "sent") just refreshes last_sms_sent_at.
-      const updates: Record<string, unknown> = { last_sms_sent_at: nowIso };
+      const updates: { last_sms_sent_at: string; status?: string } = { last_sms_sent_at: nowIso };
       if (q.status === "draft" || q.status === "expired") updates.status = "sent";
       await supabase.from("quotes").update(updates).eq("id", q.id);
 
