@@ -241,16 +241,40 @@ function NewQuotePage() {
       const phoneTrim = phone.trim();
       const emailTrim = email.trim();
 
-      // Detect email overwrite BEFORE upsert so we can log old→new.
+      // Fetch prior state BEFORE upsert so we can (a) detect email overwrite
+      // and (b) never downgrade an existing consent true -> false, and only
+      // stamp timestamps on a real transition to true.
       let priorEmail: string | null = null;
-      if (emailTrim) {
+      let priorSms = false;
+      let priorConsent = false;
+      let priorSmsAt: string | null = null;
+      let priorConsentAt: string | null = null;
+      {
         const { data: existing } = await supabase
           .from("customers")
-          .select("id, email")
+          .select("email, opt_in_consent, consent_form_signed, sms_opt_in_at, consent_form_signed_at")
           .eq("user_id", u.user.id)
           .eq("phone_number", phoneTrim)
           .maybeSingle();
         priorEmail = existing?.email ?? null;
+        priorSms = !!existing?.opt_in_consent;
+        priorConsent = !!existing?.consent_form_signed;
+        priorSmsAt = existing?.sms_opt_in_at ?? null;
+        priorConsentAt = existing?.consent_form_signed_at ?? null;
+      }
+
+      // Consent patch — write ONLY when the box is checked (upgrade to true),
+      // stamping the timestamp on first-time transitions. Unchecked boxes
+      // omit the key entirely so a prior true is preserved.
+      const nowIso = new Date().toISOString();
+      const consentPatch: Record<string, unknown> = {};
+      if (smsOptIn) {
+        consentPatch.opt_in_consent = true;
+        if (!priorSms || !priorSmsAt) consentPatch.sms_opt_in_at = priorSmsAt ?? nowIso;
+      }
+      if (consentSigned) {
+        consentPatch.consent_form_signed = true;
+        if (!priorConsent || !priorConsentAt) consentPatch.consent_form_signed_at = priorConsentAt ?? nowIso;
       }
 
       const { data: customerRow, error: custErr } = await supabase
@@ -265,6 +289,7 @@ function NewQuotePage() {
             // existing contact's email with null on dedup collision.
             ...(emailTrim ? { email: emailTrim } : {}),
             source: "quote",
+            ...consentPatch,
           },
           { onConflict: "user_id,phone_number" },
         )
@@ -280,6 +305,21 @@ function NewQuotePage() {
           action_type: "customer_email_updated",
           status: "overwritten_via_quote",
           message_sent: JSON.stringify({ old: priorEmail, new: emailTrim, source: "quote" }),
+        });
+      }
+
+      // Audit trail: log when a quote would have downgraded an existing
+      // consent true -> false (we prevent it, but record the attempt).
+      const preserved: string[] = [];
+      if (priorSms && !smsOptIn) preserved.push("opt_in_consent");
+      if (priorConsent && !consentSigned) preserved.push("consent_form_signed");
+      if (preserved.length) {
+        await supabase.from("logs").insert({
+          user_id: u.user.id,
+          customer_id: customerRow.id,
+          action_type: "customer_consent_preserved",
+          status: "prevented_downgrade_via_quote",
+          message_sent: JSON.stringify({ preserved, source: "quote" }),
         });
       }
 
