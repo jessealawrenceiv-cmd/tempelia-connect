@@ -519,7 +519,12 @@ function SchedulePage() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        {label}{a.time ? ` · ${a.time.slice(0,5)}` : " · all-day"}
+                        {label}
+                        {a.time && a.duration_minutes > 0
+                          ? ` · ${a.time.slice(0,5)}–${addMinutesHHMM(a.time, a.duration_minutes)}`
+                          : a.time
+                            ? ` · ${a.time.slice(0,5)}`
+                            : " · all-day"}
                       </div>
                       <div className="font-display text-base uppercase mt-0.5">{a.title}</div>
                       {a.notes && <div className="mono text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{a.notes}</div>}
@@ -533,6 +538,7 @@ function SchedulePage() {
                       <button
                         onClick={() => downloadIcs({
                           id: a.id, title: a.title, date: a.date, time: a.time, notes: a.notes, createdAt: a.created_at,
+                          durationMinutes: a.duration_minutes,
                         })}
                         className="mono inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider hover:border-primary hover:text-primary"
                       ><Download size={12} /> .ics</button>
