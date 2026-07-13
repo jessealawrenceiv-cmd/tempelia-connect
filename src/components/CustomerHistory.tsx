@@ -14,10 +14,13 @@ type QuoteRow = {
   id: string;
   customer_first_name: string;
   customer_last_name: string | null;
+  po_number: string | null;
   job_site_address: string;
+  billing_address: string | null;
   description: string | null;
   line_items: Array<{ key?: string; label?: string; description?: string; amount?: number | string }> | null;
   subtotal: number | string | null;
+  tax_rate: number | string | null;
   tax_amount: number | string | null;
   total_amount: number | string;
   status: string;
