@@ -248,6 +248,7 @@ function ContactsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium">{[c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed"}</div>
+                        <div className="mono text-[10px] text-muted-foreground">ID: {c.id.slice(0, 8)}</div>
                         {c.last_service_date && (
                           <div className="mono text-[10px] text-muted-foreground">last job {fmtDate(c.last_service_date)}</div>
                         )}
