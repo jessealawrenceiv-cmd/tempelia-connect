@@ -228,6 +228,23 @@ export const submitIntake = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
+    // Auto-promote intake into Contacts (dedupe on user_id + phone_number).
+    // Intake doesn't collect explicit SMS consent, so opt_in_consent stays false —
+    // the owner grants it from the Contacts page after verbally confirming.
+    await supabaseAdmin
+      .from("customers")
+      .upsert(
+        {
+          user_id: data.userId,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          phone_number: data.phone,
+          email: data.email || null,
+          source: "intake",
+        },
+        { onConflict: "user_id,phone_number", ignoreDuplicates: true },
+      );
+
     // Log rate-limit hit only on success
     await supabaseAdmin
       .from("intake_rate_limits")
