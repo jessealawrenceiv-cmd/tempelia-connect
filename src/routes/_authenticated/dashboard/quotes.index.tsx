@@ -79,6 +79,19 @@ function QuotesListPage() {
       setSendingId(null);
     }
   }
+  async function handleAskWhy(quoteId: string) {
+    setAskingId(quoteId);
+    try {
+      await askWhyFn({ data: { quoteId } });
+      toast.success("Follow-up sent — awaiting reply.");
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Send failed");
+    } finally {
+      setAskingId(null);
+    }
+  }
+
 
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["quotes"],
