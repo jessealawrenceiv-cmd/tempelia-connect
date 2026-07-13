@@ -12,6 +12,9 @@ export const INTAKE_LIMITS = {
   // Per (user_id + ip_hash) window
   RATE_LIMIT_WINDOW_MIN: 60,
   RATE_LIMIT_MAX: 5,
+  // Global per-business ceiling across ALL IPs — catches distributed spam
+  BUSINESS_CEILING_WINDOW_MIN: 60,
+  BUSINESS_CEILING_MAX: 30,
 } as const;
 
 // ─── Magic-byte sniff (don't trust client-provided MIME) ─────────
@@ -90,10 +93,19 @@ function hashIp(ip: string): string {
 }
 
 function clientIp(): string {
+  // Cloudflare sets and OVERWRITES cf-connecting-ip on every request — clients cannot spoof it.
+  const cf = getRequestHeader("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const real = getRequestHeader("x-real-ip");
+  if (real) return real.trim();
+  // Fallback: take the LAST hop of x-forwarded-for (closest to our server),
+  // never the first (attacker-controlled). Still only a fallback.
   const fwd = getRequestHeader("x-forwarded-for") || "";
-  const first = fwd.split(",")[0]?.trim();
-  return first || getRequestHeader("x-real-ip") || "0.0.0.0";
+  const parts = fwd.split(",").map((s) => s.trim()).filter(Boolean);
+  return parts[parts.length - 1] || "0.0.0.0";
 }
+
+
 
 export const getIntakeBusinessInfo = createServerFn({ method: "GET" })
   .inputValidator((d: { userId: string }) => z.object({ userId: z.string().uuid() }).parse(d))
@@ -127,17 +139,31 @@ export const submitIntake = createServerFn({ method: "POST" })
     if (!prof) throw new Error("Business not found");
     if (!prof.intake_enabled) throw new Error("This intake form is not accepting submissions");
 
-    // Rate limit: N submissions per (business, IP) per window
+    // Rate limit #1: per (business, IP) — catches a single spammer
     const ipHash = hashIp(clientIp());
     const windowStart = new Date(Date.now() - INTAKE_LIMITS.RATE_LIMIT_WINDOW_MIN * 60_000).toISOString();
-    const { count } = await supabaseAdmin
+    const { count: perIpCount } = await supabaseAdmin
       .from("intake_rate_limits")
       .select("id", { count: "exact", head: true })
       .eq("user_id", data.userId)
       .eq("ip_hash", ipHash)
       .gte("submitted_at", windowStart);
-    if ((count ?? 0) >= INTAKE_LIMITS.RATE_LIMIT_MAX) {
+    if ((perIpCount ?? 0) >= INTAKE_LIMITS.RATE_LIMIT_MAX) {
       throw new Error("Too many submissions. Please try again later.");
+    }
+
+    // Rate limit #2: global per-business ceiling across ALL IPs — floor against
+    // distributed / botnet spam that rotates source IPs.
+    const ceilingWindowStart = new Date(
+      Date.now() - INTAKE_LIMITS.BUSINESS_CEILING_WINDOW_MIN * 60_000,
+    ).toISOString();
+    const { count: perBizCount } = await supabaseAdmin
+      .from("intake_rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", data.userId)
+      .gte("submitted_at", ceilingWindowStart);
+    if ((perBizCount ?? 0) >= INTAKE_LIMITS.BUSINESS_CEILING_MAX) {
+      throw new Error("This form is temporarily paused due to unusual traffic. Try again later.");
     }
 
     // ── Photo validation + server-side upload ──────────────────
