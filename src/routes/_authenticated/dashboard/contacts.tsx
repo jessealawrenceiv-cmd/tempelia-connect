@@ -237,7 +237,7 @@ function ContactsPage() {
                 const last = lastReviewByContact?.get(c.id);
                 const isOpen = expanded.has(c.id);
                 return (
-                  <FragmentRow key={c.id}>
+                  <Fragment key={c.id}>
                     <tr
                       className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
                       onClick={() => toggleExpand(c.id)}
@@ -304,7 +304,7 @@ function ContactsPage() {
                         </td>
                       </tr>
                     )}
-                  </FragmentRow>
+                  </Fragment>
                 );
               })}
 
