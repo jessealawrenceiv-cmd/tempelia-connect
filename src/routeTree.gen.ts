@@ -23,6 +23,7 @@ import { Route as AuthenticatedDashboardDeadLeadsRouteImport } from './routes/_a
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicDebugIpRouteImport } from './routes/api/public/_debug/ip'
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
 
 const AuthRoute = AuthRouteImport.update({
@@ -101,6 +102,11 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicDebugIpRoute = ApiPublicDebugIpRouteImport.update({
+  id: '/api/public/_debug/ip',
+  path: '/api/public/ip',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardAdminNumbersRoute =
   AuthenticatedDashboardAdminNumbersRouteImport.update({
     id: '/dashboard/admin/numbers',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
+  '/api/public/ip': typeof ApiPublicDebugIpRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
+  '/api/public/ip': typeof ApiPublicDebugIpRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
+  '/api/public/_debug/ip': typeof ApiPublicDebugIpRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard/'
     | '/dashboard/admin/numbers'
+    | '/api/public/ip'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard'
     | '/dashboard/admin/numbers'
+    | '/api/public/ip'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/settings'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/admin/numbers'
+    | '/api/public/_debug/ip'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   IntakeBusinessIdRoute: typeof IntakeBusinessIdRoute
+  ApiPublicDebugIpRoute: typeof ApiPublicDebugIpRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
@@ -320,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/_debug/ip': {
+      id: '/api/public/_debug/ip'
+      path: '/api/public/ip'
+      fullPath: '/api/public/ip'
+      preLoaderRoute: typeof ApiPublicDebugIpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/dashboard/admin/numbers': {
       id: '/_authenticated/dashboard/admin/numbers'
       path: '/dashboard/admin/numbers'
@@ -362,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   IntakeBusinessIdRoute: IntakeBusinessIdRoute,
+  ApiPublicDebugIpRoute: ApiPublicDebugIpRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
