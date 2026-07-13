@@ -266,12 +266,12 @@ function NewQuotePage() {
 
           <div className="divide-y divide-border">
             {categories.map((c, idx) => (
-              <div key={c.key} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">
+              <div key={c.key} className="grid grid-cols-[auto_1fr_auto] items-start gap-3 py-3">
                 <input
                   type="checkbox"
                   checked={c.checked}
                   onChange={(e) => updateCategory(idx, { checked: e.target.checked })}
-                  className="h-4 w-4 accent-primary"
+                  className="mt-2 h-4 w-4 accent-primary"
                 />
                 <div className="min-w-0 space-y-2">
                   <div className="text-sm font-medium">{c.label}</div>
@@ -305,19 +305,25 @@ function NewQuotePage() {
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="mono text-xs text-muted-foreground">$</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={c.amount}
-                    onChange={(e) => updateCategory(idx, { amount: e.target.value })}
-                    disabled={!c.checked}
-                    placeholder="0.00"
-                    className="mono w-28 rounded-sm border border-border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50"
-                  />
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-1">
+                    <span className="mono text-xs text-muted-foreground">$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={c.amount}
+                      onChange={(e) => updateCategory(idx, { amount: e.target.value })}
+                      disabled={!c.checked}
+                      placeholder="0.00"
+                      aria-invalid={rowErrors[idx] !== null}
+                      className={`mono w-28 rounded-sm border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50 ${
+                        rowErrors[idx] ? "border-destructive" : "border-border"
+                      }`}
+                    />
+                  </div>
+                  {rowErrors[idx] && (
+                    <span className="mono text-[10px] text-destructive">{rowErrors[idx]}</span>
+                  )}
                 </div>
               </div>
             ))}
