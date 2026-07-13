@@ -12,7 +12,7 @@ function clientIp(): string {
   return parts[parts.length - 1] || "0.0.0.0";
 }
 
-export const Route = createFileRoute("/api/public/_debug/ip")({
+export const Route = createFileRoute("/api/public/debug-ip")({
   server: {
     handlers: {
       GET: async () =>

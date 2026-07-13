@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as IntakeBusinessIdRouteImport } from './routes/intake.$businessId'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
+import { Route as ApiPublicDebugIpRouteImport } from './routes/api/public/debug-ip'
 import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard/settings'
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
 import { Route as AuthenticatedDashboardMissedCallsRouteImport } from './routes/_authenticated/dashboard/missed-calls'
@@ -23,7 +24,6 @@ import { Route as AuthenticatedDashboardDeadLeadsRouteImport } from './routes/_a
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicDebugIpRouteImport } from './routes/api/public/_debug/ip'
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
 
 const AuthRoute = AuthRouteImport.update({
@@ -56,6 +56,11 @@ const AuthenticatedDashboardIndexRoute =
     path: '/dashboard/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicDebugIpRoute = ApiPublicDebugIpRouteImport.update({
+  id: '/api/public/debug-ip',
+  path: '/api/public/debug-ip',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardSettingsRoute =
   AuthenticatedDashboardSettingsRouteImport.update({
     id: '/dashboard/settings',
@@ -102,11 +107,6 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicDebugIpRoute = ApiPublicDebugIpRouteImport.update({
-  id: '/api/public/_debug/ip',
-  path: '/api/public/ip',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedDashboardAdminNumbersRoute =
   AuthenticatedDashboardAdminNumbersRouteImport.update({
     id: '/dashboard/admin/numbers',
@@ -124,9 +124,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/api/public/debug-ip': typeof ApiPublicDebugIpRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
-  '/api/public/ip': typeof ApiPublicDebugIpRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -141,9 +141,9 @@ export interface FileRoutesByTo {
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/api/public/debug-ip': typeof ApiPublicDebugIpRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
-  '/api/public/ip': typeof ApiPublicDebugIpRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -160,9 +160,9 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/api/public/debug-ip': typeof ApiPublicDebugIpRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
-  '/api/public/_debug/ip': typeof ApiPublicDebugIpRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -179,9 +179,9 @@ export interface FileRouteTypes {
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
     | '/dashboard/settings'
+    | '/api/public/debug-ip'
     | '/dashboard/'
     | '/dashboard/admin/numbers'
-    | '/api/public/ip'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
@@ -196,9 +196,9 @@ export interface FileRouteTypes {
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
     | '/dashboard/settings'
+    | '/api/public/debug-ip'
     | '/dashboard'
     | '/dashboard/admin/numbers'
-    | '/api/public/ip'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
@@ -214,9 +214,9 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/missed-calls'
     | '/_authenticated/dashboard/reviews'
     | '/_authenticated/dashboard/settings'
+    | '/api/public/debug-ip'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/admin/numbers'
-    | '/api/public/_debug/ip'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
@@ -277,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/debug-ip': {
+      id: '/api/public/debug-ip'
+      path: '/api/public/debug-ip'
+      fullPath: '/api/public/debug-ip'
+      preLoaderRoute: typeof ApiPublicDebugIpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/dashboard/settings': {
       id: '/_authenticated/dashboard/settings'
       path: '/dashboard/settings'
@@ -331,13 +338,6 @@ declare module '@tanstack/react-router' {
       path: '/api/public/payments/webhook'
       fullPath: '/api/public/payments/webhook'
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/_debug/ip': {
-      id: '/api/public/_debug/ip'
-      path: '/api/public/ip'
-      fullPath: '/api/public/ip'
-      preLoaderRoute: typeof ApiPublicDebugIpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard/admin/numbers': {
