@@ -45,11 +45,33 @@ function fmtDate(s: string | null) {
 function QuotesListPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const sendSmsFn = useServerFn(sendQuoteSms);
   const toggle = (id: string) => setExpanded((prev) => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+
+  async function handleSendSms(quoteId: string, force = false) {
+    setSendingId(quoteId);
+    try {
+      const res = await sendSmsFn({ data: { quoteId, force } });
+      if (!res.ok && res.reason === "cooldown") {
+        if (window.confirm(`Already sent ${res.minutesAgo} minute(s) ago — send again?`)) {
+          await handleSendSms(quoteId, true);
+          return;
+        }
+        toast.info("Send canceled.");
+        return;
+      }
+      toast.success(`SMS sent · ${"sid" in res ? res.sid : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Send failed");
+    } finally {
+      setSendingId(null);
+    }
+  }
 
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["quotes"],
