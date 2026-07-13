@@ -217,10 +217,15 @@ function IntakeForm() {
             <textarea rows={4} className={inp} value={form.description} onChange={(e) => upd("description", e.target.value)} placeholder="Anything else we should know?" />
           </Field>
 
-          <Field label="Photos (up to 5)">
-            <input type="file" accept="image/*" multiple onChange={onFiles} className="text-sm" />
-            {files.length > 0 && <div className="mono text-xs text-muted-foreground mt-1">{files.length} file(s) selected</div>}
+          <Field label={`Photos (up to ${MAX_PHOTOS}, 5 MB each, 20 MB total)`}>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple onChange={onFiles} className="text-sm" />
+            {files.length > 0 && <div className="mono text-xs text-muted-foreground mt-1">{files.length} file(s) selected · {(files.reduce((a,f)=>a+f.size,0)/1024/1024).toFixed(1)} MB</div>}
           </Field>
+
+          {/* Honeypot: hidden from real users, visible only to naïve bots */}
+          <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+            <label>Website<input tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => upd("website", e.target.value)} /></label>
+          </div>
 
           <button
             type="submit"
