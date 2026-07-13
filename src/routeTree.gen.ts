@@ -20,6 +20,7 @@ import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_aut
 import { Route as AuthenticatedDashboardMissedCallsRouteImport } from './routes/_authenticated/dashboard/missed-calls'
 import { Route as AuthenticatedDashboardIntakesRouteImport } from './routes/_authenticated/dashboard/intakes'
 import { Route as AuthenticatedDashboardDeadLeadsRouteImport } from './routes/_authenticated/dashboard/dead-leads'
+import { Route as AuthenticatedDashboardContactsRouteImport } from './routes/_authenticated/dashboard/contacts'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -85,6 +86,12 @@ const AuthenticatedDashboardDeadLeadsRoute =
     path: '/dashboard/dead-leads',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardContactsRoute =
+  AuthenticatedDashboardContactsRouteImport.update({
+    id: '/dashboard/contacts',
+    path: '/dashboard/contacts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
   id: '/api/public/twilio/voice',
   path: '/api/public/twilio/voice',
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/dashboard/contacts': typeof AuthenticatedDashboardContactsRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
@@ -129,6 +137,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/dashboard/contacts': typeof AuthenticatedDashboardContactsRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
@@ -147,6 +156,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/_authenticated/dashboard/contacts': typeof AuthenticatedDashboardContactsRoute
   '/_authenticated/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/_authenticated/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/_authenticated/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/dashboard/contacts'
     | '/dashboard/dead-leads'
     | '/dashboard/intakes'
     | '/dashboard/missed-calls'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/dashboard/contacts'
     | '/dashboard/dead-leads'
     | '/dashboard/intakes'
     | '/dashboard/missed-calls'
@@ -198,6 +210,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/onboarding'
     | '/intake/$businessId'
+    | '/_authenticated/dashboard/contacts'
     | '/_authenticated/dashboard/dead-leads'
     | '/_authenticated/dashboard/intakes'
     | '/_authenticated/dashboard/missed-calls'
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardDeadLeadsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/contacts': {
+      id: '/_authenticated/dashboard/contacts'
+      path: '/dashboard/contacts'
+      fullPath: '/dashboard/contacts'
+      preLoaderRoute: typeof AuthenticatedDashboardContactsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/twilio/voice': {
       id: '/api/public/twilio/voice'
       path: '/api/public/twilio/voice'
@@ -332,6 +352,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedDashboardContactsRoute: typeof AuthenticatedDashboardContactsRoute
   AuthenticatedDashboardDeadLeadsRoute: typeof AuthenticatedDashboardDeadLeadsRoute
   AuthenticatedDashboardIntakesRoute: typeof AuthenticatedDashboardIntakesRoute
   AuthenticatedDashboardMissedCallsRoute: typeof AuthenticatedDashboardMissedCallsRoute
@@ -343,6 +364,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedDashboardContactsRoute: AuthenticatedDashboardContactsRoute,
   AuthenticatedDashboardDeadLeadsRoute: AuthenticatedDashboardDeadLeadsRoute,
   AuthenticatedDashboardIntakesRoute: AuthenticatedDashboardIntakesRoute,
   AuthenticatedDashboardMissedCallsRoute:
