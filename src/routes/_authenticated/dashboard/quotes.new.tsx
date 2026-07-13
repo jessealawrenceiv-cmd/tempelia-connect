@@ -65,9 +65,31 @@ const INITIAL_CATEGORIES: CategoryState[] = [
 
 type LaborMode = "flat" | "percent";
 
+// Strict numeric validator. Accepts only clean decimal strings like
+// "0", "12", "12.5", "12.50", ".5". Rejects "", "-1", "12abc", "1e6",
+// "1,000", "  12", "NaN", "Infinity", etc. Blank returns { blank: true }
+// so callers can distinguish "empty" from "garbage".
+type AmountParse =
+  | { ok: true; value: number }
+  | { ok: false; blank: boolean };
+
+function parseAmount(raw: string): AmountParse {
+  const s = (raw ?? "").trim();
+  if (s === "") return { ok: false, blank: true };
+  if (!/^\d+(\.\d+)?$|^\.\d+$/.test(s)) return { ok: false, blank: false };
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return { ok: false, blank: false };
+  return { ok: true, value: n };
+}
+function amountErr(raw: string, requirePositive = false): string | null {
+  const p = parseAmount(raw);
+  if (!p.ok) return p.blank ? "Enter an amount" : "Numbers only (e.g. 500 or 500.00)";
+  if (requirePositive && p.value <= 0) return "Must be greater than 0";
+  return null;
+}
 function toNum(s: string): number {
-  const n = parseFloat(s);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  const p = parseAmount(s);
+  return p.ok ? p.value : 0;
 }
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -103,6 +125,17 @@ function NewQuotePage() {
   const [taxRateInput, setTaxRateInput] = useState("9.5");
   const [validUntil, setValidUntil] = useState<string>("");
 
+  // ─── VALIDATION ────────────────────────────────────────────────
+  // Per-row inline errors for every checked category (incl. Other) and
+  // for the Labor input (flat $ or %). Blank vs garbage both flagged.
+  const rowErrors = useMemo(
+    () => categories.map((c) => (c.checked ? amountErr(c.amount, true) : null)),
+    [categories],
+  );
+  const laborError = laborChecked ? amountErr(laborInput, true) : null;
+  const hasInvalidInput =
+    rowErrors.some((e) => e !== null) || laborError !== null;
+
   // ─── LIVE MATH ─────────────────────────────────────────────────
   const nonLaborSubtotal = useMemo(() => {
     return categories
@@ -121,9 +154,16 @@ function NewQuotePage() {
 
   // Tax applies unless: new construction OR manual tax-exempt override.
   const taxable = jobType === "existing_building" && !taxExempt;
-  const taxRate = taxable ? toNum(taxRateInput) : 0;
+  const taxRateParse = parseAmount(taxRateInput);
+  const taxRate = taxable && taxRateParse.ok ? taxRateParse.value : 0;
   const taxAmount = round2(subtotal * (taxRate / 100));
   const total = round2(subtotal + taxAmount);
+
+  // "Send" requires at least one checked line item with a positive amount
+  // (Labor alone counts). Draft can be saved without this.
+  const hasAnyValidLine =
+    categories.some((c, i) => c.checked && rowErrors[i] === null && toNum(c.amount) > 0) ||
+    (laborChecked && laborError === null && laborAmount > 0);
 
   function updateCategory(idx: number, patch: Partial<CategoryState>) {
     setCategories((prev) => prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
@@ -136,6 +176,14 @@ function NewQuotePage() {
       if (!firstName.trim()) throw new Error("First name required");
       if (!phone.trim()) throw new Error("Phone required");
       if (!jobSite.trim()) throw new Error("Job site address required");
+      // Never persist garbage — blocks BOTH draft and sent.
+      if (hasInvalidInput) {
+        throw new Error("Fix the highlighted amount fields before saving");
+      }
+      // Completeness — only blocks "sent"; drafts may be incomplete.
+      if (status === "sent" && !hasAnyValidLine) {
+        throw new Error("Add at least one line item with an amount greater than $0 before sending");
+      }
 
       // Build line_items array from checked categories (+ labor)
       const line_items: Array<Record<string, string | number>> = [];
@@ -218,12 +266,12 @@ function NewQuotePage() {
 
           <div className="divide-y divide-border">
             {categories.map((c, idx) => (
-              <div key={c.key} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">
+              <div key={c.key} className="grid grid-cols-[auto_1fr_auto] items-start gap-3 py-3">
                 <input
                   type="checkbox"
                   checked={c.checked}
                   onChange={(e) => updateCategory(idx, { checked: e.target.checked })}
-                  className="h-4 w-4 accent-primary"
+                  className="mt-2 h-4 w-4 accent-primary"
                 />
                 <div className="min-w-0 space-y-2">
                   <div className="text-sm font-medium">{c.label}</div>
@@ -257,30 +305,36 @@ function NewQuotePage() {
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="mono text-xs text-muted-foreground">$</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={c.amount}
-                    onChange={(e) => updateCategory(idx, { amount: e.target.value })}
-                    disabled={!c.checked}
-                    placeholder="0.00"
-                    className="mono w-28 rounded-sm border border-border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50"
-                  />
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-1">
+                    <span className="mono text-xs text-muted-foreground">$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={c.amount}
+                      onChange={(e) => updateCategory(idx, { amount: e.target.value })}
+                      disabled={!c.checked}
+                      placeholder="0.00"
+                      aria-invalid={rowErrors[idx] !== null}
+                      className={`mono w-28 rounded-sm border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50 ${
+                        rowErrors[idx] ? "border-destructive" : "border-border"
+                      }`}
+                    />
+                  </div>
+                  {rowErrors[idx] && (
+                    <span className="mono text-[10px] text-destructive">{rowErrors[idx]}</span>
+                  )}
                 </div>
               </div>
             ))}
 
             {/* Labor row */}
-            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">
+            <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3 py-3">
               <input
                 type="checkbox"
                 checked={laborChecked}
                 onChange={(e) => setLaborChecked(e.target.checked)}
-                className="h-4 w-4 accent-primary"
+                className="mt-2 h-4 w-4 accent-primary"
               />
               <div className="min-w-0 space-y-2">
                 <div className="text-sm font-medium">Labor</div>
@@ -294,29 +348,36 @@ function NewQuotePage() {
                     <option value="flat">Flat $</option>
                     <option value="percent">% of other checked items</option>
                   </select>
-                  {laborMode === "percent" && laborChecked && (
+                  {laborMode === "percent" && laborChecked && !laborError && (
                     <span className="mono text-[10px] text-muted-foreground">
                       = {money(laborAmount)} of {money(nonLaborSubtotal)}
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="mono text-xs text-muted-foreground">{laborMode === "flat" ? "$" : ""}</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={laborInput}
-                  onChange={(e) => setLaborInput(e.target.value)}
-                  disabled={!laborChecked}
-                  placeholder={laborMode === "flat" ? "0.00" : "0"}
-                  className="mono w-28 rounded-sm border border-border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50"
-                />
-                <span className="mono text-xs text-muted-foreground">{laborMode === "percent" ? "%" : ""}</span>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1">
+                  <span className="mono text-xs text-muted-foreground">{laborMode === "flat" ? "$" : ""}</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={laborInput}
+                    onChange={(e) => setLaborInput(e.target.value)}
+                    disabled={!laborChecked}
+                    placeholder={laborMode === "flat" ? "0.00" : "0"}
+                    aria-invalid={laborError !== null}
+                    className={`mono w-28 rounded-sm border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50 ${
+                      laborError ? "border-destructive" : "border-border"
+                    }`}
+                  />
+                  <span className="mono text-xs text-muted-foreground">{laborMode === "percent" ? "%" : ""}</span>
+                </div>
+                {laborError && (
+                  <span className="mono text-[10px] text-destructive">{laborError}</span>
+                )}
               </div>
             </div>
+
           </div>
         </section>
 
@@ -389,22 +450,35 @@ function NewQuotePage() {
           </div>
         </section>
 
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => navigate({ to: "/dashboard/quotes" })}
-            className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider"
-          >Cancel</button>
-          <button
-            disabled={save.isPending}
-            onClick={() => save.mutate("draft")}
-            className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider disabled:opacity-50"
-          >Save as draft</button>
-          <button
-            disabled={save.isPending}
-            onClick={() => save.mutate("sent")}
-            className="rounded-sm bg-primary px-4 py-2 text-xs uppercase tracking-wider text-primary-foreground disabled:opacity-50"
-          >Save & mark sent</button>
+        <div className="flex flex-col items-end gap-2">
+          {hasInvalidInput && (
+            <div className="mono text-[10px] text-destructive">
+              Fix the highlighted amount fields before saving.
+            </div>
+          )}
+          {!hasInvalidInput && !hasAnyValidLine && (
+            <div className="mono text-[10px] text-muted-foreground">
+              At least one line item with an amount &gt; $0 is required to send. Drafts may be saved empty.
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => navigate({ to: "/dashboard/quotes" })}
+              className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider"
+            >Cancel</button>
+            <button
+              disabled={save.isPending || hasInvalidInput}
+              onClick={() => save.mutate("draft")}
+              className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider disabled:opacity-50"
+            >Save as draft</button>
+            <button
+              disabled={save.isPending || hasInvalidInput || !hasAnyValidLine}
+              onClick={() => save.mutate("sent")}
+              className="rounded-sm bg-primary px-4 py-2 text-xs uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+            >Save & mark sent</button>
+          </div>
         </div>
+
       </div>
     </div>
   );
