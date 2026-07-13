@@ -78,7 +78,7 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_first_name, customer_last_name, job_site_address, description, line_items, subtotal, tax_amount, total_amount, status, job_type, tax_exempt, valid_until, created_at")
+        .select("id, customer_first_name, customer_last_name, po_number, job_site_address, billing_address, description, line_items, subtotal, tax_rate, tax_amount, total_amount, status, job_type, tax_exempt, valid_until, created_at")
         .eq("customer_id", customerId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
