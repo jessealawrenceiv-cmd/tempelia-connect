@@ -1,12 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
 
+type QuoteSearch = { edit?: string };
+
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/new")({
   component: NewQuotePage,
+  validateSearch: (s: Record<string, unknown>): QuoteSearch => ({
+    edit: typeof s.edit === "string" ? s.edit : undefined,
+  }),
 });
 
 // ─── Category catalog ────────────────────────────────────────────
