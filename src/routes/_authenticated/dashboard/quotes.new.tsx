@@ -450,22 +450,35 @@ function NewQuotePage() {
           </div>
         </section>
 
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => navigate({ to: "/dashboard/quotes" })}
-            className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider"
-          >Cancel</button>
-          <button
-            disabled={save.isPending}
-            onClick={() => save.mutate("draft")}
-            className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider disabled:opacity-50"
-          >Save as draft</button>
-          <button
-            disabled={save.isPending}
-            onClick={() => save.mutate("sent")}
-            className="rounded-sm bg-primary px-4 py-2 text-xs uppercase tracking-wider text-primary-foreground disabled:opacity-50"
-          >Save & mark sent</button>
+        <div className="flex flex-col items-end gap-2">
+          {hasInvalidInput && (
+            <div className="mono text-[10px] text-destructive">
+              Fix the highlighted amount fields before saving.
+            </div>
+          )}
+          {!hasInvalidInput && !hasAnyValidLine && (
+            <div className="mono text-[10px] text-muted-foreground">
+              At least one line item with an amount &gt; $0 is required to send. Drafts may be saved empty.
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => navigate({ to: "/dashboard/quotes" })}
+              className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider"
+            >Cancel</button>
+            <button
+              disabled={save.isPending || hasInvalidInput}
+              onClick={() => save.mutate("draft")}
+              className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider disabled:opacity-50"
+            >Save as draft</button>
+            <button
+              disabled={save.isPending || hasInvalidInput || !hasAnyValidLine}
+              onClick={() => save.mutate("sent")}
+              className="rounded-sm bg-primary px-4 py-2 text-xs uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+            >Save & mark sent</button>
+          </div>
         </div>
+
       </div>
     </div>
   );
