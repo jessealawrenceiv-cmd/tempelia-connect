@@ -16,35 +16,56 @@ export type Database = {
     Tables: {
       customers: {
         Row: {
+          consent_form_signed: boolean
+          consent_form_signed_at: string | null
           created_at: string
+          email: string | null
           first_name: string
           id: string
+          last_name: string | null
           last_reactivation_at: string | null
           last_service_date: string | null
+          notes: string | null
           opt_in_consent: boolean
           phone_number: string
+          sms_opt_in_at: string | null
+          source: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          consent_form_signed?: boolean
+          consent_form_signed_at?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string
           id?: string
+          last_name?: string | null
           last_reactivation_at?: string | null
           last_service_date?: string | null
+          notes?: string | null
           opt_in_consent?: boolean
           phone_number: string
+          sms_opt_in_at?: string | null
+          source?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          consent_form_signed?: boolean
+          consent_form_signed_at?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string
           id?: string
+          last_name?: string | null
           last_reactivation_at?: string | null
           last_service_date?: string | null
+          notes?: string | null
           opt_in_consent?: boolean
           phone_number?: string
+          sms_opt_in_at?: string | null
+          source?: string
           updated_at?: string
           user_id?: string
         }
