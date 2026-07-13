@@ -105,6 +105,25 @@ function money(n: number) {
 
 function NewQuotePage() {
   const navigate = useNavigate();
+  const { edit: editId } = Route.useSearch();
+  const isEdit = !!editId;
+
+  // Load existing quote when editing
+  const { data: existingQuote } = useQuery({
+    queryKey: ["quote-edit", editId],
+    enabled: !!editId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("id", editId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const [seeded, setSeeded] = useState(false);
+  const originalStatus = existingQuote?.status as string | undefined;
 
   // Customer
   const [firstName, setFirstName] = useState("");
