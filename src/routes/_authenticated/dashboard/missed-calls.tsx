@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
+import { getVoicemailProxyUrl } from "@/lib/voicemail.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/missed-calls")({
   component: MissedCallsPage,
@@ -46,19 +48,7 @@ function MissedCallsPage() {
                   </Td>
                   <Td className="max-w-md truncate">{row.message_sent}</Td>
                   <Td>
-                    {row.voicemail_url ? (
-                      <div className="flex flex-col gap-1">
-                        <audio controls preload="none" src={row.voicemail_url} className="h-8 w-56" />
-                        <a
-                          href={row.voicemail_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] uppercase tracking-widest text-violet underline"
-                        >
-                          Open recording ↗
-                        </a>
-                      </div>
-                    ) : (
+                    {row.voicemail_url ? <VoicemailPlayer logId={row.id} /> : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </Td>
@@ -77,6 +67,30 @@ function MissedCallsPage() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function VoicemailPlayer({ logId }: { logId: string }) {
+  const getUrl = useServerFn(getVoicemailProxyUrl);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["voicemail-proxy", logId],
+    queryFn: () => getUrl({ data: { logId } }),
+    staleTime: 4 * 60 * 1000, // refresh before the 5-min signed URL expires
+  });
+  if (isLoading) return <span className="text-xs text-muted-foreground">Loading…</span>;
+  if (error || !data?.url) return <span className="text-xs text-destructive">Unavailable</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      <audio controls preload="none" src={data.url} className="h-8 w-56" />
+      <a
+        href={data.url}
+        target="_blank"
+        rel="noreferrer"
+        className="text-[10px] uppercase tracking-widest text-violet underline"
+      >
+        Open recording ↗
+      </a>
     </div>
   );
 }
