@@ -104,6 +104,27 @@ function ContactsPage() {
     },
   });
 
+  // Most recent email-overwrite audit entry per contact (from quote flow).
+  const { data: emailUpdateByContact } = useQuery({
+    queryKey: ["contact-email-updates"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("logs")
+        .select("customer_id, message_sent, created_at")
+        .eq("action_type", "customer_email_updated")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      const map = new Map<string, { at: string; old: string | null; new: string | null }>();
+      (data ?? []).forEach((l: any) => {
+        if (!l.customer_id || map.has(l.customer_id)) return;
+        let parsed: { old?: string; new?: string } = {};
+        try { parsed = l.message_sent ? JSON.parse(l.message_sent) : {}; } catch { /* ignore */ }
+        map.set(l.customer_id, { at: l.created_at, old: parsed.old ?? null, new: parsed.new ?? null });
+      });
+      return map;
+    },
+  });
+
   const filtered = useMemo(() => {
     if (!contacts) return [];
     const needle = q.trim().toLowerCase();
@@ -211,7 +232,17 @@ function ContactsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 mono text-xs">{c.phone_number}</td>
-                    <td className="px-4 py-3 mono text-xs hidden md:table-cell">{c.email || "—"}</td>
+                    <td className="px-4 py-3 mono text-xs hidden md:table-cell">
+                      <div>{c.email || "—"}</div>
+                      {emailUpdateByContact?.get(c.id) && (
+                        <div
+                          className="mono text-[10px] text-violet"
+                          title={`Was: ${emailUpdateByContact.get(c.id)!.old ?? "—"} → Now: ${emailUpdateByContact.get(c.id)!.new ?? "—"}`}
+                        >
+                          ⚠ email updated via quote, {fmtDate(emailUpdateByContact.get(c.id)!.at)}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">{sourceBadge(c.source)}</td>
                     <td className="px-4 py-3">
                       {c.opt_in_consent ? (
