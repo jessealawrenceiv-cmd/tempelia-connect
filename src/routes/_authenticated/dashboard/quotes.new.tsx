@@ -179,6 +179,64 @@ function NewQuotePage() {
   const [taxRateInput, setTaxRateInput] = useState("9.5");
   const [validUntil, setValidUntil] = useState<string>("");
 
+  // Seed all state from existingQuote once loaded
+  useEffect(() => {
+    if (!existingQuote || seeded) return;
+    const q = existingQuote as any;
+    setFirstName(q.customer_first_name ?? "");
+    setLastName(q.customer_last_name ?? "");
+    setBusinessName(q.customer_business_name ?? "");
+    setPhone(q.customer_phone ?? "");
+    setPoNumber(q.po_number ?? "");
+    setJobSite(q.job_site_address ?? "");
+    setBilling(q.billing_address ?? "");
+    setDescription(q.description ?? "");
+    setJobType(q.job_type ?? "existing_building");
+    setTaxExempt(!!q.tax_exempt);
+    setTaxRateInput(q.tax_rate != null ? String(q.tax_rate) : "9.5");
+    setValidUntil(q.valid_until ?? "");
+
+    const items: Array<any> = Array.isArray(q.line_items) ? q.line_items : [];
+    setCategories((prev) =>
+      prev.map((c) => {
+        const found = items.find((li) => li.key === c.key);
+        if (!found) return c;
+        const next: CategoryState = {
+          ...c,
+          checked: true,
+          amount: String(found.amount ?? ""),
+        };
+        if (c.key === "surface_prep" || c.key === "desired_finish") {
+          if (found.label) next.variant = found.label;
+        }
+        if (c.key === "other" && found.label) next.freeLabel = found.label;
+        return next;
+      }),
+    );
+    const labor = items.find((li) => li.key === "labor");
+    if (labor) {
+      setLaborChecked(true);
+      setLaborMode(labor.labor_mode === "percent" ? "percent" : "flat");
+      setLaborInput(String(labor.labor_input ?? labor.amount ?? ""));
+    }
+    if (q.customer_id) {
+      supabase
+        .from("customers")
+        .select("email, opt_in_consent, consent_form_signed")
+        .eq("id", q.customer_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setEmail(data.email ?? "");
+            setSmsOptIn(!!data.opt_in_consent);
+            setConsentSigned(!!data.consent_form_signed);
+          }
+        });
+    }
+    setSeeded(true);
+  }, [existingQuote, seeded]);
+
+
   // ─── VALIDATION ────────────────────────────────────────────────
   // Per-row inline errors for every checked category (incl. Other) and
   // for the Labor input (flat $ or %). Blank vs garbage both flagged.
