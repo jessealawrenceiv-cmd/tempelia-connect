@@ -77,6 +77,35 @@ export type Database = {
         }
         Relationships: []
       }
+      intake_rate_limits: {
+        Row: {
+          id: string
+          ip_hash: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          ip_hash: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          ip_hash?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_rate_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intake_submissions: {
         Row: {
           created_at: string
@@ -250,6 +279,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          intake_enabled: boolean
           review_requests_enabled: boolean
           stripe_customer_id: string | null
           subscription_status: string
@@ -265,6 +295,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id: string
+          intake_enabled?: boolean
           review_requests_enabled?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string
@@ -280,6 +311,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          intake_enabled?: boolean
           review_requests_enabled?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string
