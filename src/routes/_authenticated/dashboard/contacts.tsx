@@ -83,6 +83,7 @@ function ContactsPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+  const { copied, copy } = useCopy();
 
 
   const { data: contacts, isLoading } = useQuery({
