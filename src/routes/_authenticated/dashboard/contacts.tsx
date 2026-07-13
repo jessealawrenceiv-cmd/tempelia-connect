@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
+import { CustomerHistory } from "@/components/CustomerHistory";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -9,6 +10,7 @@ import { z } from "zod";
 export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
   component: ContactsPage,
 });
+
 
 const phoneSchema = z.string().trim().regex(/^\+?[1-9]\d{7,14}$/, "Use E.164 format e.g. +15551234567");
 const SOURCES = ["all", "intake", "manual", "seeded"] as const;
