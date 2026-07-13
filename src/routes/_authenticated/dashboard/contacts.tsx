@@ -57,7 +57,9 @@ function ContactsPage() {
   const [smsFilter, setSmsFilter] = useState<(typeof SMS_FILTERS)[number]>("all");
   const [formFilter, setFormFilter] = useState<(typeof FORM_FILTERS)[number]>("all");
   const [since, setSince] = useState<string>("");
+  const [editing, setEditing] = useState<Contact | null>(null);
   const [showNew, setShowNew] = useState(false);
+
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleExpand = (id: string) => setExpanded((prev) => {
     const next = new Set(prev);
