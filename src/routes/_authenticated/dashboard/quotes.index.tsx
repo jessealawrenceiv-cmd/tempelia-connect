@@ -130,9 +130,9 @@ function QuotesListPage() {
                           <td></td>
                           <td colSpan={6} className="px-4 py-4">
                             <div className="label-eyebrow mb-3">
-                              Customer context {name ? `· ${name}` : ""} <span className="text-muted-foreground">(this quote excluded)</span>
+                              Quote detail + customer history {name ? `· ${name}` : ""}
                             </div>
-                            <CustomerHistory customerId={q.customer_id} excludeQuoteId={q.id} />
+                            <CustomerHistory customerId={q.customer_id} />
                           </td>
                         </tr>
                       )}
