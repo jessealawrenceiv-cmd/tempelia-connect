@@ -225,6 +225,15 @@ function QuotesListPage() {
                                 {sendingId === q.id ? "…" : q.status === "draft" ? "send sms" : "resend sms"}
                               </button>
                             )}
+                            {q.status === "declined" && !q.decline_followup_sent_at && (
+                              <button
+                                disabled={askingId === q.id}
+                                onClick={() => handleAskWhy(q.id)}
+                                className="mono rounded-sm border border-orange/60 px-2 py-1 text-[10px] uppercase tracking-wider text-orange hover:bg-orange hover:text-orange-foreground disabled:opacity-50"
+                              >
+                                {askingId === q.id ? "…" : "ask why declined"}
+                              </button>
+                            )}
                             {q.status === "accepted" && (
                               <Link
                                 to="/dashboard/schedule"
