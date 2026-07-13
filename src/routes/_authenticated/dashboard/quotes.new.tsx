@@ -468,7 +468,12 @@ function NewQuotePage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Estimates" title="Create Quote" />
+      <PageHeader eyebrow="Estimates" title={isEdit ? (originalStatus === "draft" ? "Edit Draft Quote" : `Revise Quote (archives ${originalStatus})`) : "Create Quote"} />
+      {isEdit && originalStatus && originalStatus !== "draft" && (
+        <div className="mx-5 mt-4 md:mx-8 rounded-sm border border-orange/40 bg-orange/10 px-3 py-2 mono text-[11px] text-paper">
+          // saving will create a NEW quote and archive the original ({originalStatus}) — history preserved
+        </div>
+      )}
       <div className="p-5 md:p-8 space-y-5 max-w-5xl">
         {/* Customer */}
         <section className="panel p-5 space-y-3">
