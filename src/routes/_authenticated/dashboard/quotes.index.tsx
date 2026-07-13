@@ -18,6 +18,7 @@ type QuoteRow = {
   customer_first_name: string;
   customer_last_name: string | null;
   customer_business_name: string | null;
+  customer_phone: string;
   job_site_address: string;
   total_amount: number;
   status: "draft" | "sent" | "accepted" | "declined" | "expired" | "archived";
@@ -79,7 +80,7 @@ function QuotesListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id")
+        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, customer_phone, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as QuoteRow[];
@@ -194,6 +195,23 @@ function QuotesListPage() {
                               >
                                 {sendingId === q.id ? "…" : q.status === "draft" ? "send sms" : "resend sms"}
                               </button>
+                            )}
+                            {q.status === "accepted" && (
+                              <Link
+                                to="/dashboard/schedule"
+                                search={{
+                                  quoteId: q.id,
+                                  customerId: q.customer_id ?? undefined,
+                                  firstName: q.customer_first_name,
+                                  lastName: q.customer_last_name ?? undefined,
+                                  phone: q.customer_phone,
+                                  title: `Job — ${[q.customer_first_name, q.customer_last_name].filter(Boolean).join(" ")}`,
+                                  address: q.job_site_address,
+                                }}
+                                className="mono rounded-sm border border-moss/60 px-2 py-1 text-[10px] uppercase tracking-wider text-moss hover:bg-moss hover:text-charcoal"
+                              >
+                                schedule job
+                              </Link>
                             )}
                           </div>
                         </td>
