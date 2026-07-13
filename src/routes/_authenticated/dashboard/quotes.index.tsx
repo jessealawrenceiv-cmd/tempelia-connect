@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { Fragment, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
+import { CustomerHistory } from "@/components/CustomerHistory";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
   component: QuotesListPage,
@@ -9,6 +11,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
 
 type QuoteRow = {
   id: string;
+  customer_id: string | null;
   customer_first_name: string;
   customer_last_name: string | null;
   customer_business_name: string | null;
@@ -18,6 +21,7 @@ type QuoteRow = {
   created_at: string;
   valid_until: string | null;
 };
+
 
 const STATUS_STYLES: Record<QuoteRow["status"], string> = {
   draft: "bg-muted text-muted-foreground",
