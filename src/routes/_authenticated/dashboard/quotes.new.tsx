@@ -65,9 +65,31 @@ const INITIAL_CATEGORIES: CategoryState[] = [
 
 type LaborMode = "flat" | "percent";
 
+// Strict numeric validator. Accepts only clean decimal strings like
+// "0", "12", "12.5", "12.50", ".5". Rejects "", "-1", "12abc", "1e6",
+// "1,000", "  12", "NaN", "Infinity", etc. Blank returns { blank: true }
+// so callers can distinguish "empty" from "garbage".
+type AmountParse =
+  | { ok: true; value: number }
+  | { ok: false; blank: boolean };
+
+function parseAmount(raw: string): AmountParse {
+  const s = (raw ?? "").trim();
+  if (s === "") return { ok: false, blank: true };
+  if (!/^\d+(\.\d+)?$|^\.\d+$/.test(s)) return { ok: false, blank: false };
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return { ok: false, blank: false };
+  return { ok: true, value: n };
+}
+function amountErr(raw: string, requirePositive = false): string | null {
+  const p = parseAmount(raw);
+  if (!p.ok) return p.blank ? "Enter an amount" : "Numbers only (e.g. 500 or 500.00)";
+  if (requirePositive && p.value <= 0) return "Must be greater than 0";
+  return null;
+}
 function toNum(s: string): number {
-  const n = parseFloat(s);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  const p = parseAmount(s);
+  return p.ok ? p.value : 0;
 }
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
