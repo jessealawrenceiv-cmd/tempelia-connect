@@ -138,7 +138,7 @@ function NewQuotePage() {
       if (!jobSite.trim()) throw new Error("Job site address required");
 
       // Build line_items array from checked categories (+ labor)
-      const line_items: { key: string; label: string; amount: number; meta?: Record<string, unknown> }[] = [];
+      const line_items: Array<Record<string, string | number>> = [];
       for (const c of categories) {
         if (!c.checked) continue;
         let label = c.label;
@@ -151,7 +151,8 @@ function NewQuotePage() {
           key: "labor",
           label: laborMode === "percent" ? `Labor (${toNum(laborInput)}%)` : "Labor",
           amount: laborAmount,
-          meta: { mode: laborMode, input: toNum(laborInput) },
+          labor_mode: laborMode,
+          labor_input: toNum(laborInput),
         });
       }
 
