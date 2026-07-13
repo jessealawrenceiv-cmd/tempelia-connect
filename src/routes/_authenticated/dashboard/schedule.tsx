@@ -41,12 +41,29 @@ type Appointment = {
   title: string;
   date: string;
   time: string | null;
+  duration_minutes: number;
   notes: string | null;
   created_at: string;
 };
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// duration in minutes: 0 => all-day; otherwise timed length
+const DURATION_PRESETS: Array<{ label: string; value: number }> = [
+  { label: "30m", value: 30 },
+  { label: "1h", value: 60 },
+  { label: "2h", value: 120 },
+  { label: "4h", value: 240 },
+  { label: "All day", value: 0 },
+];
+
+function addMinutesHHMM(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  const wrapped = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
 }
 
 function SchedulePage() {
@@ -69,6 +86,10 @@ function SchedulePage() {
   const [title, setTitle] = useState(search.title ?? "");
   const [date, setDate] = useState<string>(ymd(new Date()));
   const [time, setTime] = useState<string>("09:00");
+  const [durationMinutes, setDurationMinutes] = useState<number>(60);
+  const [customDuration, setCustomDuration] = useState<string>("");
+  const isCustomDuration = !DURATION_PRESETS.some((p) => p.value === durationMinutes);
+  const isAllDay = durationMinutes === 0;
   const [notes, setNotes] = useState<string>(search.address ? `Location: ${search.address}` : "");
   const [customerId, setCustomerId] = useState<string | null>(search.customerId ?? null);
   const quoteIdParam = search.quoteId ?? null;
@@ -162,6 +183,7 @@ function SchedulePage() {
         cid = cust.id;
       }
 
+      const allDay = durationMinutes === 0;
       const { data, error } = await supabase
         .from("appointments")
         .insert({
@@ -171,7 +193,8 @@ function SchedulePage() {
           intake_submission_id: intakeIdParam,
           title: title.trim(),
           date,
-          time: time || null,
+          time: allDay ? null : (time || null),
+          duration_minutes: durationMinutes,
           notes: notes.trim() || null,
         })
         .select("*")
@@ -319,11 +342,16 @@ function SchedulePage() {
                         <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
                         <span className="mono text-[9px] uppercase tracking-widest text-muted-foreground">{dayAppts.length}</span>
                       </div>
-                      {dayAppts.slice(0, 2).map((a) => (
-                        <div key={a.id} className="mono text-[9px] truncate text-paper/80" title={a.title}>
-                          {a.time ? a.time.slice(0,5) + " " : ""}{a.title}
-                        </div>
-                      ))}
+                      {dayAppts.slice(0, 2).map((a) => {
+                        const start = a.time ? a.time.slice(0, 5) : null;
+                        const end = start && a.duration_minutes > 0 ? addMinutesHHMM(a.time!, a.duration_minutes) : null;
+                        const range = start ? (end ? `${start}–${end}` : start) : "all-day";
+                        return (
+                          <div key={a.id} className="mono text-[9px] truncate text-paper/80" title={`${range} ${a.title}`}>
+                            {range} {a.title}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </button>
@@ -358,8 +386,64 @@ function SchedulePage() {
               <label className="block">
                 <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Time</div>
                 <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
-                  className="mt-1 w-full rounded-sm border border-border bg-background px-3 py-2 text-sm mono" />
+                  disabled={isAllDay}
+                  className="mt-1 w-full rounded-sm border border-border bg-background px-3 py-2 text-sm mono disabled:opacity-50" />
               </label>
+            </div>
+            <div className="md:col-span-2">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Duration</div>
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                {DURATION_PRESETS.map((p) => {
+                  const active = !isCustomDuration && durationMinutes === p.value;
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => { setDurationMinutes(p.value); setCustomDuration(""); }}
+                      className={`mono rounded-sm border px-2.5 py-1 text-[10px] uppercase tracking-widest ${
+                        active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                      }`}
+                    >{p.label}</button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isCustomDuration) {
+                      setDurationMinutes(90);
+                      setCustomDuration("90");
+                    }
+                  }}
+                  className={`mono rounded-sm border px-2.5 py-1 text-[10px] uppercase tracking-widest ${
+                    isCustomDuration ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                  }`}
+                >Custom</button>
+                {isCustomDuration && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      max={1440}
+                      value={customDuration}
+                      onChange={(e) => {
+                        setCustomDuration(e.target.value);
+                        const n = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(n) && n > 0 && n <= 1440) setDurationMinutes(n);
+                      }}
+                      className="w-20 rounded-sm border border-border bg-background px-2 py-1 text-sm mono"
+                    />
+                    <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">min</span>
+                  </div>
+                )}
+              </div>
+              {!isAllDay && time && (
+                <div className="mt-1 mono text-[10px] text-muted-foreground">
+                  // {time.slice(0,5)}–{addMinutesHHMM(time, durationMinutes)}
+                </div>
+              )}
+              {isAllDay && (
+                <div className="mt-1 mono text-[10px] text-muted-foreground">// all-day event</div>
+              )}
             </div>
             <label className="block">
               <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">First name</div>
@@ -435,7 +519,12 @@ function SchedulePage() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        {label}{a.time ? ` · ${a.time.slice(0,5)}` : " · all-day"}
+                        {label}
+                        {a.time && a.duration_minutes > 0
+                          ? ` · ${a.time.slice(0,5)}–${addMinutesHHMM(a.time, a.duration_minutes)}`
+                          : a.time
+                            ? ` · ${a.time.slice(0,5)}`
+                            : " · all-day"}
                       </div>
                       <div className="font-display text-base uppercase mt-0.5">{a.title}</div>
                       {a.notes && <div className="mono text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{a.notes}</div>}
@@ -449,6 +538,7 @@ function SchedulePage() {
                       <button
                         onClick={() => downloadIcs({
                           id: a.id, title: a.title, date: a.date, time: a.time, notes: a.notes, createdAt: a.created_at,
+                          durationMinutes: a.duration_minutes,
                         })}
                         className="mono inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider hover:border-primary hover:text-primary"
                       ><Download size={12} /> .ics</button>
