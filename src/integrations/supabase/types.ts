@@ -345,6 +345,78 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          billing_address: string | null
+          created_at: string
+          customer_business_name: string | null
+          customer_first_name: string
+          customer_last_name: string | null
+          customer_phone: string
+          description: string | null
+          id: string
+          job_site_address: string
+          job_type: string
+          line_items: Json
+          po_number: string | null
+          status: string
+          subtotal: number
+          tax_amount: number
+          tax_exempt: boolean
+          tax_rate: number
+          total_amount: number
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          billing_address?: string | null
+          created_at?: string
+          customer_business_name?: string | null
+          customer_first_name: string
+          customer_last_name?: string | null
+          customer_phone: string
+          description?: string | null
+          id?: string
+          job_site_address: string
+          job_type?: string
+          line_items?: Json
+          po_number?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_exempt?: boolean
+          tax_rate?: number
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          billing_address?: string | null
+          created_at?: string
+          customer_business_name?: string | null
+          customer_first_name?: string
+          customer_last_name?: string | null
+          customer_phone?: string
+          description?: string | null
+          id?: string
+          job_site_address?: string
+          job_type?: string
+          line_items?: Json
+          po_number?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_exempt?: boolean
+          tax_rate?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
