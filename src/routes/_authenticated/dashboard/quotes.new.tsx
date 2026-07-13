@@ -125,6 +125,17 @@ function NewQuotePage() {
   const [taxRateInput, setTaxRateInput] = useState("9.5");
   const [validUntil, setValidUntil] = useState<string>("");
 
+  // ─── VALIDATION ────────────────────────────────────────────────
+  // Per-row inline errors for every checked category (incl. Other) and
+  // for the Labor input (flat $ or %). Blank vs garbage both flagged.
+  const rowErrors = useMemo(
+    () => categories.map((c) => (c.checked ? amountErr(c.amount, true) : null)),
+    [categories],
+  );
+  const laborError = laborChecked ? amountErr(laborInput, true) : null;
+  const hasInvalidInput =
+    rowErrors.some((e) => e !== null) || laborError !== null;
+
   // ─── LIVE MATH ─────────────────────────────────────────────────
   const nonLaborSubtotal = useMemo(() => {
     return categories
@@ -143,9 +154,16 @@ function NewQuotePage() {
 
   // Tax applies unless: new construction OR manual tax-exempt override.
   const taxable = jobType === "existing_building" && !taxExempt;
-  const taxRate = taxable ? toNum(taxRateInput) : 0;
+  const taxRateParse = parseAmount(taxRateInput);
+  const taxRate = taxable && taxRateParse.ok ? taxRateParse.value : 0;
   const taxAmount = round2(subtotal * (taxRate / 100));
   const total = round2(subtotal + taxAmount);
+
+  // "Send" requires at least one checked line item with a positive amount
+  // (Labor alone counts). Draft can be saved without this.
+  const hasAnyValidLine =
+    categories.some((c, i) => c.checked && rowErrors[i] === null && toNum(c.amount) > 0) ||
+    (laborChecked && laborError === null && laborAmount > 0);
 
   function updateCategory(idx: number, patch: Partial<CategoryState>) {
     setCategories((prev) => prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
