@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { CustomerHistory } from "@/components/CustomerHistory";
 import { sendQuoteSms } from "@/lib/quote-sms.functions";
+import { sendDeclineFollowup } from "@/lib/decline-followup.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
   component: QuotesListPage,
@@ -25,6 +26,8 @@ type QuoteRow = {
   created_at: string;
   valid_until: string | null;
   superseded_by_id: string | null;
+  decline_reason: string | null;
+  decline_followup_sent_at: string | null;
 };
 
 const STATUS_STYLES: Record<QuoteRow["status"], string> = {
@@ -47,7 +50,10 @@ function QuotesListPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [askingId, setAskingId] = useState<string | null>(null);
   const sendSmsFn = useServerFn(sendQuoteSms);
+  const askWhyFn = useServerFn(sendDeclineFollowup);
+  const qc = useQueryClient();
   const toggle = (id: string) => setExpanded((prev) => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -73,6 +79,19 @@ function QuotesListPage() {
       setSendingId(null);
     }
   }
+  async function handleAskWhy(quoteId: string) {
+    setAskingId(quoteId);
+    try {
+      await askWhyFn({ data: { quoteId } });
+      toast.success("Follow-up sent — awaiting reply.");
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Send failed");
+    } finally {
+      setAskingId(null);
+    }
+  }
+
 
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["quotes"],
@@ -80,7 +99,7 @@ function QuotesListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, customer_phone, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id")
+        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, customer_phone, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id, decline_reason, decline_followup_sent_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as QuoteRow[];
@@ -158,6 +177,16 @@ function QuotesListPage() {
                           {q.superseded_by_id && (
                             <div className="mono text-[10px] text-orange">// superseded by newer revision</div>
                           )}
+                          {q.status === "declined" && q.decline_reason && (
+                            <div className="mono text-[10px] text-moss mt-1">
+                              // reason: <span className="text-paper">{q.decline_reason}</span>
+                            </div>
+                          )}
+                          {q.status === "declined" && !q.decline_reason && q.decline_followup_sent_at && (
+                            <div className="mono text-[10px] text-muted-foreground mt-1">
+                              // asked why — waiting on a reply
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
                         <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
@@ -194,6 +223,15 @@ function QuotesListPage() {
                                 className="mono rounded-sm border border-primary/60 px-2 py-1 text-[10px] uppercase tracking-wider text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
                               >
                                 {sendingId === q.id ? "…" : q.status === "draft" ? "send sms" : "resend sms"}
+                              </button>
+                            )}
+                            {q.status === "declined" && !q.decline_followup_sent_at && (
+                              <button
+                                disabled={askingId === q.id}
+                                onClick={() => handleAskWhy(q.id)}
+                                className="mono rounded-sm border border-orange/60 px-2 py-1 text-[10px] uppercase tracking-wider text-orange hover:bg-orange hover:text-orange-foreground disabled:opacity-50"
+                              >
+                                {askingId === q.id ? "…" : "ask why declined"}
                               </button>
                             )}
                             {q.status === "accepted" && (

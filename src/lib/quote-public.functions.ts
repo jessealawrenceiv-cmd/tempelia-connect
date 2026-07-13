@@ -61,5 +61,14 @@ export const respondToQuote = createServerFn({ method: "POST" })
       .eq("status", "sent"); // guard against races
     if (error) throw new Error(error.message);
 
+    if (data.response === "declined") {
+      try {
+        const { maybeAutoSendDeclineFollowup } = await import("./decline-followup.functions");
+        await maybeAutoSendDeclineFollowup(data.quoteId);
+      } catch {
+        // best-effort — customer response is already recorded
+      }
+    }
+
     return { ok: true, status: data.response, respondedAt: nowIso };
   });

@@ -88,6 +88,17 @@ function SettingsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const setDeclineMode = useMutation({
+    mutationFn: async (mode: "off" | "manual" | "auto") => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({ decline_followup_mode: mode }).eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
 
   return (
@@ -134,6 +145,30 @@ function SettingsPage() {
                 />
                 {profile?.review_requests_enabled === false ? "Off" : "On"}
               </label>
+            </div>
+
+            <div className="mt-6 border-t border-border pt-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="label-eyebrow">Declined-quote follow-up</div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    When a customer declines a quote: <span className="mono">off</span> = do nothing;
+                    <span className="mono"> manual</span> = show an "Ask why" button in the dashboard;
+                    <span className="mono"> auto</span> = text them automatically asking for a reason.
+                    Their reply is captured on the quote.
+                  </p>
+                </div>
+                <select
+                  value={profile?.decline_followup_mode ?? "off"}
+                  disabled={setDeclineMode.isPending}
+                  onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
+                  className="mono rounded-sm border border-border bg-background px-3 py-2 text-xs uppercase tracking-wider"
+                >
+                  <option value="off">Off</option>
+                  <option value="manual">Manual</option>
+                  <option value="auto">Auto</option>
+                </select>
+              </div>
             </div>
 
             <div className="mt-6 border-t border-border pt-4">

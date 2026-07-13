@@ -61,6 +61,37 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           return twiml("<Message>You're re-subscribed. Reply STOP anytime to unsubscribe.</Message>");
         }
 
+        // Check for a pending decline-follow-up on this number.
+        // If a phone has multiple pending (rare — same contractor sent multiple
+        // declined quotes to the same number without a reply between them),
+        // capture on the most recently sent one.
+        const { data: pendingQuote } = await supabaseAdmin
+          .from("quotes")
+          .select("id, customer_id")
+          .eq("user_id", tenant.id)
+          .eq("customer_phone", from)
+          .not("decline_followup_sent_at", "is", null)
+          .is("decline_reason", null)
+          .order("decline_followup_sent_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (pendingQuote) {
+          await supabaseAdmin
+            .from("quotes")
+            .update({ decline_reason: body })
+            .eq("id", pendingQuote.id);
+          await supabaseAdmin.from("logs").insert({
+            user_id: tenant.id,
+            customer_id: pendingQuote.customer_id ?? cust?.id ?? null,
+            action_type: "quote_decline_reason_captured",
+            status: "captured",
+            message_sent: body,
+            twilio_message_sid: messageSid || null,
+          });
+          return twiml("<Message>Thanks — we've passed that along.</Message>");
+        }
+
         await supabaseAdmin.from("logs").insert(logRow("received"));
         return twiml("");
       },
