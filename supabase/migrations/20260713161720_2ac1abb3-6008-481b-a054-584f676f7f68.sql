@@ -1,0 +1,2 @@
+ALTER TABLE public.logs DROP CONSTRAINT logs_action_type_check;
+ALTER TABLE public.logs ADD CONSTRAINT logs_action_type_check CHECK (action_type = ANY (ARRAY['missed_call_text'::text, 'review_request'::text, 'reactivation_text'::text, 'customer_email_updated'::text, 'quote_sms'::text, 'sms_inbound'::text, 'customer_consent_preserved'::text]));

@@ -1,0 +1,3 @@
+ALTER TABLE public.quotes
+  ADD COLUMN IF NOT EXISTS responded_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS last_sms_sent_at TIMESTAMPTZ;
