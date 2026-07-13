@@ -1,0 +1,1 @@
+ALTER TABLE public.appointments ADD COLUMN duration_minutes integer NOT NULL DEFAULT 60 CHECK (duration_minutes >= 0 AND duration_minutes <= 1440);
