@@ -303,7 +303,7 @@ function ContactsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </FragmentRow>
                 );
               })}
 
