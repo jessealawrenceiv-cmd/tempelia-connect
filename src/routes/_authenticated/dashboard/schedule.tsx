@@ -183,6 +183,7 @@ function SchedulePage() {
         cid = cust.id;
       }
 
+      const allDay = durationMinutes === 0;
       const { data, error } = await supabase
         .from("appointments")
         .insert({
@@ -192,7 +193,8 @@ function SchedulePage() {
           intake_submission_id: intakeIdParam,
           title: title.trim(),
           date,
-          time: time || null,
+          time: allDay ? null : (time || null),
+          duration_minutes: durationMinutes,
           notes: notes.trim() || null,
         })
         .select("*")
