@@ -161,7 +161,7 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
                       <tbody>
                         {items.map((li, i) => (
                           <tr key={i} className="border-t border-border/40">
-                            <td className="py-1 pr-2 text-muted-foreground">{li.description || "—"}</td>
+                            <td className="py-1 pr-2 text-muted-foreground">{li.label || li.description || (li.key ? li.key.replace(/_/g, " ") : "—")}</td>
                             <td className="py-1 text-right">{fmtMoney(li.amount as any)}</td>
                           </tr>
                         ))}
