@@ -27,6 +27,7 @@ import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twil
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_authenticated/dashboard/quotes.new'
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
+import { Route as AuthenticatedDashboardQuotesQuoteIdPrintRouteImport } from './routes/_authenticated/dashboard/quotes.$quoteId.print'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -128,6 +129,12 @@ const AuthenticatedDashboardAdminNumbersRoute =
     path: '/dashboard/admin/numbers',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardQuotesQuoteIdPrintRoute =
+  AuthenticatedDashboardQuotesQuoteIdPrintRouteImport.update({
+    id: '/dashboard/quotes/$quoteId/print',
+    path: '/dashboard/quotes/$quoteId/print',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/dashboard/quotes': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -187,6 +196,7 @@ export interface FileRoutesById {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/_authenticated/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/_authenticated/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/dashboard/quotes/'
+    | '/dashboard/quotes/$quoteId/print'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/dashboard/quotes'
+    | '/dashboard/quotes/$quoteId/print'
   id:
     | '__root__'
     | '/'
@@ -247,6 +259,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/_authenticated/dashboard/quotes/'
+    | '/_authenticated/dashboard/quotes/$quoteId/print'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -387,6 +400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardAdminNumbersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/quotes/$quoteId/print': {
+      id: '/_authenticated/dashboard/quotes/$quoteId/print'
+      path: '/dashboard/quotes/$quoteId/print'
+      fullPath: '/dashboard/quotes/$quoteId/print'
+      preLoaderRoute: typeof AuthenticatedDashboardQuotesQuoteIdPrintRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -402,6 +422,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardAdminNumbersRoute: typeof AuthenticatedDashboardAdminNumbersRoute
   AuthenticatedDashboardQuotesNewRoute: typeof AuthenticatedDashboardQuotesNewRoute
   AuthenticatedDashboardQuotesIndexRoute: typeof AuthenticatedDashboardQuotesIndexRoute
+  AuthenticatedDashboardQuotesQuoteIdPrintRoute: typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -419,6 +440,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardQuotesNewRoute: AuthenticatedDashboardQuotesNewRoute,
   AuthenticatedDashboardQuotesIndexRoute:
     AuthenticatedDashboardQuotesIndexRoute,
+  AuthenticatedDashboardQuotesQuoteIdPrintRoute:
+    AuthenticatedDashboardQuotesQuoteIdPrintRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
