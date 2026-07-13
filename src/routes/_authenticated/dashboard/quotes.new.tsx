@@ -277,7 +277,8 @@ function NewQuotePage() {
             <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
             <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business name (optional)" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
             <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone *" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
-            <input value={poNumber} onChange={(e) => setPoNumber(e.target.value)} placeholder="PO # (optional)" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)" type="email" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm" />
+            <input value={poNumber} onChange={(e) => setPoNumber(e.target.value)} placeholder="PO # (optional)" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
             <input value={jobSite} onChange={(e) => setJobSite(e.target.value)} placeholder="Job site address *" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
             <input value={billing} onChange={(e) => setBilling(e.target.value)} placeholder="Billing address (if different)" className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description / scope notes" rows={3} className="mono rounded-sm border border-border bg-background px-3 py-2 text-sm sm:col-span-2" />
