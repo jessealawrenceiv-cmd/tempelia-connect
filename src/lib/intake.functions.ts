@@ -12,6 +12,9 @@ export const INTAKE_LIMITS = {
   // Per (user_id + ip_hash) window
   RATE_LIMIT_WINDOW_MIN: 60,
   RATE_LIMIT_MAX: 5,
+  // Global per-business ceiling across ALL IPs — catches distributed spam
+  BUSINESS_CEILING_WINDOW_MIN: 60,
+  BUSINESS_CEILING_MAX: 30,
 } as const;
 
 // ─── Magic-byte sniff (don't trust client-provided MIME) ─────────
