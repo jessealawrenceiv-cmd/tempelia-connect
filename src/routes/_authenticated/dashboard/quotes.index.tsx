@@ -186,6 +186,15 @@ function QuotesListPage() {
                             >
                               export
                             </a>
+                            {(q.status === "draft" || q.status === "sent") && (
+                              <button
+                                disabled={sendingId === q.id}
+                                onClick={() => handleSendSms(q.id)}
+                                className="mono rounded-sm border border-primary/60 px-2 py-1 text-[10px] uppercase tracking-wider text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+                              >
+                                {sendingId === q.id ? "…" : q.status === "draft" ? "send sms" : "resend sms"}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
