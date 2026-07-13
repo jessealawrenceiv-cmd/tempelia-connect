@@ -106,6 +106,7 @@ function NewQuotePage() {
   const [lastName, setLastName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [poNumber, setPoNumber] = useState("");
   const [jobSite, setJobSite] = useState("");
   const [billing, setBilling] = useState("");
