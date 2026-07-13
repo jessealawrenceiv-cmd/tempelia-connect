@@ -334,33 +334,42 @@ export type Database = {
       logs: {
         Row: {
           action_type: string
+          call_sid: string | null
           created_at: string
           customer_id: string | null
           id: string
           message_sent: string | null
+          recording_sid: string | null
           status: string
           twilio_message_sid: string | null
           user_id: string
+          voicemail_url: string | null
         }
         Insert: {
           action_type: string
+          call_sid?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string
           message_sent?: string | null
+          recording_sid?: string | null
           status?: string
           twilio_message_sid?: string | null
           user_id: string
+          voicemail_url?: string | null
         }
         Update: {
           action_type?: string
+          call_sid?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string
           message_sent?: string | null
+          recording_sid?: string | null
           status?: string
           twilio_message_sid?: string | null
           user_id?: string
+          voicemail_url?: string | null
         }
         Relationships: [
           {
@@ -379,6 +388,7 @@ export type Database = {
           email: string | null
           id: string
           intake_enabled: boolean
+          owner_phone: string | null
           review_requests_enabled: boolean
           stripe_customer_id: string | null
           subscription_status: string
@@ -388,6 +398,7 @@ export type Database = {
           twilio_phone_sid: string | null
           twilio_provisioned_at: string | null
           updated_at: string
+          voicemail_enabled: boolean
         }
         Insert: {
           business_name?: string
@@ -395,6 +406,7 @@ export type Database = {
           email?: string | null
           id: string
           intake_enabled?: boolean
+          owner_phone?: string | null
           review_requests_enabled?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string
@@ -404,6 +416,7 @@ export type Database = {
           twilio_phone_sid?: string | null
           twilio_provisioned_at?: string | null
           updated_at?: string
+          voicemail_enabled?: boolean
         }
         Update: {
           business_name?: string
@@ -411,6 +424,7 @@ export type Database = {
           email?: string | null
           id?: string
           intake_enabled?: boolean
+          owner_phone?: string | null
           review_requests_enabled?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string
@@ -420,6 +434,7 @@ export type Database = {
           twilio_phone_sid?: string | null
           twilio_provisioned_at?: string | null
           updated_at?: string
+          voicemail_enabled?: boolean
         }
         Relationships: []
       }
