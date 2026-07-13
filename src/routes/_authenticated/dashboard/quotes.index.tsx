@@ -80,7 +80,7 @@ function QuotesListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id")
+        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, customer_phone, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as QuoteRow[];
