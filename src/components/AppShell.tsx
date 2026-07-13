@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getIsAdmin } from "@/lib/admin.functions";
 import {
-  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText,
+  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText, CalendarDays,
 } from "lucide-react";
 
 const NAV = [
@@ -12,6 +12,7 @@ const NAV = [
   { to: "/dashboard/missed-calls", label: "Missed Calls", icon: PhoneMissed },
   { to: "/dashboard/contacts", label: "Contacts", icon: Users },
   { to: "/dashboard/quotes", label: "Quotes", icon: FileText },
+  { to: "/dashboard/schedule", label: "Schedule", icon: CalendarDays },
   { to: "/dashboard/reviews", label: "Reviews", icon: Star },
   { to: "/dashboard/dead-leads", label: "Dead Leads", icon: Snowflake },
   { to: "/dashboard/intakes", label: "Intakes", icon: ClipboardList },

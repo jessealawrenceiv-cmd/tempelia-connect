@@ -17,6 +17,7 @@ import { Route as IntakeBusinessIdRouteImport } from './routes/intake.$businessI
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard/settings'
+import { Route as AuthenticatedDashboardScheduleRouteImport } from './routes/_authenticated/dashboard/schedule'
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
 import { Route as AuthenticatedDashboardMissedCallsRouteImport } from './routes/_authenticated/dashboard/missed-calls'
 import { Route as AuthenticatedDashboardIntakesRouteImport } from './routes/_authenticated/dashboard/intakes'
@@ -69,6 +70,12 @@ const AuthenticatedDashboardSettingsRoute =
   AuthenticatedDashboardSettingsRouteImport.update({
     id: '/dashboard/settings',
     path: '/dashboard/settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardScheduleRoute =
+  AuthenticatedDashboardScheduleRouteImport.update({
+    id: '/dashboard/schedule',
+    path: '/dashboard/schedule',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedDashboardReviewsRoute =
@@ -153,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
+  '/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
@@ -174,6 +182,7 @@ export interface FileRoutesByTo {
   '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
+  '/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
@@ -197,6 +206,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/_authenticated/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
+  '/_authenticated/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/dashboard/intakes'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
+    | '/dashboard/schedule'
     | '/dashboard/settings'
     | '/dashboard/'
     | '/dashboard/admin/numbers'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/dashboard/intakes'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
+    | '/dashboard/schedule'
     | '/dashboard/settings'
     | '/dashboard'
     | '/dashboard/admin/numbers'
@@ -263,6 +275,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/intakes'
     | '/_authenticated/dashboard/missed-calls'
     | '/_authenticated/dashboard/reviews'
+    | '/_authenticated/dashboard/schedule'
     | '/_authenticated/dashboard/settings'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/admin/numbers'
@@ -341,6 +354,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/settings'
       fullPath: '/dashboard/settings'
       preLoaderRoute: typeof AuthenticatedDashboardSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard/schedule': {
+      id: '/_authenticated/dashboard/schedule'
+      path: '/dashboard/schedule'
+      fullPath: '/dashboard/schedule'
+      preLoaderRoute: typeof AuthenticatedDashboardScheduleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard/reviews': {
@@ -437,6 +457,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardIntakesRoute: typeof AuthenticatedDashboardIntakesRoute
   AuthenticatedDashboardMissedCallsRoute: typeof AuthenticatedDashboardMissedCallsRoute
   AuthenticatedDashboardReviewsRoute: typeof AuthenticatedDashboardReviewsRoute
+  AuthenticatedDashboardScheduleRoute: typeof AuthenticatedDashboardScheduleRoute
   AuthenticatedDashboardSettingsRoute: typeof AuthenticatedDashboardSettingsRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDashboardAdminNumbersRoute: typeof AuthenticatedDashboardAdminNumbersRoute
@@ -453,6 +474,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardMissedCallsRoute:
     AuthenticatedDashboardMissedCallsRoute,
   AuthenticatedDashboardReviewsRoute: AuthenticatedDashboardReviewsRoute,
+  AuthenticatedDashboardScheduleRoute: AuthenticatedDashboardScheduleRoute,
   AuthenticatedDashboardSettingsRoute: AuthenticatedDashboardSettingsRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedDashboardAdminNumbersRoute:
