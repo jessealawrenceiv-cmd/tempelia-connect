@@ -87,6 +87,7 @@ function QuotesListPage() {
             <table className="w-full text-sm">
               <thead className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 <tr className="border-b border-border">
+                  <th className="px-2 py-3 w-6"></th>
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Job site</th>
                   <th className="px-4 py-3 text-right">Total</th>
@@ -98,24 +99,44 @@ function QuotesListPage() {
               <tbody>
                 {quotes!.map((q) => {
                   const name = [q.customer_first_name, q.customer_last_name].filter(Boolean).join(" ");
+                  const isOpen = expanded.has(q.id);
                   return (
-                    <tr key={q.id} className="border-b border-border/50 hover:bg-accent/30">
-                      <td className="px-4 py-3">
-                        <div className="font-medium">{name || "Unnamed"}</div>
-                        {q.customer_business_name && (
-                          <div className="mono text-[10px] text-muted-foreground">{q.customer_business_name}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
-                      <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider mono ${STATUS_STYLES[q.status]}`}>
-                          {q.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden lg:table-cell">{fmtDate(q.valid_until)}</td>
-                      <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden md:table-cell">{fmtDate(q.created_at)}</td>
-                    </tr>
+                    <Fragment key={q.id}>
+                      <tr
+                        className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                        onClick={() => toggle(q.id)}
+                      >
+                        <td className="px-2 py-3 text-center mono text-xs text-muted-foreground select-none">
+                          {isOpen ? "▾" : "▸"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{name || "Unnamed"}</div>
+                          {q.customer_business_name && (
+                            <div className="mono text-[10px] text-muted-foreground">{q.customer_business_name}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
+                        <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider mono ${STATUS_STYLES[q.status]}`}>
+                            {q.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden lg:table-cell">{fmtDate(q.valid_until)}</td>
+                        <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden md:table-cell">{fmtDate(q.created_at)}</td>
+                      </tr>
+                      {isOpen && (
+                        <tr className="border-b border-border/50 bg-background/40">
+                          <td></td>
+                          <td colSpan={6} className="px-4 py-4">
+                            <div className="label-eyebrow mb-3">
+                              Customer context {name ? `· ${name}` : ""} <span className="text-muted-foreground">(this quote excluded)</span>
+                            </div>
+                            <CustomerHistory customerId={q.customer_id} excludeQuoteId={q.id} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -126,3 +147,4 @@ function QuotesListPage() {
     </div>
   );
 }
+
