@@ -18,6 +18,7 @@ type QuoteRow = {
   customer_first_name: string;
   customer_last_name: string | null;
   customer_business_name: string | null;
+  customer_phone: string;
   job_site_address: string;
   total_amount: number;
   status: "draft" | "sent" | "accepted" | "declined" | "expired" | "archived";
