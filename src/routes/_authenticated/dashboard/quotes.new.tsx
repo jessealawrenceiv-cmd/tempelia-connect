@@ -112,6 +112,35 @@ function NewQuotePage() {
   const [billing, setBilling] = useState("");
   const [description, setDescription] = useState("");
 
+  // Consent — prefilled from an existing contact on phone match. When saving,
+  // a checked box promotes the contact to true (and stamps the timestamp if
+  // not already set); an unchecked box NEVER downgrades an existing true.
+  const [smsOptIn, setSmsOptIn] = useState(false);
+  const [consentSigned, setConsentSigned] = useState(false);
+  const [consentLookupNote, setConsentLookupNote] = useState<string>("");
+
+  async function prefillConsentFromPhone(rawPhone: string) {
+    const p = rawPhone.trim();
+    if (!p) { setConsentLookupNote(""); return; }
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("opt_in_consent, consent_form_signed, first_name, last_name")
+      .eq("user_id", u.user.id)
+      .eq("phone_number", p)
+      .maybeSingle();
+    if (existing) {
+      setSmsOptIn(!!existing.opt_in_consent);
+      setConsentSigned(!!existing.consent_form_signed);
+      setConsentLookupNote(
+        `// matched existing contact${existing.first_name ? ` — ${existing.first_name} ${existing.last_name ?? ""}`.trimEnd() : ""} · prefilled`,
+      );
+    } else {
+      setConsentLookupNote("// no existing contact for this phone");
+    }
+  }
+
   // Line items
   const [categories, setCategories] = useState<CategoryState[]>(INITIAL_CATEGORIES);
 
