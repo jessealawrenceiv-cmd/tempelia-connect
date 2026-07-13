@@ -177,6 +177,16 @@ function QuotesListPage() {
                           {q.superseded_by_id && (
                             <div className="mono text-[10px] text-orange">// superseded by newer revision</div>
                           )}
+                          {q.status === "declined" && q.decline_reason && (
+                            <div className="mono text-[10px] text-moss mt-1">
+                              // reason: <span className="text-paper">{q.decline_reason}</span>
+                            </div>
+                          )}
+                          {q.status === "declined" && !q.decline_reason && q.decline_followup_sent_at && (
+                            <div className="mono text-[10px] text-muted-foreground mt-1">
+                              // asked why — waiting on a reply
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
                         <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
