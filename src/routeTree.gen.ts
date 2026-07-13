@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as QuoteQuoteIdRouteImport } from './routes/quote.$quoteId'
 import { Route as IntakeBusinessIdRouteImport } from './routes/intake.$businessId'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
@@ -41,6 +42,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuoteQuoteIdRoute = QuoteQuoteIdRouteImport.update({
+  id: '/quote/$quoteId',
+  path: '/quote/$quoteId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntakeBusinessIdRoute = IntakeBusinessIdRouteImport.update({
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/dashboard/contacts': typeof AuthenticatedDashboardContactsRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/dashboard/contacts': typeof AuthenticatedDashboardContactsRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/_authenticated/dashboard/contacts': typeof AuthenticatedDashboardContactsRoute
   '/_authenticated/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
   '/_authenticated/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/quote/$quoteId'
     | '/dashboard/contacts'
     | '/dashboard/dead-leads'
     | '/dashboard/intakes'
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/quote/$quoteId'
     | '/dashboard/contacts'
     | '/dashboard/dead-leads'
     | '/dashboard/intakes'
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/onboarding'
     | '/intake/$businessId'
+    | '/quote/$quoteId'
     | '/_authenticated/dashboard/contacts'
     | '/_authenticated/dashboard/dead-leads'
     | '/_authenticated/dashboard/intakes'
@@ -267,6 +279,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   IntakeBusinessIdRoute: typeof IntakeBusinessIdRoute
+  QuoteQuoteIdRoute: typeof QuoteQuoteIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
@@ -293,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quote/$quoteId': {
+      id: '/quote/$quoteId'
+      path: '/quote/$quoteId'
+      fullPath: '/quote/$quoteId'
+      preLoaderRoute: typeof QuoteQuoteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/intake/$businessId': {
@@ -452,6 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   IntakeBusinessIdRoute: IntakeBusinessIdRoute,
+  QuoteQuoteIdRoute: QuoteQuoteIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
