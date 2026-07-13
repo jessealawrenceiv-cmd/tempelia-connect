@@ -385,6 +385,7 @@ export type Database = {
         Row: {
           business_name: string
           created_at: string
+          decline_followup_mode: string
           email: string | null
           id: string
           intake_enabled: boolean
@@ -403,6 +404,7 @@ export type Database = {
         Insert: {
           business_name?: string
           created_at?: string
+          decline_followup_mode?: string
           email?: string | null
           id: string
           intake_enabled?: boolean
@@ -421,6 +423,7 @@ export type Database = {
         Update: {
           business_name?: string
           created_at?: string
+          decline_followup_mode?: string
           email?: string | null
           id?: string
           intake_enabled?: boolean
@@ -448,6 +451,8 @@ export type Database = {
           customer_id: string | null
           customer_last_name: string | null
           customer_phone: string
+          decline_followup_sent_at: string | null
+          decline_reason: string | null
           description: string | null
           id: string
           job_site_address: string
@@ -476,6 +481,8 @@ export type Database = {
           customer_id?: string | null
           customer_last_name?: string | null
           customer_phone: string
+          decline_followup_sent_at?: string | null
+          decline_reason?: string | null
           description?: string | null
           id?: string
           job_site_address: string
@@ -504,6 +511,8 @@ export type Database = {
           customer_id?: string | null
           customer_last_name?: string | null
           customer_phone?: string
+          decline_followup_sent_at?: string | null
+          decline_reason?: string | null
           description?: string | null
           id?: string
           job_site_address?: string
