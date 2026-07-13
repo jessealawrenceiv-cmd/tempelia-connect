@@ -212,6 +212,13 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
                       {r.status}
                     </span>
                   </div>
+                  {(r.customer_business_name || r.customer_phone || r.customer_email) && (
+                    <div className="mono mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {r.customer_business_name && <span>{r.customer_business_name}</span>}
+                      {r.customer_phone && <span>{r.customer_phone}</span>}
+                      {r.customer_email && <span>{r.customer_email}</span>}
+                    </div>
+                  )}
                   <dl className="mt-2 grid gap-x-4 gap-y-1 text-xs md:grid-cols-2">
                     {Object.entries(resp).map(([k, v]) => (
                       <div key={k}>
