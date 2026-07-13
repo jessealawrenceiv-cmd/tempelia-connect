@@ -405,32 +405,58 @@ function NewQuotePage() {
         });
       }
 
+      const payload = {
+        user_id: u.user.id,
+        customer_id: customerRow.id,
+        customer_first_name: firstName.trim(),
+        customer_last_name: lastName.trim() || null,
+        customer_business_name: businessName.trim() || null,
+        customer_phone: phoneTrim,
+        po_number: poNumber.trim() || null,
+        job_site_address: jobSite.trim(),
+        billing_address: billing.trim() || null,
+        description: description.trim() || null,
+        line_items,
+        subtotal,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        total_amount: total,
+        job_type: jobType,
+        tax_exempt: taxExempt,
+        valid_until: validUntil || null,
+        status,
+      };
+
+      // Edit-in-place for drafts; archive-and-branch for anything else.
+      if (isEdit && editId && originalStatus === "draft") {
+        const { data, error } = await supabase
+          .from("quotes")
+          .update(payload)
+          .eq("id", editId)
+          .select("id")
+          .single();
+        if (error) throw error;
+        return data.id as string;
+      }
+
       const { data, error } = await supabase
         .from("quotes")
-        .insert({
-          user_id: u.user.id,
-          customer_id: customerRow.id,
-          customer_first_name: firstName.trim(),
-          customer_last_name: lastName.trim() || null,
-          customer_business_name: businessName.trim() || null,
-          customer_phone: phoneTrim,
-          po_number: poNumber.trim() || null,
-          job_site_address: jobSite.trim(),
-          billing_address: billing.trim() || null,
-          description: description.trim() || null,
-          line_items,
-          subtotal,
-          tax_rate: taxRate,
-          tax_amount: taxAmount,
-          total_amount: total,
-          job_type: jobType,
-          tax_exempt: taxExempt,
-          valid_until: validUntil || null,
-          status,
-        })
+        .insert(payload)
         .select("id")
         .single();
       if (error) throw error;
+
+      if (isEdit && editId && originalStatus && originalStatus !== "draft") {
+        const { error: archErr } = await supabase
+          .from("quotes")
+          .update({
+            status: "archived",
+            archived_at: new Date().toISOString(),
+            superseded_by_id: data.id,
+          })
+          .eq("id", editId);
+        if (archErr) throw archErr;
+      }
       return data.id as string;
     },
     onSuccess: () => {
