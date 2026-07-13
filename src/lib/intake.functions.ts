@@ -93,10 +93,29 @@ function hashIp(ip: string): string {
 }
 
 function clientIp(): string {
+  // Cloudflare sets and OVERWRITES cf-connecting-ip on every request — clients cannot spoof it.
+  const cf = getRequestHeader("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const real = getRequestHeader("x-real-ip");
+  if (real) return real.trim();
+  // Fallback: take the LAST hop of x-forwarded-for (closest to our server),
+  // never the first (attacker-controlled). Still only a fallback.
   const fwd = getRequestHeader("x-forwarded-for") || "";
-  const first = fwd.split(",")[0]?.trim();
-  return first || getRequestHeader("x-real-ip") || "0.0.0.0";
+  const parts = fwd.split(",").map((s) => s.trim()).filter(Boolean);
+  return parts[parts.length - 1] || "0.0.0.0";
 }
+
+// Debug: returns what clientIp() resolves to for the current request. Safe (no PII, no writes).
+export const debugClientIp = createServerFn({ method: "GET" }).handler(async () => {
+  return {
+    resolved: clientIp(),
+    headers: {
+      "cf-connecting-ip": getRequestHeader("cf-connecting-ip") || null,
+      "x-real-ip": getRequestHeader("x-real-ip") || null,
+      "x-forwarded-for": getRequestHeader("x-forwarded-for") || null,
+    },
+  };
+});
 
 export const getIntakeBusinessInfo = createServerFn({ method: "GET" })
   .inputValidator((d: { userId: string }) => z.object({ userId: z.string().uuid() }).parse(d))
