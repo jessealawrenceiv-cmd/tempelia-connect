@@ -110,7 +110,8 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
 export const getIsAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ isAdmin: boolean }> => {
-    const { supabase, userId } = context;
-    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    const { supabase } = context;
+    const { data } = await supabase.rpc("has_role", { _role: "admin" });
     return { isAdmin: Boolean(data) };
   });
+
