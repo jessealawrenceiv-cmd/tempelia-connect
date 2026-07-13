@@ -24,6 +24,7 @@ import { Route as AuthenticatedDashboardIntakesRouteImport } from './routes/_aut
 import { Route as AuthenticatedDashboardDeadLeadsRouteImport } from './routes/_authenticated/dashboard/dead-leads'
 import { Route as AuthenticatedDashboardContactsRouteImport } from './routes/_authenticated/dashboard/contacts'
 import { Route as AuthenticatedDashboardQuotesIndexRouteImport } from './routes/_authenticated/dashboard/quotes.index'
+import { Route as ApiPublicVoicemailLogIdRouteImport } from './routes/api/public/voicemail/$logId'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio/recording'
@@ -115,6 +116,11 @@ const AuthenticatedDashboardQuotesIndexRoute =
     path: '/dashboard/quotes/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicVoicemailLogIdRoute = ApiPublicVoicemailLogIdRouteImport.update({
+  id: '/api/public/voicemail/$logId',
+  path: '/api/public/voicemail/$logId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
   id: '/api/public/twilio/voice',
   path: '/api/public/twilio/voice',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
   '/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
   '/dashboard/quotes': typeof AuthenticatedDashboardQuotesIndexRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
   '/_authenticated/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
   '/_authenticated/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
+    | '/api/public/voicemail/$logId'
     | '/dashboard/quotes/'
     | '/dashboard/quotes/$quoteId/print'
   fileRoutesByTo: FileRoutesByTo
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
+    | '/api/public/voicemail/$logId'
     | '/dashboard/quotes'
     | '/dashboard/quotes/$quoteId/print'
   id:
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
+    | '/api/public/voicemail/$logId'
     | '/_authenticated/dashboard/quotes/'
     | '/_authenticated/dashboard/quotes/$quoteId/print'
   fileRoutesById: FileRoutesById
@@ -310,6 +322,7 @@ export interface RootRouteChildren {
   ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
+  ApiPublicVoicemailLogIdRoute: typeof ApiPublicVoicemailLogIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -419,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardQuotesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/voicemail/$logId': {
+      id: '/api/public/voicemail/$logId'
+      path: '/api/public/voicemail/$logId'
+      fullPath: '/api/public/voicemail/$logId'
+      preLoaderRoute: typeof ApiPublicVoicemailLogIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio/voice': {
       id: '/api/public/twilio/voice'
       path: '/api/public/twilio/voice'
@@ -520,6 +540,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
+  ApiPublicVoicemailLogIdRoute: ApiPublicVoicemailLogIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
