@@ -204,14 +204,36 @@ function NewQuotePage() {
         });
       }
 
+      // Upsert into Contacts (dedupe on user_id + phone_number) — same pattern
+      // used by the intake form. Reuse existing contact if phone already matches,
+      // otherwise create a new one. Consent columns intentionally omitted so an
+      // existing opted-in contact isn't downgraded.
+      const phoneTrim = phone.trim();
+      const { data: customerRow, error: custErr } = await supabase
+        .from("customers")
+        .upsert(
+          {
+            user_id: u.user.id,
+            first_name: firstName.trim(),
+            last_name: lastName.trim() || null,
+            phone_number: phoneTrim,
+            source: "quote",
+          },
+          { onConflict: "user_id,phone_number" },
+        )
+        .select("id")
+        .single();
+      if (custErr) throw custErr;
+
       const { data, error } = await supabase
         .from("quotes")
         .insert({
           user_id: u.user.id,
+          customer_id: customerRow.id,
           customer_first_name: firstName.trim(),
           customer_last_name: lastName.trim() || null,
           customer_business_name: businessName.trim() || null,
-          customer_phone: phone.trim(),
+          customer_phone: phoneTrim,
           po_number: poNumber.trim() || null,
           job_site_address: jobSite.trim(),
           billing_address: billing.trim() || null,
