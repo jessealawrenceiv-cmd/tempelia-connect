@@ -12,11 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as IntakeBusinessIdRouteImport } from './routes/intake.$businessId'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard/settings'
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
 import { Route as AuthenticatedDashboardMissedCallsRouteImport } from './routes/_authenticated/dashboard/missed-calls'
+import { Route as AuthenticatedDashboardIntakesRouteImport } from './routes/_authenticated/dashboard/intakes'
 import { Route as AuthenticatedDashboardDeadLeadsRouteImport } from './routes/_authenticated/dashboard/dead-leads'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
@@ -35,6 +37,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntakeBusinessIdRoute = IntakeBusinessIdRouteImport.update({
+  id: '/intake/$businessId',
+  path: '/intake/$businessId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
@@ -64,6 +71,12 @@ const AuthenticatedDashboardMissedCallsRoute =
   AuthenticatedDashboardMissedCallsRouteImport.update({
     id: '/dashboard/missed-calls',
     path: '/dashboard/missed-calls',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardIntakesRoute =
+  AuthenticatedDashboardIntakesRouteImport.update({
+    id: '/dashboard/intakes',
+    path: '/dashboard/intakes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedDashboardDeadLeadsRoute =
@@ -99,7 +112,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/intake/$businessId': typeof IntakeBusinessIdRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
+  '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
@@ -113,7 +128,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/intake/$businessId': typeof IntakeBusinessIdRoute
   '/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
+  '/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
@@ -129,7 +146,9 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/intake/$businessId': typeof IntakeBusinessIdRoute
   '/_authenticated/dashboard/dead-leads': typeof AuthenticatedDashboardDeadLeadsRoute
+  '/_authenticated/dashboard/intakes': typeof AuthenticatedDashboardIntakesRoute
   '/_authenticated/dashboard/missed-calls': typeof AuthenticatedDashboardMissedCallsRoute
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
@@ -145,7 +164,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/intake/$businessId'
     | '/dashboard/dead-leads'
+    | '/dashboard/intakes'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
     | '/dashboard/settings'
@@ -159,7 +180,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/intake/$businessId'
     | '/dashboard/dead-leads'
+    | '/dashboard/intakes'
     | '/dashboard/missed-calls'
     | '/dashboard/reviews'
     | '/dashboard/settings'
@@ -174,7 +197,9 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/onboarding'
+    | '/intake/$businessId'
     | '/_authenticated/dashboard/dead-leads'
+    | '/_authenticated/dashboard/intakes'
     | '/_authenticated/dashboard/missed-calls'
     | '/_authenticated/dashboard/reviews'
     | '/_authenticated/dashboard/settings'
@@ -189,6 +214,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  IntakeBusinessIdRoute: typeof IntakeBusinessIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
@@ -215,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/intake/$businessId': {
+      id: '/intake/$businessId'
+      path: '/intake/$businessId'
+      fullPath: '/intake/$businessId'
+      preLoaderRoute: typeof IntakeBusinessIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/onboarding': {
@@ -250,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/missed-calls'
       fullPath: '/dashboard/missed-calls'
       preLoaderRoute: typeof AuthenticatedDashboardMissedCallsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard/intakes': {
+      id: '/_authenticated/dashboard/intakes'
+      path: '/dashboard/intakes'
+      fullPath: '/dashboard/intakes'
+      preLoaderRoute: typeof AuthenticatedDashboardIntakesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard/dead-leads': {
@@ -293,6 +333,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedDashboardDeadLeadsRoute: typeof AuthenticatedDashboardDeadLeadsRoute
+  AuthenticatedDashboardIntakesRoute: typeof AuthenticatedDashboardIntakesRoute
   AuthenticatedDashboardMissedCallsRoute: typeof AuthenticatedDashboardMissedCallsRoute
   AuthenticatedDashboardReviewsRoute: typeof AuthenticatedDashboardReviewsRoute
   AuthenticatedDashboardSettingsRoute: typeof AuthenticatedDashboardSettingsRoute
@@ -303,6 +344,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedDashboardDeadLeadsRoute: AuthenticatedDashboardDeadLeadsRoute,
+  AuthenticatedDashboardIntakesRoute: AuthenticatedDashboardIntakesRoute,
   AuthenticatedDashboardMissedCallsRoute:
     AuthenticatedDashboardMissedCallsRoute,
   AuthenticatedDashboardReviewsRoute: AuthenticatedDashboardReviewsRoute,
@@ -319,6 +361,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  IntakeBusinessIdRoute: IntakeBusinessIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
