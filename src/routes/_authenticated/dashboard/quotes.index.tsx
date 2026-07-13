@@ -26,6 +26,8 @@ type QuoteRow = {
   created_at: string;
   valid_until: string | null;
   superseded_by_id: string | null;
+  decline_reason: string | null;
+  decline_followup_sent_at: string | null;
 };
 
 const STATUS_STYLES: Record<QuoteRow["status"], string> = {
