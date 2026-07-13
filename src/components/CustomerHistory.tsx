@@ -181,7 +181,7 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
                     <span>subtotal {fmtMoney(q.subtotal)}</span>
                     <span>
                       tax {fmtMoney(q.tax_amount)}
-                      {q.tax_rate != null && Number(q.tax_rate) > 0 ? ` @ ${(Number(q.tax_rate) * 100).toFixed(2)}%` : ""}
+                      {q.tax_rate != null && Number(q.tax_rate) > 0 ? ` @ ${Number(q.tax_rate).toFixed(2)}%` : ""}
                       {q.tax_exempt ? " (exempt)" : ""}
                     </span>
                     <span className="text-paper">total {fmtMoney(q.total_amount)}</span>
