@@ -13,8 +13,8 @@ function MissedCallsPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("logs")
-        .select("id, message_sent, created_at, twilio_message_sid, customer_id, customers(phone_number, first_name, opt_in_consent)")
-        .eq("action_type", "missed_call_text")
+        .select("id, message_sent, created_at, twilio_message_sid, customer_id, voicemail_url, action_type, status, customers(phone_number, first_name, opt_in_consent)")
+        .in("action_type", ["missed_call_text", "missed_call_autotext"])
         .order("created_at", { ascending: false })
         .limit(100);
       return data ?? [];
@@ -29,13 +29,13 @@ function MissedCallsPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40">
               <tr className="text-left">
-                <Th>Time</Th><Th>Caller</Th><Th>Auto-reply</Th><Th>Status</Th>
+                <Th>Time</Th><Th>Caller</Th><Th>Auto-reply</Th><Th>Voicemail</Th><Th>Status</Th>
               </tr>
             </thead>
             <tbody className="mono divide-y divide-border">
-              {isLoading && <tr><td colSpan={4} className="p-5 text-muted-foreground">Loading…</td></tr>}
+              {isLoading && <tr><td colSpan={5} className="p-5 text-muted-foreground">Loading…</td></tr>}
               {!isLoading && data?.length === 0 && (
-                <tr><td colSpan={4} className="p-5 text-muted-foreground">No missed calls yet. Missed-call auto-text captures once a caller is added to your customer list.</td></tr>
+                <tr><td colSpan={5} className="p-5 text-muted-foreground">No missed calls yet.</td></tr>
               )}
               {data?.map((row: any) => (
                 <tr key={row.id}>
@@ -46,7 +46,26 @@ function MissedCallsPage() {
                   </Td>
                   <Td className="max-w-md truncate">{row.message_sent}</Td>
                   <Td>
-                    {row.customers?.opt_in_consent === false ? (
+                    {row.voicemail_url ? (
+                      <div className="flex flex-col gap-1">
+                        <audio controls preload="none" src={row.voicemail_url} className="h-8 w-56" />
+                        <a
+                          href={row.voicemail_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] uppercase tracking-widest text-violet underline"
+                        >
+                          Open recording ↗
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </Td>
+                  <Td>
+                    {row.status === "failed" ? (
+                      <span className="rounded-sm bg-destructive/10 px-2 py-0.5 text-xs uppercase tracking-wider text-destructive">Failed</span>
+                    ) : row.customers?.opt_in_consent === false ? (
                       <span className="rounded-sm bg-destructive/10 px-2 py-0.5 text-xs uppercase tracking-wider text-destructive">Needs consent</span>
                     ) : (
                       <span className="rounded-sm bg-moss/10 px-2 py-0.5 text-xs uppercase tracking-wider text-moss">Sent</span>
