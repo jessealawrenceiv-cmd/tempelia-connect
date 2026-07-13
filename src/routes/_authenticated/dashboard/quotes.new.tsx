@@ -329,12 +329,12 @@ function NewQuotePage() {
             ))}
 
             {/* Labor row */}
-            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">
+            <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3 py-3">
               <input
                 type="checkbox"
                 checked={laborChecked}
                 onChange={(e) => setLaborChecked(e.target.checked)}
-                className="h-4 w-4 accent-primary"
+                className="mt-2 h-4 w-4 accent-primary"
               />
               <div className="min-w-0 space-y-2">
                 <div className="text-sm font-medium">Labor</div>
@@ -348,29 +348,36 @@ function NewQuotePage() {
                     <option value="flat">Flat $</option>
                     <option value="percent">% of other checked items</option>
                   </select>
-                  {laborMode === "percent" && laborChecked && (
+                  {laborMode === "percent" && laborChecked && !laborError && (
                     <span className="mono text-[10px] text-muted-foreground">
                       = {money(laborAmount)} of {money(nonLaborSubtotal)}
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="mono text-xs text-muted-foreground">{laborMode === "flat" ? "$" : ""}</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={laborInput}
-                  onChange={(e) => setLaborInput(e.target.value)}
-                  disabled={!laborChecked}
-                  placeholder={laborMode === "flat" ? "0.00" : "0"}
-                  className="mono w-28 rounded-sm border border-border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50"
-                />
-                <span className="mono text-xs text-muted-foreground">{laborMode === "percent" ? "%" : ""}</span>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1">
+                  <span className="mono text-xs text-muted-foreground">{laborMode === "flat" ? "$" : ""}</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={laborInput}
+                    onChange={(e) => setLaborInput(e.target.value)}
+                    disabled={!laborChecked}
+                    placeholder={laborMode === "flat" ? "0.00" : "0"}
+                    aria-invalid={laborError !== null}
+                    className={`mono w-28 rounded-sm border bg-background px-2 py-1.5 text-sm text-right disabled:opacity-50 ${
+                      laborError ? "border-destructive" : "border-border"
+                    }`}
+                  />
+                  <span className="mono text-xs text-muted-foreground">{laborMode === "percent" ? "%" : ""}</span>
+                </div>
+                {laborError && (
+                  <span className="mono text-[10px] text-destructive">{laborError}</span>
+                )}
               </div>
             </div>
+
           </div>
         </section>
 
