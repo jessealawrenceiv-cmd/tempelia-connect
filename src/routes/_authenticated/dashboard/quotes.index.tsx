@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { Fragment, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
+import { CustomerHistory } from "@/components/CustomerHistory";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
   component: QuotesListPage,
@@ -9,6 +11,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
 
 type QuoteRow = {
   id: string;
+  customer_id: string | null;
   customer_first_name: string;
   customer_last_name: string | null;
   customer_business_name: string | null;
@@ -18,6 +21,7 @@ type QuoteRow = {
   created_at: string;
   valid_until: string | null;
 };
+
 
 const STATUS_STYLES: Record<QuoteRow["status"], string> = {
   draft: "bg-muted text-muted-foreground",
@@ -35,18 +39,26 @@ function fmtDate(s: string | null) {
 }
 
 function QuotesListPage() {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setExpanded((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["quotes"],
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until")
+        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, total_amount, status, created_at, valid_until")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as QuoteRow[];
     },
   });
+
 
   return (
     <div>
@@ -75,6 +87,7 @@ function QuotesListPage() {
             <table className="w-full text-sm">
               <thead className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 <tr className="border-b border-border">
+                  <th className="px-2 py-3 w-6"></th>
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Job site</th>
                   <th className="px-4 py-3 text-right">Total</th>
@@ -86,24 +99,44 @@ function QuotesListPage() {
               <tbody>
                 {quotes!.map((q) => {
                   const name = [q.customer_first_name, q.customer_last_name].filter(Boolean).join(" ");
+                  const isOpen = expanded.has(q.id);
                   return (
-                    <tr key={q.id} className="border-b border-border/50 hover:bg-accent/30">
-                      <td className="px-4 py-3">
-                        <div className="font-medium">{name || "Unnamed"}</div>
-                        {q.customer_business_name && (
-                          <div className="mono text-[10px] text-muted-foreground">{q.customer_business_name}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
-                      <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider mono ${STATUS_STYLES[q.status]}`}>
-                          {q.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden lg:table-cell">{fmtDate(q.valid_until)}</td>
-                      <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden md:table-cell">{fmtDate(q.created_at)}</td>
-                    </tr>
+                    <Fragment key={q.id}>
+                      <tr
+                        className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                        onClick={() => toggle(q.id)}
+                      >
+                        <td className="px-2 py-3 text-center mono text-xs text-muted-foreground select-none">
+                          {isOpen ? "▾" : "▸"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{name || "Unnamed"}</div>
+                          {q.customer_business_name && (
+                            <div className="mono text-[10px] text-muted-foreground">{q.customer_business_name}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
+                        <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider mono ${STATUS_STYLES[q.status]}`}>
+                            {q.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden lg:table-cell">{fmtDate(q.valid_until)}</td>
+                        <td className="px-4 py-3 mono text-[10px] text-muted-foreground hidden md:table-cell">{fmtDate(q.created_at)}</td>
+                      </tr>
+                      {isOpen && (
+                        <tr className="border-b border-border/50 bg-background/40">
+                          <td></td>
+                          <td colSpan={6} className="px-4 py-4">
+                            <div className="label-eyebrow mb-3">
+                              Customer context {name ? `· ${name}` : ""} <span className="text-muted-foreground">(this quote excluded)</span>
+                            </div>
+                            <CustomerHistory customerId={q.customer_id} excludeQuoteId={q.id} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -114,3 +147,4 @@ function QuotesListPage() {
     </div>
   );
 }
+
