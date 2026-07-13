@@ -370,8 +370,10 @@ export type Database = {
           id: string
           job_site_address: string
           job_type: string
+          last_sms_sent_at: string | null
           line_items: Json
           po_number: string | null
+          responded_at: string | null
           status: string
           subtotal: number
           superseded_by_id: string | null
@@ -396,8 +398,10 @@ export type Database = {
           id?: string
           job_site_address: string
           job_type?: string
+          last_sms_sent_at?: string | null
           line_items?: Json
           po_number?: string | null
+          responded_at?: string | null
           status?: string
           subtotal?: number
           superseded_by_id?: string | null
@@ -422,8 +426,10 @@ export type Database = {
           id?: string
           job_site_address?: string
           job_type?: string
+          last_sms_sent_at?: string | null
           line_items?: Json
           po_number?: string | null
+          responded_at?: string | null
           status?: string
           subtotal?: number
           superseded_by_id?: string | null
