@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 function SettingsPage() {
   const qc = useQueryClient();
   const [reviewUrl, setReviewUrl] = useState("");
+  const [ownerPhone, setOwnerPhone] = useState("");
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -39,6 +40,10 @@ function SettingsPage() {
     if (intg) setReviewUrl(intg.google_review_url ?? "");
   }, [intg]);
 
+  useEffect(() => {
+    if (profile) setOwnerPhone(profile.owner_phone ?? "");
+  }, [profile]);
+
   const save = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -48,8 +53,27 @@ function SettingsPage() {
         { onConflict: "user_id" },
       );
       if (error) throw error;
+      const { error: e2 } = await supabase.from("profiles")
+        .update({ owner_phone: ownerPhone.trim() || null }).eq("id", u.user.id);
+      if (e2) throw e2;
     },
-    onSuccess: () => { toast.success("Settings saved."); qc.invalidateQueries({ queryKey: ["integrations"] }); },
+    onSuccess: () => {
+      toast.success("Settings saved.");
+      qc.invalidateQueries({ queryKey: ["integrations"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleVoicemail = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({ voicemail_enabled: enabled }).eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -111,8 +135,48 @@ function SettingsPage() {
                 {profile?.review_requests_enabled === false ? "Off" : "On"}
               </label>
             </div>
+
+            <div className="mt-6 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="label-eyebrow">Voicemail on missed calls</div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    When on, missed callers hear a short prompt and can leave a voicemail. Auto-text still fires either way.
+                  </p>
+                </div>
+                <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={profile?.voicemail_enabled ?? false}
+                    disabled={toggleVoicemail.isPending}
+                    onChange={(e) => toggleVoicemail.mutate(e.target.checked)}
+                  />
+                  {profile?.voicemail_enabled ? "On" : "Off"}
+                </label>
+              </div>
+              <label className="mt-3 block">
+                <span className="label-eyebrow">Owner mobile (voicemail alerts)</span>
+                <input
+                  value={ownerPhone}
+                  onChange={(e) => setOwnerPhone(e.target.value)}
+                  placeholder="+15551234567"
+                  className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+                />
+                {profile?.voicemail_enabled && !profile?.owner_phone && (
+                  <p className="mt-1 text-xs text-orange">
+                    ⚠ Voicemail is on but no owner phone is set — recordings are saved, but you won't get a text alert until you add a number and save.
+                  </p>
+                )}
+                <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
+                  Used only to text you when a voicemail lands. Press Save to store.
+                </p>
+              </label>
+            </div>
           </div>
         </div>
+
+
 
 
         <div className="panel p-6">
