@@ -318,6 +318,18 @@ function ContactsPage() {
                       <tr className="border-b border-border/50 bg-background/40">
                         <td></td>
                         <td colSpan={8} className="px-4 py-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="mono text-[10px] uppercase tracking-wider text-muted-foreground">Contact ID</span>
+                            <code className="mono text-xs break-all text-paper">{c.id}</code>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); copy(c.id); }}
+                              className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-primary"
+                              title="Copy full ID"
+                            >
+                              {copied === c.id ? <Check size={12} /> : <Copy size={12} />}
+                              {copied === c.id ? "copied" : "copy"}
+                            </button>
+                          </div>
                           <CustomerHistory customerId={c.id} />
                         </td>
                       </tr>
