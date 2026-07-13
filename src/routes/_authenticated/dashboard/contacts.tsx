@@ -7,6 +7,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { toast } from "sonner";
 import { z } from "zod";
+import { Copy, Check } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
   component: ContactsPage,
@@ -38,6 +39,21 @@ function fmtDate(s: string | null | undefined) {
   return s ? new Date(s).toLocaleDateString() : "—";
 }
 
+function useCopy() {
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(text);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied((prev) => (prev === text ? null : prev)), 1500);
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+  return { copied, copy };
+}
+
 function sourceBadge(src: string) {
   const map: Record<string, string> = {
     intake: "bg-violet/20 text-paper",
@@ -67,6 +83,7 @@ function ContactsPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+  const { copied, copy } = useCopy();
 
 
   const { data: contacts, isLoading } = useQuery({
@@ -248,6 +265,7 @@ function ContactsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium">{[c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed"}</div>
+                        <div className="mono text-[10px] text-muted-foreground">ID: {c.id.slice(0, 8)}</div>
                         {c.last_service_date && (
                           <div className="mono text-[10px] text-muted-foreground">last job {fmtDate(c.last_service_date)}</div>
                         )}
@@ -300,6 +318,18 @@ function ContactsPage() {
                       <tr className="border-b border-border/50 bg-background/40">
                         <td></td>
                         <td colSpan={8} className="px-4 py-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="mono text-[10px] uppercase tracking-wider text-muted-foreground">Contact ID</span>
+                            <code className="mono text-xs break-all text-paper">{c.id}</code>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); copy(c.id); }}
+                              className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-primary"
+                              title="Copy full ID"
+                            >
+                              {copied === c.id ? <Check size={12} /> : <Copy size={12} />}
+                              {copied === c.id ? "copied" : "copy"}
+                            </button>
+                          </div>
                           <CustomerHistory customerId={c.id} />
                         </td>
                       </tr>
