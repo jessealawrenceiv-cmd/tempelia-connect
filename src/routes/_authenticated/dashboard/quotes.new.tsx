@@ -211,6 +211,19 @@ function NewQuotePage() {
       // existing opted-in contact isn't downgraded.
       const phoneTrim = phone.trim();
       const emailTrim = email.trim();
+
+      // Detect email overwrite BEFORE upsert so we can log old→new.
+      let priorEmail: string | null = null;
+      if (emailTrim) {
+        const { data: existing } = await supabase
+          .from("customers")
+          .select("id, email")
+          .eq("user_id", u.user.id)
+          .eq("phone_number", phoneTrim)
+          .maybeSingle();
+        priorEmail = existing?.email ?? null;
+      }
+
       const { data: customerRow, error: custErr } = await supabase
         .from("customers")
         .upsert(
@@ -229,6 +242,17 @@ function NewQuotePage() {
         .select("id")
         .single();
       if (custErr) throw custErr;
+
+      // Audit trail: log when a quote overwrites an existing (different) email.
+      if (emailTrim && priorEmail && priorEmail.trim().toLowerCase() !== emailTrim.toLowerCase()) {
+        await supabase.from("logs").insert({
+          user_id: u.user.id,
+          customer_id: customerRow.id,
+          action_type: "customer_email_updated",
+          status: "overwritten_via_quote",
+          message_sent: JSON.stringify({ old: priorEmail, new: emailTrim, source: "quote" }),
+        });
+      }
 
       const { data, error } = await supabase
         .from("quotes")
