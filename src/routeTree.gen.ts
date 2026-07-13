@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as IntakeBusinessIdRouteImport } from './routes/intake.$businessId'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
+import { Route as ApiPublicDebugRatelimitRouteImport } from './routes/api/public/debug-ratelimit'
 import { Route as ApiPublicDebugIpRouteImport } from './routes/api/public/debug-ip'
 import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard/settings'
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
@@ -56,6 +57,11 @@ const AuthenticatedDashboardIndexRoute =
     path: '/dashboard/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicDebugRatelimitRoute = ApiPublicDebugRatelimitRouteImport.update({
+  id: '/api/public/debug-ratelimit',
+  path: '/api/public/debug-ratelimit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicDebugIpRoute = ApiPublicDebugIpRouteImport.update({
   id: '/api/public/debug-ip',
   path: '/api/public/debug-ip',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/api/public/debug-ip': typeof ApiPublicDebugIpRoute
+  '/api/public/debug-ratelimit': typeof ApiPublicDebugRatelimitRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/api/public/debug-ip': typeof ApiPublicDebugIpRoute
+  '/api/public/debug-ratelimit': typeof ApiPublicDebugRatelimitRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/api/public/debug-ip': typeof ApiPublicDebugIpRoute
+  '/api/public/debug-ratelimit': typeof ApiPublicDebugRatelimitRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/dashboard/reviews'
     | '/dashboard/settings'
     | '/api/public/debug-ip'
+    | '/api/public/debug-ratelimit'
     | '/dashboard/'
     | '/dashboard/admin/numbers'
     | '/api/public/payments/webhook'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/dashboard/reviews'
     | '/dashboard/settings'
     | '/api/public/debug-ip'
+    | '/api/public/debug-ratelimit'
     | '/dashboard'
     | '/dashboard/admin/numbers'
     | '/api/public/payments/webhook'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/reviews'
     | '/_authenticated/dashboard/settings'
     | '/api/public/debug-ip'
+    | '/api/public/debug-ratelimit'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/admin/numbers'
     | '/api/public/payments/webhook'
@@ -228,6 +240,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   IntakeBusinessIdRoute: typeof IntakeBusinessIdRoute
   ApiPublicDebugIpRoute: typeof ApiPublicDebugIpRoute
+  ApiPublicDebugRatelimitRoute: typeof ApiPublicDebugRatelimitRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
@@ -276,6 +289,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/debug-ratelimit': {
+      id: '/api/public/debug-ratelimit'
+      path: '/api/public/debug-ratelimit'
+      fullPath: '/api/public/debug-ratelimit'
+      preLoaderRoute: typeof ApiPublicDebugRatelimitRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/debug-ip': {
       id: '/api/public/debug-ip'
@@ -383,6 +403,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   IntakeBusinessIdRoute: IntakeBusinessIdRoute,
   ApiPublicDebugIpRoute: ApiPublicDebugIpRoute,
+  ApiPublicDebugRatelimitRoute: ApiPublicDebugRatelimitRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
