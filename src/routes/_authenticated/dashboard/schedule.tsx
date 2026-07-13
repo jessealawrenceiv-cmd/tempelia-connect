@@ -342,11 +342,16 @@ function SchedulePage() {
                         <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
                         <span className="mono text-[9px] uppercase tracking-widest text-muted-foreground">{dayAppts.length}</span>
                       </div>
-                      {dayAppts.slice(0, 2).map((a) => (
-                        <div key={a.id} className="mono text-[9px] truncate text-paper/80" title={a.title}>
-                          {a.time ? a.time.slice(0,5) + " " : ""}{a.title}
-                        </div>
-                      ))}
+                      {dayAppts.slice(0, 2).map((a) => {
+                        const start = a.time ? a.time.slice(0, 5) : null;
+                        const end = start && a.duration_minutes > 0 ? addMinutesHHMM(a.time!, a.duration_minutes) : null;
+                        const range = start ? (end ? `${start}–${end}` : start) : "all-day";
+                        return (
+                          <div key={a.id} className="mono text-[9px] truncate text-paper/80" title={`${range} ${a.title}`}>
+                            {range} {a.title}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </button>
