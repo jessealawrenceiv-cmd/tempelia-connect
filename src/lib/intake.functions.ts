@@ -229,8 +229,10 @@ export const submitIntake = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Auto-promote intake into Contacts (dedupe on user_id + phone_number).
-    // Intake doesn't collect explicit SMS consent, so opt_in_consent stays false —
-    // the owner grants it from the Contacts page after verbally confirming.
+    // On phone collision we MERGE the latest intake info onto the existing contact
+    // (name, email, source) so the intake is always reflected in Contacts.
+    // Consent columns (opt_in_consent, sms_opt_in_at, consent_form_signed*) are
+    // intentionally omitted so an existing opted-in contact isn't downgraded.
     await supabaseAdmin
       .from("customers")
       .upsert(
@@ -242,7 +244,7 @@ export const submitIntake = createServerFn({ method: "POST" })
           email: data.email || null,
           source: "intake",
         },
-        { onConflict: "user_id,phone_number", ignoreDuplicates: true },
+        { onConflict: "user_id,phone_number" },
       );
 
     // Log rate-limit hit only on success
