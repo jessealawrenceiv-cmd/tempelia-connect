@@ -195,6 +195,22 @@ function QuotesListPage() {
                                 {sendingId === q.id ? "…" : q.status === "draft" ? "send sms" : "resend sms"}
                               </button>
                             )}
+                            {q.status === "accepted" && (
+                              <Link
+                                to="/dashboard/schedule"
+                                search={{
+                                  quoteId: q.id,
+                                  customerId: q.customer_id ?? undefined,
+                                  firstName: q.customer_first_name,
+                                  lastName: q.customer_last_name ?? undefined,
+                                  title: `Job — ${[q.customer_first_name, q.customer_last_name].filter(Boolean).join(" ")}`,
+                                  address: q.job_site_address,
+                                }}
+                                className="mono rounded-sm border border-moss/60 px-2 py-1 text-[10px] uppercase tracking-wider text-moss hover:bg-moss hover:text-charcoal"
+                              >
+                                schedule job
+                              </Link>
+                            )}
                           </div>
                         </td>
                       </tr>
