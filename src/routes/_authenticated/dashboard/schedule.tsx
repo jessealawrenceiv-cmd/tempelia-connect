@@ -381,8 +381,64 @@ function SchedulePage() {
               <label className="block">
                 <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Time</div>
                 <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
-                  className="mt-1 w-full rounded-sm border border-border bg-background px-3 py-2 text-sm mono" />
+                  disabled={isAllDay}
+                  className="mt-1 w-full rounded-sm border border-border bg-background px-3 py-2 text-sm mono disabled:opacity-50" />
               </label>
+            </div>
+            <div className="md:col-span-2">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Duration</div>
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                {DURATION_PRESETS.map((p) => {
+                  const active = !isCustomDuration && durationMinutes === p.value;
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => { setDurationMinutes(p.value); setCustomDuration(""); }}
+                      className={`mono rounded-sm border px-2.5 py-1 text-[10px] uppercase tracking-widest ${
+                        active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                      }`}
+                    >{p.label}</button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isCustomDuration) {
+                      setDurationMinutes(90);
+                      setCustomDuration("90");
+                    }
+                  }}
+                  className={`mono rounded-sm border px-2.5 py-1 text-[10px] uppercase tracking-widest ${
+                    isCustomDuration ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                  }`}
+                >Custom</button>
+                {isCustomDuration && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      max={1440}
+                      value={customDuration}
+                      onChange={(e) => {
+                        setCustomDuration(e.target.value);
+                        const n = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(n) && n > 0 && n <= 1440) setDurationMinutes(n);
+                      }}
+                      className="w-20 rounded-sm border border-border bg-background px-2 py-1 text-sm mono"
+                    />
+                    <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">min</span>
+                  </div>
+                )}
+              </div>
+              {!isAllDay && time && (
+                <div className="mt-1 mono text-[10px] text-muted-foreground">
+                  // {time.slice(0,5)}–{addMinutesHHMM(time, durationMinutes)}
+                </div>
+              )}
+              {isAllDay && (
+                <div className="mt-1 mono text-[10px] text-muted-foreground">// all-day event</div>
+              )}
             </div>
             <label className="block">
               <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">First name</div>
