@@ -133,6 +133,7 @@ export type Database = {
           customer_business_name: string | null
           customer_email: string | null
           customer_first_name: string
+          customer_id: string | null
           customer_last_name: string
           customer_phone: string
           id: string
@@ -149,6 +150,7 @@ export type Database = {
           customer_business_name?: string | null
           customer_email?: string | null
           customer_first_name: string
+          customer_id?: string | null
           customer_last_name: string
           customer_phone: string
           id?: string
@@ -165,6 +167,7 @@ export type Database = {
           customer_business_name?: string | null
           customer_email?: string | null
           customer_first_name?: string
+          customer_id?: string | null
           customer_last_name?: string
           customer_phone?: string
           id?: string
@@ -176,7 +179,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "intake_submissions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integrations: {
         Row: {

@@ -233,7 +233,7 @@ export const submitIntake = createServerFn({ method: "POST" })
     // (name, email, source) so the intake is always reflected in Contacts.
     // Consent columns (opt_in_consent, sms_opt_in_at, consent_form_signed*) are
     // intentionally omitted so an existing opted-in contact isn't downgraded.
-    await supabaseAdmin
+    const { data: cust } = await supabaseAdmin
       .from("customers")
       .upsert(
         {
@@ -245,7 +245,18 @@ export const submitIntake = createServerFn({ method: "POST" })
           source: "intake",
         },
         { onConflict: "user_id,phone_number" },
-      );
+      )
+      .select("id")
+      .single();
+
+    // Stamp the resolved customer_id back onto the submission so the link is
+    // explicit (not just implicitly matched by phone).
+    if (cust?.id) {
+      await supabaseAdmin
+        .from("intake_submissions")
+        .update({ customer_id: cust.id })
+        .eq("id", row.id);
+    }
 
     // Log rate-limit hit only on success
     await supabaseAdmin
@@ -253,6 +264,7 @@ export const submitIntake = createServerFn({ method: "POST" })
       .insert({ user_id: data.userId, ip_hash: ipHash });
 
     return { id: row.id };
+
   });
 
 export const signIntakePhotos = createServerFn({ method: "POST" })
