@@ -74,9 +74,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Tempelia — The quiet line that keeps your business booked" },
-      { name: "description", content: "Tempelia auto-texts missed calls, requests Google reviews, and re-engages dormant customers so your calendar stays full." },
-      { property: "og:title", content: "Tempelia — The quiet line that keeps your business booked" },
+      { title: "Temora — The quiet line that keeps your business booked" },
+      { name: "description", content: "Temora auto-texts missed calls, requests Google reviews, and re-engages dormant customers so your calendar stays full." },
+      { property: "og:title", content: "Temora — The quiet line that keeps your business booked" },
       { property: "og:description", content: "Auto-text missed calls, boost Google reviews, and re-engage old leads so your schedule never empties." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

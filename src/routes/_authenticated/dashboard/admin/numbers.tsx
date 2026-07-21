@@ -34,7 +34,7 @@ function AdminNumbersPage() {
             <div className="label-eyebrow text-orange">{forbidden ? "Access denied" : "Error"}</div>
             <p className="mt-2 text-sm text-muted-foreground">
               {forbidden
-                ? "This page is restricted to Tempelia operators."
+                ? "This page is restricted to Temora operators."
                 : msg}
             </p>
           </div>

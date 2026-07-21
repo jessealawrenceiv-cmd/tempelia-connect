@@ -84,13 +84,13 @@ function OnboardingPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Setup" title="Welcome to Tempelia" />
+      <PageHeader eyebrow="Setup" title="Welcome to Temora" />
       <div className="mx-auto max-w-2xl space-y-5 p-5 md:p-8">
         <div className="panel p-6">
           <div className="label-eyebrow">Step 1 · Dedicated number</div>
-          <h2 className="mt-1 text-xl">Your Tempelia line</h2>
+          <h2 className="mt-1 text-xl">Your Temora line</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            We automatically buy a local Twilio number under Tempelia's master account and wire it up
+            We automatically buy a local Twilio number under Temora's master account and wire it up
             for missed-call auto-texts, review requests, and STOP/START compliance.
           </p>
 

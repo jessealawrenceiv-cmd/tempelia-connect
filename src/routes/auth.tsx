@@ -13,8 +13,8 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
   head: () => ({
     meta: [
-      { title: "Sign in — Tempelia" },
-      { name: "description", content: "Sign in to your Tempelia account." },
+      { title: "Sign in — Temora" },
+      { name: "description", content: "Sign in to your Temora account." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -99,7 +99,7 @@ function AuthPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4">
           <a href="/" className="flex items-center gap-2">
             <img src="/logo-icon.png" alt="" className="h-9 w-auto" />
-            <span className="font-display text-xl font-bold uppercase tracking-wider">Tempelia</span>
+            <span className="font-display text-xl font-bold uppercase tracking-wider">Temora</span>
           </a>
         </div>
       </div>
@@ -134,7 +134,7 @@ function AuthPage() {
                 <input type="checkbox" name="tos" required className="mt-0.5 h-4 w-4 accent-orange" />
                 <span>
                   I confirm my customers have opted in to receive text messages and I accept the
-                  Tempelia terms of service.
+                  Temora terms of service.
                 </span>
               </label>
             )}

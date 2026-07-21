@@ -1,4 +1,4 @@
-// Twilio inbound Voice webhook — when a caller reaches a tenant's Tempelia number,
+// Twilio inbound Voice webhook — when a caller reaches a tenant's Temora number,
 // respond with a short greeting (and optionally a voicemail prompt) and fire off
 // an auto-text from the same number. Routing: look up the tenant by the To number.
 import { createFileRoute } from "@tanstack/react-router";

@@ -26,7 +26,7 @@ export const sendDeclineFollowup = createServerFn({ method: "POST" })
     const { data: prof } = await supabase
       .from("profiles").select("twilio_phone_number").eq("id", userId).maybeSingle();
     const from = prof?.twilio_phone_number;
-    if (!from) throw new Error("Provision your Tempelia number in Settings first.");
+    if (!from) throw new Error("Provision your Temora number in Settings first.");
 
     const message = DECLINE_FOLLOWUP_BODY + STOP_SUFFIX;
     try {

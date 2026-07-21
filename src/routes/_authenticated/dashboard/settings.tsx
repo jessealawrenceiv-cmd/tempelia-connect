@@ -107,7 +107,7 @@ function SettingsPage() {
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
         <div className="panel p-6">
           <div className="label-eyebrow">Integrations</div>
-          <h2 className="mt-1 text-xl">Google review link & Tempelia number</h2>
+          <h2 className="mt-1 text-xl">Google review link & Temora number</h2>
           <p className="mt-2 text-xs text-muted-foreground">
             Your dedicated line:{" "}
             <span className="mono">{profile?.twilio_phone_number ?? "not provisioned yet — visit onboarding"}</span>

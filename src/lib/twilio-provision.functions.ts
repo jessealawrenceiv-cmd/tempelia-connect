@@ -51,7 +51,7 @@ export const provisionTenantNumber = createServerFn({ method: "POST" })
           ok: false,
           errorCode: "twilio_setup",
           message:
-            "Tempelia couldn't provision a number because Twilio rejected the saved credentials. Update the Twilio Account SID/Auth Token and make sure the account can buy phone numbers, then retry.",
+            "Temora couldn't provision a number because Twilio rejected the saved credentials. Update the Twilio Account SID/Auth Token and make sure the account can buy phone numbers, then retry.",
         };
       }
 
@@ -62,7 +62,7 @@ export const provisionTenantNumber = createServerFn({ method: "POST" })
       return {
         ok: false,
         errorCode: "twilio_unavailable",
-        message: "Tempelia couldn't provision a number right now. Please retry in a moment.",
+        message: "Temora couldn't provision a number right now. Please retry in a moment.",
       };
     }
 

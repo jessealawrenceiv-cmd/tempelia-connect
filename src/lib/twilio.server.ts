@@ -30,7 +30,7 @@ function twilioCreds() {
 
 export async function sendTwilioSms(from: string, to: string, body: string): Promise<SendSmsResult> {
   const { sid, auth } = twilioCreds();
-  if (!from) throw new Error("This business has no Tempelia number provisioned yet.");
+  if (!from) throw new Error("This business has no Temora number provisioned yet.");
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
   const params = new URLSearchParams({ To: to, From: from, Body: body });
