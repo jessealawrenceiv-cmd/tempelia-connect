@@ -8,7 +8,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/intake/$businessId")({
   head: () => ({
     meta: [
-      { title: "Project intake — Tempelia" },
+      { title: "Project intake — Temora" },
       { name: "description", content: "Tell us about your concrete project and get a quote." },
       { name: "robots", content: "noindex" },
     ],
@@ -156,7 +156,7 @@ function IntakeForm() {
       <div className="mx-auto max-w-2xl p-5 md:p-10">
         <header className="mb-6">
           <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">// project intake</div>
-          <h1 className="font-display text-3xl md:text-4xl uppercase mt-1">{info?.businessName || "Tempelia"}</h1>
+          <h1 className="font-display text-3xl md:text-4xl uppercase mt-1">{info?.businessName || "Temora"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">Tell us about your concrete project. Takes about 2 minutes.</p>
         </header>
 

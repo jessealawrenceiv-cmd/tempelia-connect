@@ -99,7 +99,7 @@ export const completeJob = createServerFn({ method: "POST" })
         message_sent: message, status: "failed",
       });
       await supabase.from("jobs").update({ status: "failed" }).eq("id", job.id);
-      throw new Error("Provision your Tempelia number in Settings before sending.");
+      throw new Error("Provision your Temora number in Settings before sending.");
     }
 
     // 5. Send.
@@ -142,7 +142,7 @@ export const sendReactivation = createServerFn({ method: "POST" })
     const { data: prof } = await supabase.from("profiles")
       .select("twilio_phone_number").eq("id", userId).maybeSingle();
     const from = prof?.twilio_phone_number;
-    if (!from) throw new Error("Provision your Tempelia number in Settings before sending.");
+    if (!from) throw new Error("Provision your Temora number in Settings before sending.");
 
     // Respect excluded_numbers for reactivations too.
     const custDigits = normalizePhone(cust.phone_number);

@@ -4,9 +4,9 @@ import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Tempelia — The quiet line that keeps your business booked" },
-      { name: "description", content: "Tempelia auto-texts missed calls, requests Google reviews, and re-engages dormant customers so your calendar stays full." },
-      { property: "og:title", content: "Tempelia — The quiet line that keeps your business booked" },
+      { title: "Temora — The quiet line that keeps your business booked" },
+      { name: "description", content: "Temora auto-texts missed calls, requests Google reviews, and re-engages dormant customers so your calendar stays full." },
+      { property: "og:title", content: "Temora — The quiet line that keeps your business booked" },
       { property: "og:description", content: "Auto-text missed calls, boost Google reviews, and re-engage old leads so your schedule never empties." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -19,12 +19,12 @@ const features = [
   {
     tag: "01 · Missed-Call Auto-Text",
     title: "Every missed call becomes a booked call.",
-    body: "When a customer calls and you can't pick up, Tempelia texts them back within 30 seconds from the same number. Most callers reply and book.",
+    body: "When a customer calls and you can't pick up, Temora texts them back within 30 seconds from the same number. Most callers reply and book.",
   },
   {
     tag: "02 · Review Booster",
     title: "More reviews, more bookings.",
-    body: "After every job, Tempelia sends your customer a Google review link. More five-star reviews mean more calls and more appointments on the calendar.",
+    body: "After every job, Temora sends your customer a Google review link. More five-star reviews mean more calls and more appointments on the calendar.",
   },
   {
     tag: "03 · Dead-Lead Re-Activator",
@@ -56,7 +56,7 @@ function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2">
             <img src="/logo-icon.png" alt="" className="h-9 w-auto" />
-            <span className="font-display text-xl font-bold uppercase tracking-wider">Tempelia</span>
+            <span className="font-display text-xl font-bold uppercase tracking-wider">Temora</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/auth" className="text-sm uppercase tracking-wider text-paper/80 hover:text-paper">Sign in</Link>
@@ -81,7 +81,7 @@ function Landing() {
               <span className="text-orange">business booked.</span>
             </h1>
             <p className="mt-6 max-w-lg text-base text-muted-foreground">
-              Tempelia runs behind your existing business line — auto-texting missed calls, asking
+              Temora runs behind your existing business line — auto-texting missed calls, asking
               happy customers for reviews, and re-engaging old leads so your calendar stays full.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -185,7 +185,7 @@ function Landing() {
 
       <footer className="bg-charcoal text-paper/70">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs uppercase tracking-wider">
-          <span>© {new Date().getFullYear()} Tempelia</span>
+          <span>© {new Date().getFullYear()} Temora</span>
           <span className="mono">Dispatch · Ops · Comms</span>
         </div>
       </footer>

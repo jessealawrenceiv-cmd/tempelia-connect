@@ -56,7 +56,7 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
       .maybeSingle();
     const biz = prof?.business_name || "our team";
     const from = prof?.twilio_phone_number;
-    if (!from) throw new Error("Provision your Tempelia number in Settings before sending.");
+    if (!from) throw new Error("Provision your Temora number in Settings before sending.");
 
     const link = `${PROJECT_PUBLIC_BASE}/quote/${q.id}`;
     const validLine = q.valid_until
