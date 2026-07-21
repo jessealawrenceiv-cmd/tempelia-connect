@@ -34,9 +34,8 @@ const features = [
 ];
 
 const tiers = [
-  { name: "Starter", price: "99", blurb: "Solo operator. 1 line. Keep every missed call.", priceId: "starter_monthly" },
-  { name: "Standard", price: "199", blurb: "Small crew. 2 lines, priority support.", featured: true, priceId: "standard_monthly" },
-  { name: "Premium", price: "299", blurb: "Multi-location. 5 lines, custom flows.", priceId: "premium_monthly" },
+  { name: "Starter", price: "49.99", blurb: "Solo operator. 1 line. Keep every missed call.", priceId: "starter_monthly" },
+  { name: "Standard", price: "99.99", blurb: "Small crew. 2 lines, priority support.", featured: true, priceId: "standard_monthly" },
 ];
 
 const logRows: Array<{ time: string; dot: string; msg: string }> = [
