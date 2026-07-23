@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { checkAndRecord, rateLimitError } from "../rate-limit";
 
 function supabaseForUser(ctx: ToolContext) {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -23,6 +24,8 @@ export default defineTool({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
+    const rl = await checkAndRecord(ctx, "list_contacts");
+    if (!rl.ok) return rateLimitError(rl);
     const supabase = supabaseForUser(ctx);
     let q = supabase
       .from("customers")

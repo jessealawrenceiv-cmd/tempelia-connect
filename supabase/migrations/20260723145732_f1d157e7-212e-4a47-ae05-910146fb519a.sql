@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.mcp_rate_limits_prune() FROM PUBLIC, anon, authenticated;
