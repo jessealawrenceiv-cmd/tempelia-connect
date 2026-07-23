@@ -6,7 +6,15 @@ import { toast } from "sonner";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).catch("signin").optional(),
+  next: z.string().optional(),
 });
+
+function safeNext(next: string | undefined): string | null {
+  if (!next) return null;
+  // Same-origin relative path only.
+  if (!next.startsWith("/") || next.startsWith("//")) return null;
+  return next;
+}
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -24,7 +32,7 @@ const signupSchema = z.object({
   business_name: z.string().trim().min(1, "Business name is required").max(120),
   email: z.string().trim().email().max(255),
   password: z.string().min(8, "At least 8 characters").max(72),
-  tos: z.literal(true, { errorMap: () => ({ message: "You must accept the terms" }) }),
+  tos: z.literal(true, { error: "You must accept the terms" }),
 });
 
 const signinSchema = z.object({
@@ -38,11 +46,16 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">(search.mode === "signup" ? "signup" : "signin");
   const [loading, setLoading] = useState(false);
 
+  const nextPath = safeNext(search.next);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) {
+        if (nextPath) window.location.replace(nextPath);
+        else navigate({ to: "/dashboard" });
+      }
     });
-  }, [navigate]);
+  }, [navigate, nextPath]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -64,7 +77,7 @@ function AuthPage() {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: window.location.origin + "/dashboard",
+            emailRedirectTo: window.location.origin + (nextPath ?? "/dashboard"),
             data: {
               business_name: parsed.data.business_name,
               tos_accepted: true,
@@ -77,6 +90,7 @@ function AuthPage() {
           return;
         }
         toast.success("Account created. Welcome aboard.");
+        if (nextPath) { window.location.replace(nextPath); return; }
         navigate({ to: "/onboarding" });
       } else {
         const parsed = signinSchema.safeParse({
@@ -86,6 +100,7 @@ function AuthPage() {
         if (!parsed.success) { toast.error("Enter your email and password"); return; }
         const { error } = await supabase.auth.signInWithPassword(parsed.data);
         if (error) { toast.error(error.message); return; }
+        if (nextPath) { window.location.replace(nextPath); return; }
         navigate({ to: "/dashboard" });
       }
     } finally {
