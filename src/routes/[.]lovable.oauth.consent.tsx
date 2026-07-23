@@ -84,6 +84,7 @@ function Consent() {
   }
 
   const clientName = details?.client?.name ?? "an app";
+  const redirectUri = details?.client?.redirect_uri;
 
   return (
     <main className="min-h-screen bg-background">
@@ -102,6 +103,15 @@ function Consent() {
             account (contacts, quotes, appointments, and dispatch activity) while you are
             signed in. This does not bypass Temora's permissions or your data policies.
           </p>
+          {redirectUri && (
+            <div className="mt-4 rounded-sm border border-border bg-card/40 p-3">
+              <div className="label-eyebrow text-[10px]">Authorization will be sent to</div>
+              <p className="mono mt-1 break-all text-xs text-paper">{redirectUri}</p>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Only approve if you recognize this destination. If it looks wrong, cancel.
+              </p>
+            </div>
+          )}
           {details?.scope && (
             <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
               Requested scope: {details.scope}
