@@ -24,6 +24,8 @@ export default defineTool({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
+    const rl = await checkAndRecord(ctx, "list_recent_activity");
+    if (!rl.ok) return rateLimitError(rl);
     const supabase = supabaseForUser(ctx);
     let q = supabase
       .from("logs")
