@@ -46,11 +46,16 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">(search.mode === "signup" ? "signup" : "signin");
   const [loading, setLoading] = useState(false);
 
+  const nextPath = safeNext(search.next);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) {
+        if (nextPath) window.location.replace(nextPath);
+        else navigate({ to: "/dashboard" });
+      }
     });
-  }, [navigate]);
+  }, [navigate, nextPath]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -72,7 +77,7 @@ function AuthPage() {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: window.location.origin + "/dashboard",
+            emailRedirectTo: window.location.origin + (nextPath ?? "/dashboard"),
             data: {
               business_name: parsed.data.business_name,
               tos_accepted: true,
@@ -85,6 +90,7 @@ function AuthPage() {
           return;
         }
         toast.success("Account created. Welcome aboard.");
+        if (nextPath) { window.location.replace(nextPath); return; }
         navigate({ to: "/onboarding" });
       } else {
         const parsed = signinSchema.safeParse({
@@ -94,6 +100,7 @@ function AuthPage() {
         if (!parsed.success) { toast.error("Enter your email and password"); return; }
         const { error } = await supabase.auth.signInWithPassword(parsed.data);
         if (error) { toast.error(error.message); return; }
+        if (nextPath) { window.location.replace(nextPath); return; }
         navigate({ to: "/dashboard" });
       }
     } finally {
