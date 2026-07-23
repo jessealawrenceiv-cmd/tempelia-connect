@@ -381,6 +381,27 @@ export type Database = {
           },
         ]
       }
+      mcp_rate_limits: {
+        Row: {
+          called_at: string
+          id: string
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          called_at?: string
+          id?: string
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          called_at?: string
+          id?: string
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           business_name: string
@@ -631,6 +652,7 @@ export type Database = {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      mcp_rate_limits_prune: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"
