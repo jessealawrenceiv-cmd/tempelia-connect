@@ -6,7 +6,15 @@ import { toast } from "sonner";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).catch("signin").optional(),
+  next: z.string().optional(),
 });
+
+function safeNext(next: string | undefined): string | null {
+  if (!next) return null;
+  // Same-origin relative path only.
+  if (!next.startsWith("/") || next.startsWith("//")) return null;
+  return next;
+}
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -24,7 +32,7 @@ const signupSchema = z.object({
   business_name: z.string().trim().min(1, "Business name is required").max(120),
   email: z.string().trim().email().max(255),
   password: z.string().min(8, "At least 8 characters").max(72),
-  tos: z.literal(true, { errorMap: () => ({ message: "You must accept the terms" }) }),
+  tos: z.literal(true, { error: "You must accept the terms" }),
 });
 
 const signinSchema = z.object({
