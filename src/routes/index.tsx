@@ -187,6 +187,7 @@ function Landing() {
           <span>© {new Date().getFullYear()} Temaro</span>
           <div className="flex items-center gap-4">
             <Link to="/privacy" className="hover:text-paper">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-paper">Terms of Service</Link>
             <span className="mono">Dispatch · Ops · Comms</span>
           </div>
         </div>
