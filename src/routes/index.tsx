@@ -185,7 +185,10 @@ function Landing() {
       <footer className="bg-charcoal text-paper/70">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs uppercase tracking-wider">
           <span>© {new Date().getFullYear()} Temaro</span>
-          <span className="mono">Dispatch · Ops · Comms</span>
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="hover:text-paper">Privacy Policy</Link>
+            <span className="mono">Dispatch · Ops · Comms</span>
+          </div>
         </div>
       </footer>
     </div>
