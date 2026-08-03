@@ -21,8 +21,8 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
   head: () => ({
     meta: [
-      { title: "Sign in — Temora" },
-      { name: "description", content: "Sign in to your Temora account." },
+      { title: "Sign in — Temaro" },
+      { name: "description", content: "Sign in to your Temaro account." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -114,7 +114,7 @@ function AuthPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4">
           <a href="/" className="flex items-center gap-2">
             <img src="/logo-icon.png" alt="" className="h-9 w-auto" />
-            <span className="font-display text-xl font-bold uppercase tracking-wider">Temora</span>
+            <span className="font-display text-xl font-bold uppercase tracking-wider">Temaro</span>
           </a>
         </div>
       </div>
@@ -149,7 +149,7 @@ function AuthPage() {
                 <input type="checkbox" name="tos" required className="mt-0.5 h-4 w-4 accent-orange" />
                 <span>
                   I confirm my customers have opted in to receive text messages and I accept the
-                  Temora terms of service.
+                  Temaro terms of service.
                 </span>
               </label>
             )}

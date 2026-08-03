@@ -91,7 +91,7 @@ function Consent() {
       <div className="border-b border-border bg-charcoal text-paper">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4">
           <img src="/logo-icon.png" alt="" className="h-9 w-auto" />
-          <span className="font-display text-xl font-bold uppercase tracking-wider">Temora</span>
+          <span className="font-display text-xl font-bold uppercase tracking-wider">Temaro</span>
         </div>
       </div>
       <div className="mx-auto grid min-h-[calc(100vh-72px)] max-w-5xl place-items-center px-4 py-10">
@@ -99,9 +99,9 @@ function Consent() {
           <div className="label-eyebrow">Agent access</div>
           <h1 className="mt-2 text-2xl">Connect {clientName} to your account</h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            This lets {clientName} use Temora as you. It can call the enabled tools on this
+            This lets {clientName} use Temaro as you. It can call the enabled tools on this
             account (contacts, quotes, appointments, and dispatch activity) while you are
-            signed in. This does not bypass Temora's permissions or your data policies.
+            signed in. This does not bypass Temaro's permissions or your data policies.
           </p>
           {redirectUri && (
             <div className="mt-4 rounded-sm border border-border bg-card/40 p-3">
