@@ -13,13 +13,13 @@
     "server": {
       "name": "temora-mcp",
       "version": "0.1.0",
-      "title": "Temora"
+      "title": "Temaro"
     },
     "tools": [
       {
         "name": "list_contacts",
         "title": "List contacts",
-        "description": "List contacts for the signed-in Temora account. Optionally filter by a search string matching name or phone number.",
+        "description": "List contacts for the signed-in Temaro account. Optionally filter by a search string matching name or phone number.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -46,7 +46,7 @@
       {
         "name": "list_quotes",
         "title": "List quotes",
-        "description": "List recent quotes for the signed-in Temora account, optionally filtered by status (draft, sent, accepted, declined, superseded).",
+        "description": "List recent quotes for the signed-in Temaro account, optionally filtered by status (draft, sent, accepted, declined, superseded).",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -84,7 +84,7 @@
       {
         "name": "list_appointments",
         "title": "List appointments",
-        "description": "List scheduled appointments for the signed-in Temora account within an optional date range (inclusive, YYYY-MM-DD).",
+        "description": "List scheduled appointments for the signed-in Temaro account within an optional date range (inclusive, YYYY-MM-DD).",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -117,7 +117,7 @@
       {
         "name": "list_recent_activity",
         "title": "List recent dispatch activity",
-        "description": "List recent dispatch log entries for the signed-in Temora account (missed calls, auto-texts, voicemails, review requests, decline follow-ups). Filter by action_type when needed.",
+        "description": "List recent dispatch log entries for the signed-in Temaro account (missed calls, auto-texts, voicemails, review requests, decline follow-ups). Filter by action_type when needed.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,

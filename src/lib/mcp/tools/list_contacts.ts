@@ -14,7 +14,7 @@ export default defineTool({
   name: "list_contacts",
   title: "List contacts",
   description:
-    "List contacts for the signed-in Temora account. Optionally filter by a search string matching name or phone number.",
+    "List contacts for the signed-in Temaro account. Optionally filter by a search string matching name or phone number.",
   inputSchema: {
     search: z.string().trim().optional().describe("Optional case-insensitive substring match on name or phone."),
     limit: z.number().int().min(1).max(100).optional().describe("Max rows to return (default 25)."),

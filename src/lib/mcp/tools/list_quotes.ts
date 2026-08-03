@@ -14,7 +14,7 @@ export default defineTool({
   name: "list_quotes",
   title: "List quotes",
   description:
-    "List recent quotes for the signed-in Temora account, optionally filtered by status (draft, sent, accepted, declined, superseded).",
+    "List recent quotes for the signed-in Temaro account, optionally filtered by status (draft, sent, accepted, declined, superseded).",
   inputSchema: {
     status: z
       .enum(["draft", "sent", "accepted", "declined", "superseded"])

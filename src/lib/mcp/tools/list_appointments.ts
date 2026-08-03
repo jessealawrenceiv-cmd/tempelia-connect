@@ -14,7 +14,7 @@ export default defineTool({
   name: "list_appointments",
   title: "List appointments",
   description:
-    "List scheduled appointments for the signed-in Temora account within an optional date range (inclusive, YYYY-MM-DD).",
+    "List scheduled appointments for the signed-in Temaro account within an optional date range (inclusive, YYYY-MM-DD).",
   inputSchema: {
     from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Start date (inclusive)."),
     to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("End date (inclusive)."),

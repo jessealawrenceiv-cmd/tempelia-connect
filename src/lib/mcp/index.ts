@@ -11,10 +11,10 @@ const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unse
 
 export default defineMcp({
   name: "temora-mcp",
-  title: "Temora",
+  title: "Temaro",
   version: "0.1.0",
   instructions:
-    "Read-only access to a signed-in Temora account: contacts, quotes, appointments, and dispatch activity. Every tool acts as the authenticated user via Supabase RLS.",
+    "Read-only access to a signed-in Temaro account: contacts, quotes, appointments, and dispatch activity. Every tool acts as the authenticated user via Supabase RLS.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

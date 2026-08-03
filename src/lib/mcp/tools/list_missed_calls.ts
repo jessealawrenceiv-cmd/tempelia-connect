@@ -14,7 +14,7 @@ export default defineTool({
   name: "list_recent_activity",
   title: "List recent dispatch activity",
   description:
-    "List recent dispatch log entries for the signed-in Temora account (missed calls, auto-texts, voicemails, review requests, decline follow-ups). Filter by action_type when needed.",
+    "List recent dispatch log entries for the signed-in Temaro account (missed calls, auto-texts, voicemails, review requests, decline follow-ups). Filter by action_type when needed.",
   inputSchema: {
     action_type: z.string().optional().describe("Optional action_type filter, e.g. 'missed_call', 'auto_text_sent', 'voicemail_left'."),
     limit: z.number().int().min(1).max(200).optional().describe("Max rows (default 50)."),

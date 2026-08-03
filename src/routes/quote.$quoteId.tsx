@@ -7,7 +7,7 @@ import { getPublicQuote, respondToQuote } from "@/lib/quote-public.functions";
 export const Route = createFileRoute("/quote/$quoteId")({
   head: () => ({
     meta: [
-      { title: "Your quote — Temora" },
+      { title: "Your quote — Temaro" },
       { name: "description", content: "Review your quote and accept or decline." },
       { name: "robots", content: "noindex" },
     ],

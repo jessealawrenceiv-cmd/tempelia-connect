@@ -59,7 +59,7 @@ export type IcsAppointment = {
   durationMinutes?: number | null; // 0 or null with no time => all-day; otherwise timed length
 };
 
-export function buildIcs(a: IcsAppointment, prodId = "-//Temora//Schedule//EN"): string {
+export function buildIcs(a: IcsAppointment, prodId = "-//Temaro//Schedule//EN"): string {
   const [y, m, d] = a.date.split("-").map(Number);
   let dtStart: string;
   let dtEnd: string;
