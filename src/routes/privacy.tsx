@@ -14,7 +14,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const SUPPORT_EMAIL = "support@temaro.app";
+const SUPPORT_EMAIL = "admin@temaro.io";
 
 function PrivacyPage() {
   return (
