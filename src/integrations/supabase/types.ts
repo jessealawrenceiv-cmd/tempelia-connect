@@ -623,6 +623,7 @@ export type Database = {
           accepted_at: string | null
           business_owner_id: string
           created_at: string
+          expires_at: string
           id: string
           invited_at: string
           invited_email: string
@@ -634,6 +635,7 @@ export type Database = {
           accepted_at?: string | null
           business_owner_id: string
           created_at?: string
+          expires_at?: string
           id?: string
           invited_at?: string
           invited_email: string
@@ -645,6 +647,7 @@ export type Database = {
           accepted_at?: string | null
           business_owner_id?: string
           created_at?: string
+          expires_at?: string
           id?: string
           invited_at?: string
           invited_email?: string
@@ -686,6 +689,7 @@ export type Database = {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
       }
+      has_expired_team_invite: { Args: never; Returns: boolean }
       has_pending_team_invite: { Args: never; Returns: boolean }
       has_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
@@ -697,6 +701,7 @@ export type Database = {
         Returns: {
           business_name: string
           business_owner_id: string
+          expires_at: string
           invite_id: string
           invited_at: string
         }[]
