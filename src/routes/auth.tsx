@@ -40,6 +40,12 @@ const signinSchema = z.object({
   password: z.string().min(1).max(72),
 });
 
+async function hasPendingInvite(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("has_pending_team_invite");
+  if (error) return false;
+  return data === true;
+}
+
 function AuthPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
