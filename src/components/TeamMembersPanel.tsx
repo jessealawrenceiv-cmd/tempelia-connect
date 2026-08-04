@@ -39,7 +39,7 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Invite created. They get access as soon as they sign in with that email.");
+      toast.success("Invite created. Send them the accept link below.");
       setEmail("");
       qc.invalidateQueries({ queryKey: ["team_members"] });
     },
