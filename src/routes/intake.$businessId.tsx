@@ -171,14 +171,30 @@ function IntakeForm() {
             <Field label="Email (optional)"><input type="email" className={inp} value={form.email} onChange={(e) => upd("email", e.target.value)} /></Field>
           </Row>
 
+          {/* Standalone, unchecked-by-default SMS consent checkbox (A2P requirement) */}
+          <label className="flex items-start gap-3 rounded-sm border border-border bg-background/40 p-3">
+            <input
+              type="checkbox"
+              required
+              name="smsConsent"
+              aria-label="SMS consent"
+              checked={smsConsent}
+              onChange={(e) => setSmsConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-violet"
+            />
+            <span className="text-xs leading-relaxed text-muted-foreground">
+              I agree to receive SMS text messages from {info?.businessName || "[Business Name]"} regarding my project
+              inquiry. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help.
+            </span>
+          </label>
+
           <p className="text-xs leading-relaxed text-muted-foreground">
-            By providing your phone number, you agree to receive SMS text messages from{" "}
-            {info?.businessName || "[Business Name]"} regarding your project inquiry. Message frequency varies.
-            Message and data rates may apply. Reply STOP to opt out at any time, or HELP for help. View our{" "}
+            View our{" "}
             <a href="https://tempelia-connect.lovable.app/privacy" target="_blank" rel="noreferrer" className="text-moss underline">Privacy Policy</a>{" "}
             and{" "}
             <a href="https://tempelia-connect.lovable.app/terms" target="_blank" rel="noreferrer" className="text-moss underline">Terms of Service</a>.
           </p>
+
 
           <Field label="Project location / address *"><input required className={inp} value={form.address} onChange={(e) => upd("address", e.target.value)} /></Field>
 
