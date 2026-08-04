@@ -570,6 +570,53 @@ export type Database = {
           },
         ]
       }
+      sms_consent_events: {
+        Row: {
+          action: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          keyword: string
+          message_body: string | null
+          occurred_at: string
+          phone_number: string
+          twilio_message_sid: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          keyword: string
+          message_body?: string | null
+          occurred_at?: string
+          phone_number: string
+          twilio_message_sid?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          keyword?: string
+          message_body?: string | null
+          occurred_at?: string
+          phone_number?: string
+          twilio_message_sid?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_consent_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
