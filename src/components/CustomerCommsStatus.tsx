@@ -105,6 +105,16 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
     },
   });
 
+  const resend = useMutation({
+    mutationFn: async () => resendFn({ data: { customerId: customerId! } }),
+    onSuccess: () => {
+      toast.success("Message re-sent");
+      queryClient.invalidateQueries({ queryKey: ["comms-last-outbound", customerId] });
+      queryClient.invalidateQueries({ queryKey: ["customer-logs", customerId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (!customerId) return null;
 
   // Prefer the audited consent keyword; fall back to the first word of the
@@ -112,6 +122,15 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
   const keyword = lastConsent?.keyword ?? firstWord(lastInbound?.message_sent);
   const keywordAt = lastConsent?.occurred_at ?? lastInbound?.created_at ?? null;
   const keywordIsConsent = !!lastConsent;
+
+  // Delivery is unconfirmed when Twilio reported a failure, or when we never
+  // recorded a message SID / delivery confirmation from the webhook.
+  const canResend =
+    !!lastOutbound &&
+    !!lastOutbound.message_sent &&
+    optInConsent &&
+    (RESENDABLE_STATUSES.includes(lastOutbound.status) || !lastOutbound.twilio_message_sid);
+
 
   return (
     <section className="rounded-sm border border-border bg-background/40 p-3">
