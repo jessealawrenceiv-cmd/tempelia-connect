@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { CustomerHistory } from "@/components/CustomerHistory";
+import { CustomerCommsStatus } from "@/components/CustomerCommsStatus";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { toast } from "sonner";
@@ -329,6 +330,13 @@ function ContactsPage() {
                               {copied === c.id ? <Check size={12} /> : <Copy size={12} />}
                               {copied === c.id ? "copied" : "copy"}
                             </button>
+                          </div>
+                          <div className="mb-4">
+                            <CustomerCommsStatus
+                              customerId={c.id}
+                              optInConsent={c.opt_in_consent}
+                              smsOptInAt={c.sms_opt_in_at}
+                            />
                           </div>
                           <CustomerHistory customerId={c.id} />
                         </td>
