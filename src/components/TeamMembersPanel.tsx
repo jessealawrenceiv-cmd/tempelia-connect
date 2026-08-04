@@ -53,8 +53,8 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
     mutationFn: async (m: { id: string; invited_email: string }) => {
       const { error } = await supabase
         .from("team_members")
-        .update({ invited_at: new Date().toISOString(), accepted_at: null, staff_user_id: null })
-        .eq("id", m.id);
+        .update({ invited_at: new Date().toISOString() })
+
       if (error) throw error;
       const link = acceptUrl();
       try {
