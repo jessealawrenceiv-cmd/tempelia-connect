@@ -28,11 +28,11 @@ for (const r of rows) {
   const { data: p } = await s.from('profiles').select('business_name').eq('id', r.business_owner_id).single();
   console.log(`  ${p.business_name}: staff_user_id=${r.staff_user_id ? 'SET' : 'null'} accepted_at=${r.accepted_at}`);
 }
-// what can staff see?
+for (const id of [ownerA, ownerB]) await s.from('customers').insert({ user_id: id, first_name: 'Cust'+id.slice(0,4), phone_number: '+15550001111' });
 for (const [name, id] of [['Alpha Plumbing', ownerA], ['Beta Roofing', ownerB]]) {
   const { data: cust } = await c.from('customers').select('id').eq('user_id', id);
   console.log(`staff read access to ${name} customers rows:`, cust?.length);
 }
 console.log('CLEANUP');
-await s.from('team_members').delete().eq('invited_email', staffEmail);
+await s.from('team_members').delete().eq('invited_email', staffEmail); await s.from('customers').delete().in('user_id',[ownerA,ownerB]);
 for (const id of [ownerA, ownerB, staff]) await s.auth.admin.deleteUser(id);
