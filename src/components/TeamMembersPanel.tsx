@@ -78,16 +78,21 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
   });
 
   const revoke = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("team_members").delete().eq("id", id);
+    mutationFn: async (m: { id: string; accepted_at: string | null }) => {
+      const { error } = await supabase.from("team_members").delete().eq("id", m.id);
       if (error) throw error;
+      return m;
     },
-    onSuccess: () => {
-      toast.success("Access revoked.");
+    onSuccess: (m) => {
+      toast.success(m.accepted_at ? "Staff access removed." : "Pending invite revoked.");
       qc.invalidateQueries({ queryKey: ["team_members"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const pending = (members ?? []).filter((m) => !m.accepted_at);
+  const active = (members ?? []).filter((m) => !!m.accepted_at);
+
 
 
   return (
