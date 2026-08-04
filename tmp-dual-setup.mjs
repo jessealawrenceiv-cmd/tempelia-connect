@@ -1,0 +1,13 @@
+import { createClient } from '@supabase/supabase-js';
+const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth:{persistSession:false} });
+const stamp = Date.now();
+const mk = async (email) => (await s.auth.admin.createUser({ email, password:'Test1234!pass', email_confirm:true })).data.user.id;
+const a = await mk(`ownerA${stamp}@example.com`), b = await mk(`ownerB${stamp}@example.com`);
+const staffEmail = `staff${stamp}@example.com`; const st = await mk(staffEmail);
+await s.from('profiles').update({business_name:'Alpha Plumbing',subscription_tier:'standard'}).eq('id',a);
+await s.from('profiles').update({business_name:'Beta Roofing',subscription_tier:'standard'}).eq('id',b);
+await s.from('team_members').insert({business_owner_id:a,invited_email:staffEmail,invited_at:new Date(Date.now()-7200e3).toISOString()});
+await s.from('team_members').insert({business_owner_id:b,invited_email:staffEmail});
+await s.from('customers').insert({user_id:a,first_name:'AlphaCustomer',phone_number:'+15550001111'});
+await s.from('customers').insert({user_id:b,first_name:'BetaCustomer',phone_number:'+15550002222'});
+console.log(JSON.stringify({staffEmail,a,b,st}));
