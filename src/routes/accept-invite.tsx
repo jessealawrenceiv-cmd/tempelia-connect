@@ -92,7 +92,7 @@ function AcceptInvitePage() {
                 <Link
                   to="/auth"
                   search={{ mode: "signin", next: "/accept-invite" }}
-                  className="rounded-sm bg-violet px-4 py-3 text-center text-xs uppercase tracking-wider text-paper"
+                  className="rounded-sm bg-orange px-4 py-3 text-center text-xs uppercase tracking-wider text-paper"
                 >
                   Sign in
                 </Link>
@@ -129,7 +129,7 @@ function AcceptInvitePage() {
               </p>
               <Link
                 to="/dashboard"
-                className="mt-6 block rounded-sm bg-violet px-4 py-3 text-center text-xs uppercase tracking-wider text-paper"
+                className="mt-6 block rounded-sm bg-orange px-4 py-3 text-center text-xs uppercase tracking-wider text-paper"
               >
                 Go to dashboard
               </Link>
@@ -162,7 +162,7 @@ function AcceptInvitePage() {
 
 function StatusLine({ tone, children }: { tone: "ok" | "pending" | "error"; children: React.ReactNode }) {
   const color =
-    tone === "ok" ? "text-moss" : tone === "error" ? "text-destructive" : "text-violet";
+    tone === "ok" ? "text-moss" : tone === "error" ? "text-destructive" : "text-orange";
   return (
     <div className={`mono mt-6 text-[10px] uppercase tracking-widest ${color}`}>{children}</div>
   );
