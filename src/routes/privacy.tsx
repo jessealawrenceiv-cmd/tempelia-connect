@@ -64,8 +64,9 @@ function PrivacyPage() {
           <section>
             <h2 className="text-2xl">SMS Consent and Opt-Out</h2>
             <p className="mt-4 text-base leading-relaxed text-foreground/90">
-              Every automated text we send includes opt-out instructions. Replying STOP immediately and automatically stops all future messages to that number. Consent status is tracked and respected across every message type.
+              Every automated text we send includes opt-out instructions. Replying STOP immediately and automatically stops all future messages to that number. Consent status is tracked and respected across every message type. No mobile opt-in data will be shared with third parties or affiliates for marketing or promotional purposes at any time.
             </p>
+
           </section>
 
           <section>
