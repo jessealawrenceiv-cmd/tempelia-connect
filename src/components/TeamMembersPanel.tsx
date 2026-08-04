@@ -90,6 +90,17 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
         </div>
       )}
 
+      {isStandard && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Ask staff to sign in with the invited email, confirm it from their inbox, then open{" "}
+          <a href="/accept-invite" className="underline">
+            /accept-invite
+          </a>{" "}
+          to activate access.
+        </p>
+      )}
+
+
       <div className="mt-5 space-y-2">
         {(members ?? []).length === 0 && (
           <p className="text-xs text-muted-foreground">No staff logins yet.</p>
