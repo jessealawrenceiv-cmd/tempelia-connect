@@ -107,6 +107,10 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword(parsed.data);
         if (error) { toast.error(error.message); return; }
         if (nextPath) { window.location.replace(nextPath); return; }
+        if (await hasPendingInvite()) {
+          navigate({ to: "/accept-invite" });
+          return;
+        }
         navigate({ to: "/dashboard" });
       }
     } finally {
