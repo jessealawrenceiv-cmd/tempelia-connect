@@ -194,12 +194,26 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
                 <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   {lastOutbound.action_type.replace(/_/g, " ")} · {lastOutbound.status} ·{" "}
                   {fmtDateTime(lastOutbound.created_at)}
+                  {!lastOutbound.twilio_message_sid && (
+                    <span className="text-destructive"> · delivery unconfirmed</span>
+                  )}
                 </div>
                 <p className="mono mt-1 whitespace-pre-wrap text-xs text-paper">
                   {lastOutbound.message_sent || "— no body recorded —"}
                 </p>
+                {canResend && (
+                  <button
+                    type="button"
+                    onClick={() => resend.mutate()}
+                    disabled={resend.isPending}
+                    className="mono mt-2 rounded-sm border border-primary/60 px-2 py-1 text-[10px] uppercase tracking-wider text-paper hover:bg-primary/20 disabled:opacity-50"
+                  >
+                    {resend.isPending ? "Re-sending…" : "Resend last message"}
+                  </button>
+                )}
               </>
             ) : (
+
               <span className="mono text-xs italic text-muted-foreground">
                 // nothing sent yet
               </span>
