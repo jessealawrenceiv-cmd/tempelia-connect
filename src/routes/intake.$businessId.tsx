@@ -70,7 +70,9 @@ function IntakeForm() {
     description: "",
     website: "", // honeypot — hidden from real users
   });
+  const [smsConsent, setSmsConsent] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
