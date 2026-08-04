@@ -160,6 +160,36 @@ function AcceptInvitePage() {
               <RetryButton onClick={run} label="I've confirmed — check again" />
             </>
           )}
+          {state.kind === "choose" && (
+            <>
+              <StatusLine tone="pending">Multiple invites found</StatusLine>
+              <p className="mt-3 text-sm text-muted-foreground">
+                <span className="mono">{state.email}</span> was invited by more than one business.
+                Pick the one you're joining — you can only have staff access to one business at a
+                time.
+              </p>
+              <div className="mt-6 flex flex-col gap-2">
+                {state.invites.map((inv) => (
+                  <button
+                    key={inv.invite_id}
+                    disabled={claiming !== null}
+                    onClick={() => void claimOne(inv, state.email)}
+                    className="flex items-center justify-between rounded-sm border border-violet/60 px-4 py-3 text-left hover:bg-violet/10 disabled:opacity-50"
+                  >
+                    <span className="text-sm text-foreground">
+                      {inv.business_name || "Unnamed business"}
+                    </span>
+                    <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {claiming === inv.invite_id
+                        ? "joining…"
+                        : `invited ${new Date(inv.invited_at).toLocaleDateString()}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
 
           {state.kind === "accepted" && (
             <>
