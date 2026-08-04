@@ -69,6 +69,13 @@ function PrivacyPage() {
           </section>
 
           <section>
+            <h2 className="text-2xl">How You Opt In</h2>
+            <p className="mt-4 text-base leading-relaxed text-foreground/90">
+              You opt in to receive text messages from a business either by submitting their Project Intake form (providing your name and phone number and agreeing to be contacted about your project), or by calling the business — if your call isn't answered, you'll receive a single automated text reply inviting you to describe your project. This reply is sent because you initiated contact, not as an unsolicited message.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-2xl">Third-Party Services</h2>
             <p className="mt-4 text-base leading-relaxed text-foreground/90">
               We use Twilio to send and receive text messages and calls, Stripe for payment processing, and Supabase for secure data storage. Each of these providers has its own privacy practices governing the data they process on our behalf.
