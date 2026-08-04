@@ -44,6 +44,16 @@ type IntakeRow = {
   submitted_at: string;
 };
 
+type ConsentRow = {
+  id: string;
+  phone_number: string;
+  keyword: string;
+  action: "opt_in" | "opt_out";
+  message_body: string | null;
+  twilio_message_sid: string | null;
+  occurred_at: string;
+};
+
 function fmtMoney(n: number | string | null | undefined) {
   const v = typeof n === "string" ? Number(n) : (n ?? 0);
   return v.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -100,6 +110,20 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
     },
   });
 
+  const { data: consents, isLoading: cLoading } = useQuery({
+    queryKey: ["customer-history-consents", customerId],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sms_consent_events")
+        .select("id, phone_number, keyword, action, message_body, twilio_message_sid, occurred_at")
+        .eq("customer_id", customerId!)
+        .order("occurred_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as ConsentRow[];
+    },
+  });
+
   const allPhotoPaths = useMemo(
     () => (intakes ?? []).flatMap((r) => r.photo_urls ?? []),
     [intakes],
@@ -119,12 +143,13 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
     );
   }
 
-  if (qLoading || iLoading) {
+  if (qLoading || iLoading || cLoading) {
     return <div className="mono text-xs text-muted-foreground">// loading history…</div>;
   }
 
   const filteredQuotes = (quotes ?? []).filter((q) => q.id !== excludeQuoteId);
-  const isEmpty = filteredQuotes.length === 0 && (intakes ?? []).length === 0;
+  const isEmpty =
+    filteredQuotes.length === 0 && (intakes ?? []).length === 0 && (consents ?? []).length === 0;
 
   if (isEmpty) {
     return (
@@ -243,6 +268,36 @@ export function CustomerHistory({ customerId, excludeQuoteId }: Props) {
                 </div>
               );
             })}
+          </div>
+        </section>
+      )}
+      {/* SMS CONSENT AUDIT */}
+      {(consents ?? []).length > 0 && (
+        <section>
+          <div className="label-eyebrow mb-2">
+            SMS consent log ({consents!.length})
+          </div>
+          <div className="space-y-1.5">
+            {consents!.map((c) => (
+              <div
+                key={c.id}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-sm border border-border bg-background/40 px-3 py-2 mono text-[11px]"
+              >
+                <span className="text-muted-foreground">{fmtDateTime(c.occurred_at)}</span>
+                <span className="text-paper">{c.phone_number}</span>
+                <span
+                  className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider ${
+                    c.action === "opt_in" ? "bg-moss/30 text-paper" : "bg-destructive/20 text-paper"
+                  }`}
+                >
+                  {c.action === "opt_in" ? "opted in" : "opted out"}
+                </span>
+                <span className="text-muted-foreground">via {c.keyword}</span>
+                {c.twilio_message_sid && (
+                  <span className="text-muted-foreground/70">{c.twilio_message_sid.slice(0, 12)}…</span>
+                )}
+              </div>
+            ))}
           </div>
         </section>
       )}
