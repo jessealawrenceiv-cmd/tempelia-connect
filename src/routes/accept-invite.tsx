@@ -220,6 +220,18 @@ function AcceptInvitePage() {
             </>
           )}
 
+          {state.kind === "expired" && (
+            <>
+              <StatusLine tone="error">Invite expired</StatusLine>
+              <p className="mt-3 text-sm text-muted-foreground">
+                This invite has expired — ask the business owner to send you a new one. Invites for{" "}
+                <span className="mono">{state.email}</span> stay valid for 7 days after they're sent.
+              </p>
+              <RetryButton onClick={run} label="Check again" />
+            </>
+          )}
+
+
           {state.kind === "not_found" && (
             <>
               <StatusLine tone="pending">No invite found</StatusLine>
