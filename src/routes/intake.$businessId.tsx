@@ -204,9 +204,7 @@ function IntakeForm() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-violet"
             />
             <span className="text-xs leading-relaxed text-muted-foreground">
-              By checking this box, you agree to receive recurring text messages from {businessLabel},{" "}
-              including replies to your inquiry, appointment updates, and review requests. Message frequency varies.{" "}
-              Message and data rates may apply. Reply STOP to unsubscribe. Terms:{" "}
+              I agree to receive text messages from {businessLabel}, including replies to my inquiry, appointment updates, and review requests. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe. Terms:{" "}
               <a href="https://tempelia-connect.lovable.app/terms" target="_blank" rel="noreferrer" className="text-moss underline">https://tempelia-connect.lovable.app/terms</a>.{" "}
               Privacy:{" "}
               <a href="https://tempelia-connect.lovable.app/privacy" target="_blank" rel="noreferrer" className="text-moss underline">https://tempelia-connect.lovable.app/privacy</a>.
