@@ -40,6 +40,16 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           .from("customers").select("id")
           .eq("user_id", tenant.id).eq("phone_number", from).maybeSingle();
 
+        const consentRow = (action: "opt_in" | "opt_out") => ({
+          user_id: tenant.id,
+          customer_id: cust?.id ?? null,
+          phone_number: from,
+          keyword,
+          action,
+          message_body: body || null,
+          twilio_message_sid: messageSid || null,
+        });
+
         const logRow = (status: string) => ({
           user_id: tenant.id,
           customer_id: cust?.id ?? null,
@@ -53,6 +63,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           if (cust) {
             await supabaseAdmin.from("customers").update({ opt_in_consent: false }).eq("id", cust.id);
           }
+          await supabaseAdmin.from("sms_consent_events").insert(consentRow("opt_out"));
           await supabaseAdmin.from("logs").insert(logRow("opted_out"));
           return twiml("<Message>You've been unsubscribed. Reply START to resume.</Message>");
         }
@@ -61,6 +72,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           if (cust) {
             await supabaseAdmin.from("customers").update({ opt_in_consent: true }).eq("id", cust.id);
           }
+          await supabaseAdmin.from("sms_consent_events").insert(consentRow("opt_in"));
           await supabaseAdmin.from("logs").insert(logRow("opted_in"));
           const name = escapeXml(tenant.business_name || "Temaro");
           return twiml(
