@@ -51,6 +51,9 @@ function firstWord(s: string | null | undefined) {
 
 export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Props) {
   const enabled = !!customerId;
+  const queryClient = useQueryClient();
+  const resendFn = useServerFn(resendLastMessage);
+
 
   const { data: lastInbound } = useQuery({
     queryKey: ["comms-last-inbound", customerId],
