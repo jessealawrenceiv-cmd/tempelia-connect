@@ -73,7 +73,7 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logs")
-        .select("id, action_type, status, message_sent, created_at")
+        .select("id, action_type, status, message_sent, twilio_message_sid, created_at")
         .eq("customer_id", customerId!)
         .in("action_type", OUTBOUND_TYPES as unknown as string[])
         .order("created_at", { ascending: false })
