@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-const url = process.env.SUPABASE_URL, srk = process.env.SUPABASE_SERVICE_ROLE_KEY, anon = process.env.SUPABASE_ANON_KEY;
+const url = process.env.SUPABASE_URL, srk = process.env.SUPABASE_SERVICE_ROLE_KEY, anon = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqaG95Z3JneW15ZHhjcHRjZ3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTYwNTgsImV4cCI6MjA5OTA5MjA1OH0.fggexYdRR93c_VKl0vApeXF_IKU_xI90YWma99w0CZo";
 const s = createClient(url, srk, { auth: { persistSession: false } });
 const stamp = Date.now();
 const mk = async (email) => {
