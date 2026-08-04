@@ -23,6 +23,7 @@ type PendingInvite = {
   business_owner_id: string;
   business_name: string;
   invited_at: string;
+  expires_at: string;
 };
 
 type State =
@@ -31,8 +32,10 @@ type State =
   | { kind: "unconfirmed"; email: string }
   | { kind: "choose"; email: string; invites: PendingInvite[] }
   | { kind: "accepted"; email: string; justClaimed: boolean }
+  | { kind: "expired"; email: string }
   | { kind: "not_found"; email: string }
   | { kind: "error"; message: string };
+
 
 function AcceptInvitePage() {
   const [state, setState] = useState<State>({ kind: "loading" });
