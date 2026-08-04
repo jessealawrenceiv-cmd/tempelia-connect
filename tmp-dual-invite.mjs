@@ -26,8 +26,10 @@ console.log('list_pending_team_invites:', JSON.stringify(list?.map(r=>({b:r.busi
 const { data: claimed, error: ce } = await c.rpc('claim_team_invites');
 console.log('claim_team_invites returned:', claimed, ce);
 const pick = list.find(r=>r.business_name==='Alpha Plumbing');
-const { data: ok2 } = await c.rpc('claim_team_invite', { _invite_id: pick.invite_id });
-console.log('explicit claim of Alpha after auto-claim:', ok2);
+const { data: ok2, error: e2b } = await c.rpc('claim_team_invite', { _invite_id: pick.invite_id });
+console.log('explicit claim of Alpha after auto-claim:', ok2, e2b?.message);
+console.log('list after claim:', (await c.rpc('list_pending_team_invites')).data?.length);
+console.log('has_pending after claim:', (await c.rpc('has_pending_team_invite')).data);
 const { data: rows } = await s.from('team_members').select('business_owner_id, staff_user_id, accepted_at').eq('invited_email', staffEmail);
 for (const r of rows) {
   const { data: p } = await s.from('profiles').select('business_name').eq('id', r.business_owner_id).single();
