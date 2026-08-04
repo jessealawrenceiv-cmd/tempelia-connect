@@ -3,20 +3,21 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getIsAdmin } from "@/lib/admin.functions";
+import { useTeamRole } from "@/hooks/useTeamRole";
 import {
   LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText, CalendarDays,
 } from "lucide-react";
 
 const NAV = [
-  { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { to: "/dashboard/missed-calls", label: "Missed Calls", icon: PhoneMissed },
-  { to: "/dashboard/contacts", label: "Contacts", icon: Users },
-  { to: "/dashboard/quotes", label: "Quotes", icon: FileText },
-  { to: "/dashboard/schedule", label: "Schedule", icon: CalendarDays },
-  { to: "/dashboard/reviews", label: "Reviews", icon: Star },
-  { to: "/dashboard/dead-leads", label: "Dead Leads", icon: Snowflake },
-  { to: "/dashboard/intakes", label: "Intakes", icon: ClipboardList },
-  { to: "/dashboard/settings", label: "Settings", icon: Settings },
+  { to: "/dashboard", label: "Overview", icon: LayoutDashboard, ownerOnly: false },
+  { to: "/dashboard/missed-calls", label: "Missed Calls", icon: PhoneMissed, ownerOnly: false },
+  { to: "/dashboard/contacts", label: "Contacts", icon: Users, ownerOnly: false },
+  { to: "/dashboard/quotes", label: "Quotes", icon: FileText, ownerOnly: false },
+  { to: "/dashboard/schedule", label: "Schedule", icon: CalendarDays, ownerOnly: false },
+  { to: "/dashboard/reviews", label: "Reviews", icon: Star, ownerOnly: false },
+  { to: "/dashboard/dead-leads", label: "Dead Leads", icon: Snowflake, ownerOnly: false },
+  { to: "/dashboard/intakes", label: "Intakes", icon: ClipboardList, ownerOnly: false },
+  { to: "/dashboard/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -26,6 +27,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [businessName, setBusinessName] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
   const getIsAdminFn = useServerFn(getIsAdmin);
+  const { isStaff } = useTeamRole();
+  const nav = NAV.filter((item) => !(isStaff && item.ownerOnly));
+
 
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
@@ -81,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
 
             <nav className="flex-1 space-y-0.5 px-3">
-              {NAV.map(({ to, label, icon: Icon }) => {
+              {nav.map(({ to, label, icon: Icon }) => {
                 const active = to === "/dashboard"
                   ? location.pathname === "/dashboard"
                   : location.pathname.startsWith(to);
@@ -109,12 +113,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Shield size={14} /> Admin · Numbers
                 </Link>
               )}
-              <Link
-                to="/onboarding"
-                className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-paper/70 hover:bg-paper/10"
-              >
-                <Wrench size={14} /> Onboarding
-              </Link>
+              {!isStaff && (
+                <Link
+                  to="/onboarding"
+                  className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-paper/70 hover:bg-paper/10"
+                >
+                  <Wrench size={14} /> Onboarding
+                </Link>
+              )}
               <button
                 onClick={signOut}
                 className="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-paper/70 hover:bg-paper/10"

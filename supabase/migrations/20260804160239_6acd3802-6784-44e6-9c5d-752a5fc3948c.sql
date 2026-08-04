@@ -1,0 +1,9 @@
+REVOKE ALL ON FUNCTION public.is_accepted_team_member(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_accepted_team_member(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.is_accepted_team_member(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.claim_team_invites() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.claim_team_invites() FROM anon;
+GRANT EXECUTE ON FUNCTION public.claim_team_invites() TO authenticated;
+REVOKE ALL ON FUNCTION public.team_members_enforce_tier() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.team_members_enforce_tier() FROM anon;
+REVOKE ALL ON FUNCTION public.team_members_enforce_tier() FROM authenticated;
