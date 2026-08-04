@@ -1,5 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { resendLastMessage } from "@/lib/resend-sms.functions";
+import { RESENDABLE_STATUSES } from "@/lib/resend-sms";
+
 
 /** Log action types that represent messages WE sent to the customer. */
 const OUTBOUND_TYPES = [
@@ -25,7 +30,9 @@ type LogRow = {
   action_type: string;
   status: string;
   message_sent: string | null;
+  twilio_message_sid?: string | null;
   created_at: string;
+
 };
 
 type ConsentRow = {
@@ -45,6 +52,9 @@ function firstWord(s: string | null | undefined) {
 
 export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Props) {
   const enabled = !!customerId;
+  const queryClient = useQueryClient();
+  const resendFn = useServerFn(resendLastMessage);
+
 
   const { data: lastInbound } = useQuery({
     queryKey: ["comms-last-inbound", customerId],
@@ -69,7 +79,7 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logs")
-        .select("id, action_type, status, message_sent, created_at")
+        .select("id, action_type, status, message_sent, twilio_message_sid, created_at")
         .eq("customer_id", customerId!)
         .in("action_type", OUTBOUND_TYPES as unknown as string[])
         .order("created_at", { ascending: false })
@@ -96,6 +106,16 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
     },
   });
 
+  const resend = useMutation({
+    mutationFn: async () => resendFn({ data: { customerId: customerId! } }),
+    onSuccess: () => {
+      toast.success("Message re-sent");
+      queryClient.invalidateQueries({ queryKey: ["comms-last-outbound", customerId] });
+      queryClient.invalidateQueries({ queryKey: ["customer-logs", customerId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (!customerId) return null;
 
   // Prefer the audited consent keyword; fall back to the first word of the
@@ -103,6 +123,15 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
   const keyword = lastConsent?.keyword ?? firstWord(lastInbound?.message_sent);
   const keywordAt = lastConsent?.occurred_at ?? lastInbound?.created_at ?? null;
   const keywordIsConsent = !!lastConsent;
+
+  // Delivery is unconfirmed when Twilio reported a failure, or when we never
+  // recorded a message SID / delivery confirmation from the webhook.
+  const canResend =
+    !!lastOutbound &&
+    !!lastOutbound.message_sent &&
+    optInConsent &&
+    (RESENDABLE_STATUSES.includes(lastOutbound.status) || !lastOutbound.twilio_message_sid);
+
 
   return (
     <section className="rounded-sm border border-border bg-background/40 p-3">
@@ -166,12 +195,26 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
                 <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   {lastOutbound.action_type.replace(/_/g, " ")} · {lastOutbound.status} ·{" "}
                   {fmtDateTime(lastOutbound.created_at)}
+                  {!lastOutbound.twilio_message_sid && (
+                    <span className="text-destructive"> · delivery unconfirmed</span>
+                  )}
                 </div>
                 <p className="mono mt-1 whitespace-pre-wrap text-xs text-paper">
                   {lastOutbound.message_sent || "— no body recorded —"}
                 </p>
+                {canResend && (
+                  <button
+                    type="button"
+                    onClick={() => resend.mutate()}
+                    disabled={resend.isPending}
+                    className="mono mt-2 rounded-sm border border-primary/60 px-2 py-1 text-[10px] uppercase tracking-wider text-paper hover:bg-primary/20 disabled:opacity-50"
+                  >
+                    {resend.isPending ? "Re-sending…" : "Resend last message"}
+                  </button>
+                )}
               </>
             ) : (
+
               <span className="mono text-xs italic text-muted-foreground">
                 // nothing sent yet
               </span>
