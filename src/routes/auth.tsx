@@ -55,12 +55,13 @@ function AuthPage() {
   const nextPath = safeNext(search.next);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        if (nextPath) window.location.replace(nextPath);
-        else navigate({ to: "/dashboard" });
-      }
-    });
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      if (nextPath) { window.location.replace(nextPath); return; }
+      if (await hasPendingInvite()) { navigate({ to: "/accept-invite" }); return; }
+      navigate({ to: "/dashboard" });
+    })();
   }, [navigate, nextPath]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
