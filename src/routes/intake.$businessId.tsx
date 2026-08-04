@@ -138,7 +138,15 @@ function IntakeForm() {
     }
   }
 
-  if (info && info.businessName === null) {
+  if (!info) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+        <div className="mono text-xs uppercase tracking-widest text-muted-foreground">// loading form…</div>
+      </div>
+    );
+  }
+
+  if (info.businessName === null) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
         <div className="panel max-w-md p-8 text-center">
@@ -148,6 +156,7 @@ function IntakeForm() {
       </div>
     );
   }
+
 
   if (done) {
     return (
