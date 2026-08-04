@@ -93,6 +93,20 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
   const pending = (members ?? []).filter((m) => !m.accepted_at);
   const active = (members ?? []).filter((m) => !!m.accepted_at);
 
+  /** "expires in 3 days" / "expires today" / "expired 2 days ago" */
+  const expiryLabel = (iso: string | null) => {
+    if (!iso) return { text: "no expiry", expired: false };
+    const ms = new Date(iso).getTime() - Date.now();
+    const days = Math.ceil(ms / 86_400_000);
+    if (ms <= 0) {
+      const ago = Math.max(1, Math.floor(-ms / 86_400_000));
+      return { text: `expired ${ago === 1 ? "1 day" : `${ago} days`} ago`, expired: true };
+    }
+    if (days <= 1) return { text: "expires today", expired: false };
+    return { text: `expires in ${days} days`, expired: false };
+  };
+
+
 
 
   return (
