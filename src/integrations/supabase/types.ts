@@ -618,6 +618,42 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          accepted_at: string | null
+          business_owner_id: string
+          created_at: string
+          id: string
+          invited_at: string
+          invited_email: string
+          role: string
+          staff_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          business_owner_id: string
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_email: string
+          role?: string
+          staff_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          business_owner_id?: string
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_email?: string
+          role?: string
+          staff_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -644,6 +680,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_team_invites: { Args: never; Returns: number }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
@@ -652,6 +689,7 @@ export type Database = {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      is_accepted_team_member: { Args: { _owner_id: string }; Returns: boolean }
       mcp_rate_limits_prune: { Args: never; Returns: undefined }
     }
     Enums: {

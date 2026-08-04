@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { ExcludedNumbersPanel } from "@/components/ExcludedNumbersPanel";
+import { TeamMembersPanel } from "@/components/TeamMembersPanel";
+import { useTeamRole } from "@/hooks/useTeamRole";
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -13,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
+  const { isStaff } = useTeamRole();
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
@@ -100,6 +103,21 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  if (isStaff) {
+    return (
+      <div>
+        <PageHeader eyebrow="Config" title="Settings" />
+        <div className="p-5 md:p-8">
+          <div className="panel p-6">
+            <div className="label-eyebrow">Restricted</div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Settings, billing and excluded numbers are available to the business owner only.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -234,6 +252,9 @@ function SettingsPage() {
         </div>
 
         <ExcludedNumbersPanel />
+
+        <TeamMembersPanel tier={profile?.subscription_tier} />
+
 
         <div className="panel p-6 md:col-span-2">
 
