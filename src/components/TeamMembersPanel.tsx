@@ -142,16 +142,31 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
             <div className="min-w-0">
               <div className="truncate text-sm">{m.invited_email}</div>
               <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                {m.role} · {m.accepted_at ? `accepted ${new Date(m.accepted_at).toLocaleDateString()}` : "pending"}
+                {m.role} ·{" "}
+                {m.accepted_at
+                  ? `accepted ${new Date(m.accepted_at).toLocaleDateString()}`
+                  : `pending · invited ${new Date(m.invited_at).toLocaleDateString()}`}
               </div>
             </div>
-            <button
-              onClick={() => revoke.mutate(m.id)}
-              className="shrink-0 rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
-            >
-              Revoke
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {!m.accepted_at && (
+                <button
+                  onClick={() => resend.mutate({ id: m.id, invited_email: m.invited_email })}
+                  disabled={resend.isPending}
+                  className="rounded-sm border border-violet/50 px-3 py-1 text-[10px] uppercase tracking-widest text-violet disabled:opacity-50"
+                >
+                  {resend.isPending ? "Resending…" : "Resend accept link"}
+                </button>
+              )}
+              <button
+                onClick={() => revoke.mutate(m.id)}
+                className="rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              >
+                Revoke
+              </button>
+            </div>
           </div>
+
         ))}
       </div>
     </div>
