@@ -23,6 +23,7 @@ type PendingInvite = {
   business_owner_id: string;
   business_name: string;
   invited_at: string;
+  expires_at: string;
 };
 
 type State =
@@ -31,8 +32,10 @@ type State =
   | { kind: "unconfirmed"; email: string }
   | { kind: "choose"; email: string; invites: PendingInvite[] }
   | { kind: "accepted"; email: string; justClaimed: boolean }
+  | { kind: "expired"; email: string }
   | { kind: "not_found"; email: string }
   | { kind: "error"; message: string };
+
 
 function AcceptInvitePage() {
   const [state, setState] = useState<State>({ kind: "loading" });
@@ -49,9 +52,17 @@ function AcceptInvitePage() {
 
     if (membership && membership.length > 0) {
       setState({ kind: "accepted", email, justClaimed });
+      return;
+    }
+
+    // No active access: distinguish an expired invite from no invite at all.
+    const { data: expired } = await supabase.rpc("has_expired_team_invite");
+    if (expired === true) {
+      setState({ kind: "expired", email });
     } else {
       setState({ kind: "not_found", email });
     }
+
   }, []);
 
   const run = useCallback(async () => {
@@ -208,6 +219,18 @@ function AcceptInvitePage() {
               </Link>
             </>
           )}
+
+          {state.kind === "expired" && (
+            <>
+              <StatusLine tone="error">Invite expired</StatusLine>
+              <p className="mt-3 text-sm text-muted-foreground">
+                This invite has expired — ask the business owner to send you a new one. Invites for{" "}
+                <span className="mono">{state.email}</span> stay valid for 7 days after they're sent.
+              </p>
+              <RetryButton onClick={run} label="Check again" />
+            </>
+          )}
+
 
           {state.kind === "not_found" && (
             <>

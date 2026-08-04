@@ -93,6 +93,20 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
   const pending = (members ?? []).filter((m) => !m.accepted_at);
   const active = (members ?? []).filter((m) => !!m.accepted_at);
 
+  /** "expires in 3 days" / "expires today" / "expired 2 days ago" */
+  const expiryLabel = (iso: string | null) => {
+    if (!iso) return { text: "no expiry", expired: false };
+    const ms = new Date(iso).getTime() - Date.now();
+    const days = Math.ceil(ms / 86_400_000);
+    if (ms <= 0) {
+      const ago = Math.max(1, Math.floor(-ms / 86_400_000));
+      return { text: `expired ${ago === 1 ? "1 day" : `${ago} days`} ago`, expired: true };
+    }
+    if (days <= 1) return { text: "expires today", expired: false };
+    return { text: `expires in ${days} days`, expired: false };
+  };
+
+
 
 
   return (
@@ -154,7 +168,20 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       {m.role} · pending · invited {new Date(m.invited_at).toLocaleDateString()}
                     </div>
+                    {(() => {
+                      const e = expiryLabel(m.expires_at);
+                      return (
+                        <div
+                          className={`mono text-[10px] uppercase tracking-widest ${
+                            e.expired ? "text-destructive" : "text-moss"
+                          }`}
+                        >
+                          {e.expired ? `expired — resend needed (${e.text})` : e.text}
+                        </div>
+                      );
+                    })()}
                   </div>
+
                   <div className="flex shrink-0 items-center gap-2">
                     <button
                       onClick={() => resend.mutate({ id: m.id, invited_email: m.invited_email })}
