@@ -40,6 +40,12 @@ const signinSchema = z.object({
   password: z.string().min(1).max(72),
 });
 
+async function hasPendingInvite(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("has_pending_team_invite");
+  if (error) return false;
+  return data === true;
+}
+
 function AuthPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -49,12 +55,13 @@ function AuthPage() {
   const nextPath = safeNext(search.next);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        if (nextPath) window.location.replace(nextPath);
-        else navigate({ to: "/dashboard" });
-      }
-    });
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      if (nextPath) { window.location.replace(nextPath); return; }
+      if (await hasPendingInvite()) { navigate({ to: "/accept-invite" }); return; }
+      navigate({ to: "/dashboard" });
+    })();
   }, [navigate, nextPath]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -101,6 +108,10 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword(parsed.data);
         if (error) { toast.error(error.message); return; }
         if (nextPath) { window.location.replace(nextPath); return; }
+        if (await hasPendingInvite()) {
+          navigate({ to: "/accept-invite" });
+          return;
+        }
         navigate({ to: "/dashboard" });
       }
     } finally {
