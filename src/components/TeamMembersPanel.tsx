@@ -46,6 +46,35 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const acceptUrl = () =>
+    `${typeof window !== "undefined" ? window.location.origin : ""}/accept-invite`;
+
+  const resend = useMutation({
+    mutationFn: async (m: { id: string; invited_email: string }) => {
+      const { error } = await supabase
+        .from("team_members")
+        .update({ invited_at: new Date().toISOString(), accepted_at: null, staff_user_id: null })
+        .eq("id", m.id);
+      if (error) throw error;
+      const link = acceptUrl();
+      try {
+        await navigator.clipboard.writeText(link);
+        return { link, copied: true, email: m.invited_email };
+      } catch {
+        return { link, copied: false, email: m.invited_email };
+      }
+    },
+    onSuccess: (r) => {
+      toast.success(
+        r.copied
+          ? `Accept link copied — send it to ${r.email}.`
+          : `Accept link regenerated: ${r.link}`,
+      );
+      qc.invalidateQueries({ queryKey: ["team_members"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const revoke = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("team_members").delete().eq("id", id);
@@ -57,6 +86,7 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <div className="panel p-6">
