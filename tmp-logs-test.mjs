@@ -7,7 +7,7 @@ const oe = `o2.${s}@teamtest.temaro.io`, se = `s2.${s}@teamtest.temaro.io`;
 const o = (await admin.auth.admin.createUser({ email: oe, password: PW, email_confirm: true })).data.user.id;
 const st = (await admin.auth.admin.createUser({ email: se, password: PW, email_confirm: true })).data.user.id;
 await admin.from("profiles").update({ subscription_tier: "standard" }).eq("id", o);
-console.log("log insert:", JSON.stringify(await admin.from("logs").insert({ user_id: o, action_type: "missed_call", message_sent: "LOG-LINE-A" }).select("id, action_type, message_sent")));
+console.log("log insert:", JSON.stringify(await admin.from("logs").insert({ user_id: o, action_type: "missed_call_autotext", message_sent: "LOG-LINE-A" }).select("id, action_type, message_sent")));
 await admin.from("team_members").insert({ business_owner_id: o, invited_email: se });
 const c = createClient(URL, PUB, { auth: { persistSession: false }, global: { fetch: shim(PUB) } });
 await c.auth.signInWithPassword({ email: se, password: PW });
