@@ -18,16 +18,41 @@ export const Route = createFileRoute("/accept-invite")({
   }),
 });
 
+type PendingInvite = {
+  invite_id: string;
+  business_owner_id: string;
+  business_name: string;
+  invited_at: string;
+};
+
 type State =
   | { kind: "loading" }
   | { kind: "signed_out" }
   | { kind: "unconfirmed"; email: string }
+  | { kind: "choose"; email: string; invites: PendingInvite[] }
   | { kind: "accepted"; email: string; justClaimed: boolean }
   | { kind: "not_found"; email: string }
   | { kind: "error"; message: string };
 
 function AcceptInvitePage() {
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [claiming, setClaiming] = useState<string | null>(null);
+
+  const finish = useCallback(async (email: string, userId: string, justClaimed: boolean) => {
+    const { data: membership, error: memberError } = await supabase
+      .from("team_members")
+      .select("business_owner_id, accepted_at")
+      .eq("staff_user_id", userId)
+      .not("accepted_at", "is", null)
+      .limit(1);
+    if (memberError) return setState({ kind: "error", message: memberError.message });
+
+    if (membership && membership.length > 0) {
+      setState({ kind: "accepted", email, justClaimed });
+    } else {
+      setState({ kind: "not_found", email });
+    }
+  }, []);
 
   const run = useCallback(async () => {
     setState({ kind: "loading" });
@@ -38,23 +63,41 @@ function AcceptInvitePage() {
 
     if (!user.email_confirmed_at) return setState({ kind: "unconfirmed", email });
 
-    const { data: claimed, error: rpcError } = await supabase.rpc("claim_team_invites");
-    if (rpcError) return setState({ kind: "error", message: rpcError.message });
+    const { data: pending, error: listError } = await supabase.rpc("list_pending_team_invites");
+    if (listError) return setState({ kind: "error", message: listError.message });
 
-    const { data: membership, error: memberError } = await supabase
-      .from("team_members")
-      .select("business_owner_id, accepted_at")
-      .eq("staff_user_id", user.id)
-      .not("accepted_at", "is", null)
-      .maybeSingle();
-    if (memberError) return setState({ kind: "error", message: memberError.message });
+    const invites = (pending ?? []) as PendingInvite[];
 
-    if (membership) {
-      setState({ kind: "accepted", email, justClaimed: (claimed ?? 0) > 0 });
-    } else {
-      setState({ kind: "not_found", email });
+    // Multiple businesses invited this address — the invitee must pick one.
+    if (invites.length > 1) return setState({ kind: "choose", email, invites });
+
+    let justClaimed = false;
+    if (invites.length === 1) {
+      const { data: ok, error: rpcError } = await supabase.rpc("claim_team_invite", {
+        _invite_id: invites[0].invite_id,
+      });
+      if (rpcError) return setState({ kind: "error", message: rpcError.message });
+      justClaimed = ok === true;
     }
-  }, []);
+
+    await finish(email, user.id, justClaimed);
+  }, [finish]);
+
+  const claimOne = useCallback(
+    async (invite: PendingInvite, email: string) => {
+      setClaiming(invite.invite_id);
+      const { data: ok, error } = await supabase.rpc("claim_team_invite", {
+        _invite_id: invite.invite_id,
+      });
+      setClaiming(null);
+      if (error) return setState({ kind: "error", message: error.message });
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return setState({ kind: "signed_out" });
+      await finish(email, u.user.id, ok === true);
+    },
+    [finish],
+  );
+
 
   useEffect(() => {
     void run();
