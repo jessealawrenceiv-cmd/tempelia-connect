@@ -110,7 +110,12 @@ function IntakeForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!smsConsent) {
+      toast.error("Please agree to receive SMS text messages to submit.");
+      return;
+    }
     setSubmitting(true);
+
     try {
       const photos = await Promise.all(
         files.map(async (f) => ({
