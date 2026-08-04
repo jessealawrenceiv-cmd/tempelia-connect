@@ -170,7 +170,18 @@ function IntakeForm() {
             <Field label="Phone *"><input required type="tel" className={inp} value={form.phone} onChange={(e) => upd("phone", e.target.value)} /></Field>
             <Field label="Email (optional)"><input type="email" className={inp} value={form.email} onChange={(e) => upd("email", e.target.value)} /></Field>
           </Row>
+
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            By providing your phone number, you agree to receive SMS text messages from{" "}
+            {info?.businessName || "[Business Name]"} regarding your project inquiry. Message frequency varies.
+            Message and data rates may apply. Reply STOP to opt out at any time, or HELP for help. View our{" "}
+            <a href="https://tempelia-connect.lovable.app/privacy" target="_blank" rel="noreferrer" className="text-moss underline">Privacy Policy</a>{" "}
+            and{" "}
+            <a href="https://tempelia-connect.lovable.app/terms" target="_blank" rel="noreferrer" className="text-moss underline">Terms of Service</a>.
+          </p>
+
           <Field label="Project location / address *"><input required className={inp} value={form.address} onChange={(e) => upd("address", e.target.value)} /></Field>
+
 
           <Row>
             <Field label="Type *">
