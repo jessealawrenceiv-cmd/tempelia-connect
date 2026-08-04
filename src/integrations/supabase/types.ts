@@ -680,6 +680,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_team_invite: { Args: { _invite_id: string }; Returns: boolean }
       claim_team_invites: { Args: never; Returns: number }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
@@ -691,6 +692,15 @@ export type Database = {
         Returns: boolean
       }
       is_accepted_team_member: { Args: { _owner_id: string }; Returns: boolean }
+      list_pending_team_invites: {
+        Args: never
+        Returns: {
+          business_name: string
+          business_owner_id: string
+          invite_id: string
+          invited_at: string
+        }[]
+      }
       mcp_rate_limits_prune: { Args: never; Returns: undefined }
     }
     Enums: {

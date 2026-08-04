@@ -18,16 +18,41 @@ export const Route = createFileRoute("/accept-invite")({
   }),
 });
 
+type PendingInvite = {
+  invite_id: string;
+  business_owner_id: string;
+  business_name: string;
+  invited_at: string;
+};
+
 type State =
   | { kind: "loading" }
   | { kind: "signed_out" }
   | { kind: "unconfirmed"; email: string }
+  | { kind: "choose"; email: string; invites: PendingInvite[] }
   | { kind: "accepted"; email: string; justClaimed: boolean }
   | { kind: "not_found"; email: string }
   | { kind: "error"; message: string };
 
 function AcceptInvitePage() {
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [claiming, setClaiming] = useState<string | null>(null);
+
+  const finish = useCallback(async (email: string, userId: string, justClaimed: boolean) => {
+    const { data: membership, error: memberError } = await supabase
+      .from("team_members")
+      .select("business_owner_id, accepted_at")
+      .eq("staff_user_id", userId)
+      .not("accepted_at", "is", null)
+      .limit(1);
+    if (memberError) return setState({ kind: "error", message: memberError.message });
+
+    if (membership && membership.length > 0) {
+      setState({ kind: "accepted", email, justClaimed });
+    } else {
+      setState({ kind: "not_found", email });
+    }
+  }, []);
 
   const run = useCallback(async () => {
     setState({ kind: "loading" });
@@ -38,23 +63,41 @@ function AcceptInvitePage() {
 
     if (!user.email_confirmed_at) return setState({ kind: "unconfirmed", email });
 
-    const { data: claimed, error: rpcError } = await supabase.rpc("claim_team_invites");
-    if (rpcError) return setState({ kind: "error", message: rpcError.message });
+    const { data: pending, error: listError } = await supabase.rpc("list_pending_team_invites");
+    if (listError) return setState({ kind: "error", message: listError.message });
 
-    const { data: membership, error: memberError } = await supabase
-      .from("team_members")
-      .select("business_owner_id, accepted_at")
-      .eq("staff_user_id", user.id)
-      .not("accepted_at", "is", null)
-      .maybeSingle();
-    if (memberError) return setState({ kind: "error", message: memberError.message });
+    const invites = (pending ?? []) as PendingInvite[];
 
-    if (membership) {
-      setState({ kind: "accepted", email, justClaimed: (claimed ?? 0) > 0 });
-    } else {
-      setState({ kind: "not_found", email });
+    // Multiple businesses invited this address — the invitee must pick one.
+    if (invites.length > 1) return setState({ kind: "choose", email, invites });
+
+    let justClaimed = false;
+    if (invites.length === 1) {
+      const { data: ok, error: rpcError } = await supabase.rpc("claim_team_invite", {
+        _invite_id: invites[0].invite_id,
+      });
+      if (rpcError) return setState({ kind: "error", message: rpcError.message });
+      justClaimed = ok === true;
     }
-  }, []);
+
+    await finish(email, user.id, justClaimed);
+  }, [finish]);
+
+  const claimOne = useCallback(
+    async (invite: PendingInvite, email: string) => {
+      setClaiming(invite.invite_id);
+      const { data: ok, error } = await supabase.rpc("claim_team_invite", {
+        _invite_id: invite.invite_id,
+      });
+      setClaiming(null);
+      if (error) return setState({ kind: "error", message: error.message });
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return setState({ kind: "signed_out" });
+      await finish(email, u.user.id, ok === true);
+    },
+    [finish],
+  );
+
 
   useEffect(() => {
     void run();
@@ -117,6 +160,36 @@ function AcceptInvitePage() {
               <RetryButton onClick={run} label="I've confirmed — check again" />
             </>
           )}
+          {state.kind === "choose" && (
+            <>
+              <StatusLine tone="pending">Multiple invites found</StatusLine>
+              <p className="mt-3 text-sm text-muted-foreground">
+                <span className="mono">{state.email}</span> was invited by more than one business.
+                Pick the one you're joining — you can only have staff access to one business at a
+                time.
+              </p>
+              <div className="mt-6 flex flex-col gap-2">
+                {state.invites.map((inv) => (
+                  <button
+                    key={inv.invite_id}
+                    disabled={claiming !== null}
+                    onClick={() => void claimOne(inv, state.email)}
+                    className="flex items-center justify-between rounded-sm border border-violet/60 px-4 py-3 text-left hover:bg-violet/10 disabled:opacity-50"
+                  >
+                    <span className="text-sm text-foreground">
+                      {inv.business_name || "Unnamed business"}
+                    </span>
+                    <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {claiming === inv.invite_id
+                        ? "joining…"
+                        : `invited ${new Date(inv.invited_at).toLocaleDateString()}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
 
           {state.kind === "accepted" && (
             <>
