@@ -7,6 +7,10 @@ function twiml(body: string) {
   return new Response(xml, { status: 200, headers: { "Content-Type": "text/xml" } });
 }
 
+function escapeXml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 const STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]);
 const START_KEYWORDS = new Set(["START", "YES", "UNSTOP"]);
 
@@ -28,7 +32,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
 
         // Resolve tenant by the number that received the SMS.
         const { data: tenant } = await supabaseAdmin
-          .from("profiles").select("id").eq("twilio_phone_number", to).maybeSingle();
+          .from("profiles").select("id, business_name").eq("twilio_phone_number", to).maybeSingle();
         if (!tenant) return twiml("");
 
         // Find (or none) the customer row for this caller under this tenant.
@@ -58,7 +62,10 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             await supabaseAdmin.from("customers").update({ opt_in_consent: true }).eq("id", cust.id);
           }
           await supabaseAdmin.from("logs").insert(logRow("opted_in"));
-          return twiml("<Message>You're re-subscribed. Reply STOP anytime to unsubscribe.</Message>");
+          const name = escapeXml(tenant.business_name || "Temaro");
+          return twiml(
+            `<Message>${name}: You're opted back in to receive recurring text messages regarding your inquiry, appointment updates, and reviews. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe.</Message>`,
+          );
         }
 
         // Check for a pending decline-follow-up on this number.
