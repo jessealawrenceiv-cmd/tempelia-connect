@@ -78,16 +78,21 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
   });
 
   const revoke = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("team_members").delete().eq("id", id);
+    mutationFn: async (m: { id: string; accepted_at: string | null }) => {
+      const { error } = await supabase.from("team_members").delete().eq("id", m.id);
       if (error) throw error;
+      return m;
     },
-    onSuccess: () => {
-      toast.success("Access revoked.");
+    onSuccess: (m) => {
+      toast.success(m.accepted_at ? "Staff access removed." : "Pending invite revoked.");
       qc.invalidateQueries({ queryKey: ["team_members"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const pending = (members ?? []).filter((m) => !m.accepted_at);
+  const active = (members ?? []).filter((m) => !!m.accepted_at);
+
 
 
   return (
@@ -133,42 +138,81 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
       )}
 
 
-      <div className="mt-5 space-y-2">
-        {(members ?? []).length === 0 && (
-          <p className="text-xs text-muted-foreground">No staff logins yet.</p>
-        )}
-        {(members ?? []).map((m) => (
-          <div key={m.id} className="flex items-center justify-between gap-3 border-t border-border pt-2">
-            <div className="min-w-0">
-              <div className="truncate text-sm">{m.invited_email}</div>
-              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                {m.role} ·{" "}
-                {m.accepted_at
-                  ? `accepted ${new Date(m.accepted_at).toLocaleDateString()}`
-                  : `pending · invited ${new Date(m.invited_at).toLocaleDateString()}`}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {!m.accepted_at && (
-                <button
-                  onClick={() => resend.mutate({ id: m.id, invited_email: m.invited_email })}
-                  disabled={resend.isPending}
-                  className="rounded-sm border border-violet/50 px-3 py-1 text-[10px] uppercase tracking-widest text-violet disabled:opacity-50"
-                >
-                  {resend.isPending ? "Resending…" : "Resend accept link"}
-                </button>
-              )}
-              <button
-                onClick={() => revoke.mutate(m.id)}
-                className="rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
-              >
-                Revoke
-              </button>
-            </div>
+      <div className="mt-5 space-y-5">
+        <section>
+          <div className="mono text-[10px] uppercase tracking-widest text-moss">
+            Pending invites ({pending.length})
           </div>
+          {pending.length === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">No pending invites.</p>
+          ) : (
+            <div className="mt-2 space-y-2">
+              {pending.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 border-t border-border pt-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm">{m.invited_email}</div>
+                    <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {m.role} · pending · invited {new Date(m.invited_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => resend.mutate({ id: m.id, invited_email: m.invited_email })}
+                      disabled={resend.isPending}
+                      className="rounded-sm border border-violet/50 px-3 py-1 text-[10px] uppercase tracking-widest text-violet disabled:opacity-50"
+                    >
+                      {resend.isPending ? "Resending…" : "Resend accept link"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!window.confirm(`Revoke the pending invite for ${m.invited_email}?`)) return;
+                        revoke.mutate({ id: m.id, accepted_at: m.accepted_at });
+                      }}
+                      disabled={revoke.isPending}
+                      className="rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground disabled:opacity-50"
+                    >
+                      Revoke invite
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-        ))}
+        <section>
+          <div className="mono text-[10px] uppercase tracking-widest text-moss">
+            Active staff ({active.length})
+          </div>
+          {active.length === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">No staff logins active yet.</p>
+          ) : (
+            <div className="mt-2 space-y-2">
+              {active.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 border-t border-border pt-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm">{m.invited_email}</div>
+                    <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {m.role} · accepted {new Date(m.accepted_at as string).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!window.confirm(`Remove ${m.invited_email}'s access immediately?`)) return;
+                      revoke.mutate({ id: m.id, accepted_at: m.accepted_at });
+                    }}
+                    disabled={revoke.isPending}
+                    className="shrink-0 rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  >
+                    Remove access
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
+
   );
 }
