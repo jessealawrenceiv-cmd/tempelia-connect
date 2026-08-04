@@ -29,7 +29,9 @@ type LogRow = {
   action_type: string;
   status: string;
   message_sent: string | null;
+  twilio_message_sid?: string | null;
   created_at: string;
+
 };
 
 type ConsentRow = {
