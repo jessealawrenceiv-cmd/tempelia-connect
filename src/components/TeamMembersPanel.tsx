@@ -54,6 +54,8 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
       const { error } = await supabase
         .from("team_members")
         .update({ invited_at: new Date().toISOString() })
+        .eq("id", m.id);
+
 
       if (error) throw error;
       const link = acceptUrl();
