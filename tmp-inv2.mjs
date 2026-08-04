@@ -1,0 +1,15 @@
+import { createClient } from '@supabase/supabase-js';
+const URL=process.env.SUPABASE_URL, SRK=process.env.SUPABASE_SERVICE_ROLE_KEY, PK=process.env.SUPABASE_PUBLISHABLE_KEY;
+const s=createClient(URL,SRK,{auth:{persistSession:false}});
+const ownerEmail='owner1785878811716@example.com', pass='TestPass!2345';
+const stamp=Date.now(); const staff2=`staff2_${stamp}@example.com`;
+const { data:u, error } = await s.auth.admin.createUser({ email: staff2, password: pass, email_confirm: true });
+if (error) throw error;
+const { data: owner } = await s.from('profiles').select('id').eq('email', ownerEmail).single();
+const oc=createClient(URL,PK,{auth:{persistSession:false}});
+await oc.auth.signInWithPassword({email:ownerEmail,password:pass});
+const { data: ins, error: ie } = await oc.from('team_members').insert({business_owner_id:owner.id,invited_email:staff2,role:'staff'}).select('id,invited_at,expires_at').single();
+console.log('fresh invite err:', ie?.message ?? null, ins);
+const { data: rows } = await oc.from('team_members').select('invited_email,invited_at,expires_at,accepted_at').eq('business_owner_id', owner.id);
+console.log(JSON.stringify(rows,null,1));
+console.log(JSON.stringify({ staff2, pass, ownerEmail }));
