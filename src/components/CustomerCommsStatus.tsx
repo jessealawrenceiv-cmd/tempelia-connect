@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { resendLastMessage, RESENDABLE_STATUSES } from "@/lib/resend-sms.functions";
+import { resendLastMessage } from "@/lib/resend-sms.functions";
+import { RESENDABLE_STATUSES } from "@/lib/resend-sms";
 
 
 /** Log action types that represent messages WE sent to the customer. */

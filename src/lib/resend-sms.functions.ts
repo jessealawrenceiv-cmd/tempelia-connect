@@ -1,18 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-/** Log statuses that mean the message never made it out, or was never confirmed. */
-export const RESENDABLE_STATUSES = ["failed", "queued", "accepted", "undelivered", "unconfirmed"];
-
-/** Outbound log action types eligible for a resend. */
-const OUTBOUND_TYPES = [
-  "quote_sms",
-  "review_request",
-  "missed_call_text",
-  "missed_call_autotext",
-  "reactivation_text",
-  "quote_decline_followup",
-];
+import { RESENDABLE_STATUSES, OUTBOUND_LOG_TYPES } from "./resend-sms";
 
 function validate(data: unknown): { customerId: string } {
   const { customerId } = (data ?? {}) as { customerId?: unknown };
@@ -48,7 +36,7 @@ export const resendLastMessage = createServerFn({ method: "POST" })
       .from("logs")
       .select("id, action_type, status, message_sent, twilio_message_sid, created_at")
       .eq("customer_id", cust.id)
-      .in("action_type", OUTBOUND_TYPES)
+      .in("action_type", OUTBOUND_LOG_TYPES)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
