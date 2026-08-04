@@ -168,7 +168,20 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       {m.role} · pending · invited {new Date(m.invited_at).toLocaleDateString()}
                     </div>
+                    {(() => {
+                      const e = expiryLabel(m.expires_at);
+                      return (
+                        <div
+                          className={`mono text-[10px] uppercase tracking-widest ${
+                            e.expired ? "text-destructive" : "text-moss"
+                          }`}
+                        >
+                          {e.expired ? `expired — resend needed (${e.text})` : e.text}
+                        </div>
+                      );
+                    })()}
                   </div>
+
                   <div className="flex shrink-0 items-center gap-2">
                     <button
                       onClick={() => resend.mutate({ id: m.id, invited_email: m.invited_email })}
