@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-const URL = process.env.SUPABASE_URL, SRK = process.env.SUPABASE_SERVICE_ROLE_KEY, ANON = process.env.SUPABASE_ANON_KEY;
+const URL = process.env.SUPABASE_URL, SRK = process.env.SUPABASE_SERVICE_ROLE_KEY, ANON = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqaG95Z3JneW15ZHhjcHRjZ3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTYwNTgsImV4cCI6MjA5OTA5MjA1OH0.fggexYdRR93c_VKl0vApeXF_IKU_xI90YWma99w0CZo';
 const admin = createClient(URL, SRK, { auth: { persistSession: false } });
 
 // pick a standard-tier owner (or promote one)
