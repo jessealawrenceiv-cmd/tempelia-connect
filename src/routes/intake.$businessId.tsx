@@ -53,6 +53,11 @@ function IntakeForm() {
     queryFn: () => getInfo({ data: { userId: businessId } }),
   });
 
+  // Never render a raw template placeholder: fall back to a generic,
+  // still-compliant business reference when the tenant has no name set
+  // (or while the profile is still loading).
+  const businessLabel = info?.businessName?.trim() || "this business";
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -190,7 +195,7 @@ function IntakeForm() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-violet"
             />
             <span className="text-xs leading-relaxed text-muted-foreground">
-              I agree to receive SMS text messages from {info?.businessName || "[Business Name]"} regarding my project
+              I agree to receive SMS text messages from {businessLabel} regarding my project
               inquiry. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help.
             </span>
           </label>
