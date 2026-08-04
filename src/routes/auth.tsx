@@ -40,11 +40,19 @@ const signinSchema = z.object({
   password: z.string().min(1).max(72),
 });
 
+/**
+ * True when this account has a team invite to deal with — pending OR expired.
+ * Expired invites also route to /accept-invite so the invitee sees the
+ * "invite expired" explanation instead of a silent, empty dashboard.
+ */
 async function hasPendingInvite(): Promise<boolean> {
-  const { data, error } = await supabase.rpc("has_pending_team_invite");
-  if (error) return false;
-  return data === true;
+  const [pending, expired] = await Promise.all([
+    supabase.rpc("has_pending_team_invite"),
+    supabase.rpc("has_expired_team_invite"),
+  ]);
+  return pending.data === true || expired.data === true;
 }
+
 
 function AuthPage() {
   const search = Route.useSearch();
