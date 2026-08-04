@@ -52,9 +52,17 @@ function AcceptInvitePage() {
 
     if (membership && membership.length > 0) {
       setState({ kind: "accepted", email, justClaimed });
+      return;
+    }
+
+    // No active access: distinguish an expired invite from no invite at all.
+    const { data: expired } = await supabase.rpc("has_expired_team_invite");
+    if (expired === true) {
+      setState({ kind: "expired", email });
     } else {
       setState({ kind: "not_found", email });
     }
+
   }, []);
 
   const run = useCallback(async () => {
