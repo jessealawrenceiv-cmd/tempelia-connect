@@ -3,6 +3,8 @@ import {
   parseDepositDeepLink,
   parseDepositEventHash,
   resolveDepositJump,
+  consumeDepositJump,
+  depositJumpKey,
 } from "@/lib/deposit-deep-link";
 
 describe("parseDepositDeepLink", () => {
@@ -92,5 +94,45 @@ describe("resolveDepositJump", () => {
       reason: "missing",
       fallbackIndex: 0,
     });
+  });
+});
+
+describe("consumeDepositJump", () => {
+  function fakeStorage() {
+    const map = new Map<string, string>();
+    return {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+    };
+  }
+
+  it("allows the first jump and blocks repeats for the same link", () => {
+    const s = fakeStorage();
+    expect(consumeDepositJump(s, "/dashboard/quotes/1", "evt")).toBe(true);
+    expect(consumeDepositJump(s, "/dashboard/quotes/1", "evt")).toBe(false);
+    expect(consumeDepositJump(s, "/dashboard/quotes/1", "evt")).toBe(false);
+  });
+
+  it("tracks links per route and per event", () => {
+    const s = fakeStorage();
+    expect(consumeDepositJump(s, "/a", "evt")).toBe(true);
+    expect(consumeDepositJump(s, "/b", "evt")).toBe(true);
+    expect(consumeDepositJump(s, "/a", "other")).toBe(true);
+    expect(consumeDepositJump(s, "/a", "evt")).toBe(false);
+  });
+
+  it("allows the jump when storage is unavailable or throws", () => {
+    expect(consumeDepositJump(null, "/a", "evt")).toBe(true);
+    const broken = {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {},
+    };
+    expect(consumeDepositJump(broken, "/a", "evt")).toBe(true);
+  });
+
+  it("builds a namespaced key", () => {
+    expect(depositJumpKey("/a", "evt")).toBe("temaro:deposit-jump:/a:evt");
   });
 });
