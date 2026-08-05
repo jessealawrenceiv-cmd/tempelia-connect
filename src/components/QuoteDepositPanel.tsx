@@ -736,6 +736,24 @@ export function QuoteDepositPanel({ quote }: Props) {
                         <div className="mono border-t border-border/60 pt-1 text-[11px] text-violet">
                           current balance · {money(currentBalanceRemaining)}
                         </div>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <a
+                            href={`/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mono inline-flex items-center rounded-sm border border-violet/60 bg-violet/10 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            open quote ↗
+                          </a>
+                          <a
+                            href={`/quote/${p.quote_id ?? quote.id}${eventLinkSuffix(row.id)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mono inline-flex items-center rounded-sm border border-steel/60 bg-steel/10 px-2 py-1 text-[10px] uppercase tracking-wider text-steel hover:bg-steel/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            customer view ↗
+                          </a>
+                        </div>
                       </PopoverContent>
                     </Popover>
                     <span className="text-muted-foreground">
