@@ -293,6 +293,15 @@ export function QuoteDepositPanel({ quote }: Props) {
     if (resolution.kind === "miss") {
       // Graceful fallback: the linked event isn't in view. Explain why and land
       // the reader at the closest available spot (first entry / timeline top).
+      const missPayload = {
+        quote_id: quote.id,
+        event_id: incomingEventId,
+        reason: resolution.reason,
+        source: incomingSource,
+        fallback_index: resolution.fallbackIndex,
+        filtered_count: filteredAudit.length,
+        total_audit_count: audit?.length ?? 0,
+      };
       trackDepositJump({
         kind: "miss",
         quoteId: quote.id,
@@ -300,6 +309,7 @@ export function QuoteDepositPanel({ quote }: Props) {
         reason: resolution.reason,
         source: incomingSource,
       });
+      logDepositJumpDebug("deposit_jump_miss", missPayload);
       setJumpMiss({ id: incomingEventId, reason: resolution.reason });
       setAuditCursor(resolution.fallbackIndex);
       // Strip the deep-link params immediately (not in a rAF) so a refresh or
