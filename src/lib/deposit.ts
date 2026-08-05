@@ -110,3 +110,47 @@ export function depositSelectionLabel(
   }
   return DEPOSIT_SELECTIONS.find((s) => s.value === selection)?.label ?? "None";
 }
+
+/**
+ * Balance still owed after the deposit. Only a *received* deposit reduces the
+ * balance — an unpaid deposit leaves the full total outstanding.
+ */
+export function depositBalanceRemaining(args: {
+  total: number | string | null | undefined;
+  depositAmount: number | string | null | undefined;
+  depositPaid: boolean | null | undefined;
+}): number {
+  const total = Number(args.total ?? 0);
+  const dep = Number(args.depositAmount ?? 0);
+  return round2(args.depositPaid ? total - dep : total);
+}
+
+/** One-line deposit summary used in the customer SMS and public quote page. */
+export function depositCustomerLine(args: {
+  depositRequired: boolean | null | undefined;
+  depositAmount: number | string | null | undefined;
+  total: number | string | null | undefined;
+}): string | null {
+  if (!args.depositRequired) return null;
+  const dep = round2(Number(args.depositAmount ?? 0));
+  if (dep <= 0) return null;
+  const total = round2(Number(args.total ?? 0));
+  const balance = round2(total - dep);
+  const money = (n: number) =>
+    `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return dep >= total
+    ? `Full payment of ${money(dep)} is due up front.`
+    : `A deposit of ${money(dep)} is required to book, with the remaining ${money(balance)} due on completion.`;
+}
+
+/**
+ * Customer-facing figure: what's left after the deposit is applied, whether or
+ * not it's been received yet. (Internal "balance remaining" only subtracts a
+ * deposit once it's actually marked received.)
+ */
+export function depositBalanceAfterDeposit(args: {
+  total: number | string | null | undefined;
+  depositAmount: number | string | null | undefined;
+}): number {
+  return round2(Number(args.total ?? 0) - Number(args.depositAmount ?? 0));
+}
