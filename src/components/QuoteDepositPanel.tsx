@@ -155,7 +155,10 @@ export function QuoteDepositPanel({ quote }: Props) {
 
   const [auditCursor, setAuditCursor] = useState(0);
   const entryRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const popoverFocusedRef = useRef(false);
   const filterKey = `${term}|${auditAction}|${auditActor}|${auditFrom}|${auditTo}|${filteredAudit.length}`;
+
   useEffect(() => {
     setAuditCursor(0);
   }, [filterKey]);
@@ -790,14 +793,26 @@ export function QuoteDepositPanel({ quote }: Props) {
                     <Popover
                       open={openPreviewId === row.id}
                       onOpenChange={(o) => {
-                        if (!o) openModeRef.current = null;
+                        if (!o) {
+                          const id = openPreviewId;
+                          if (id && (openModeRef.current === "keyboard" || popoverFocusedRef.current)) {
+                            requestAnimationFrame(() => triggerRefs.current[id]?.focus());
+                          }
+                          openModeRef.current = null;
+                          popoverFocusedRef.current = false;
+                        }
                         setOpenPreviewId(o ? row.id : null);
                       }}
                     >
+
                       <PopoverTrigger asChild>
                         <button
                           type="button"
+                          ref={(el) => {
+                            triggerRefs.current[row.id] = el;
+                          }}
                           aria-label={`Preview quote ${(p.quote_id ?? quote.id).slice(0, 8)} deposit details`}
+
                           onPointerDown={() => {
                             openModeRef.current = "keyboard";
                           }}
@@ -830,7 +845,14 @@ export function QuoteDepositPanel({ quote }: Props) {
                           // Hover-opened popovers must not steal focus; keyboard/click opens trap focus.
                           if (openModeRef.current === "hover") e.preventDefault();
                         }}
+                        onFocusCapture={() => {
+                          // Once focus moves inside the popover, treat it as a keyboard interaction
+                          // so Escape/click-outside returns focus to the trigger.
+                          popoverFocusedRef.current = true;
+                          openModeRef.current = "keyboard";
+                        }}
                         onEscapeKeyDown={() => setOpenPreviewId(null)}
+
                         onMouseEnter={() => {
                           if (openModeRef.current === "hover") setOpenPreviewId(row.id);
                         }}
