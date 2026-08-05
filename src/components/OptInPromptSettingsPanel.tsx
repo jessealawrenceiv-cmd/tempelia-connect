@@ -41,6 +41,7 @@ export function OptInPromptSettingsPanel({
   cooldownMinutes,
   ownerPhone,
   fromNumber,
+  lastTestPhone,
 }: Props) {
   const qc = useQueryClient();
   const sendTest = useServerFn(sendTestOptInPrompt);
