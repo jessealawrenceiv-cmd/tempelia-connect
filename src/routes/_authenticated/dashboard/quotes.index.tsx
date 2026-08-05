@@ -28,6 +28,13 @@ type QuoteRow = {
   superseded_by_id: string | null;
   decline_reason: string | null;
   decline_followup_sent_at: string | null;
+  deposit_required: boolean;
+  deposit_selection: string;
+  deposit_custom_type: string | null;
+  deposit_custom_value: number | null;
+  deposit_amount: number;
+  deposit_paid: boolean;
+  deposit_paid_at: string | null;
 };
 
 const STATUS_STYLES: Record<QuoteRow["status"], string> = {
