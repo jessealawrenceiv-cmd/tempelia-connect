@@ -26,6 +26,8 @@ beforeAll(() => {
 
 afterEach(() => cleanup());
 
+const previewQuote = vi.fn();
+const previewCustomer = vi.fn();
 const copyShortId = vi.fn();
 const copyShareLink = vi.fn();
 
@@ -44,8 +46,8 @@ function Harness() {
         balanceAtEvent="$457.00"
         quoteTotal="$657.00"
         currentBalance="$457.00"
-        quoteHref="/dashboard/quotes/q1/print"
-        customerHref="/quote/q1"
+        onPreviewQuote={previewQuote}
+        onPreviewCustomer={previewCustomer}
         onCopyShortId={copyShortId}
         onCopyShareLink={copyShareLink}
       />
