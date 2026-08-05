@@ -171,6 +171,36 @@ export type Database = {
         }
         Relationships: []
       }
+      deposit_jump_debug_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          occurred_at: string
+          payload: Json
+          quote_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          quote_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          quote_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       deposit_jump_recovery_events: {
         Row: {
           action: string

@@ -22,6 +22,11 @@ import {
 } from "@/lib/deposit-deep-link";
 import { trackDepositJump, trackDepositJumpRecovery } from "@/lib/analytics";
 import { recordDepositJumpRecovery } from "@/lib/deposit-jump-analytics.functions";
+import {
+  saveDepositJumpDebugEvent,
+  listDepositJumpDebugEvents,
+  clearDepositJumpDebugEvents,
+} from "@/lib/deposit-jump-debug.functions";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
@@ -222,6 +227,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   };
   const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
   const debugLogRef = useRef<HTMLDivElement | null>(null);
+  const [debugHydrated, setDebugHydrated] = useState(false);
 
   const logDepositJumpDebug = useCallback(
     (
@@ -234,15 +240,46 @@ export function QuoteDepositPanel({ quote }: Props) {
       console.log(`[deposit-jump-debug] ${event}`, payload);
       if (debugMode) {
         setDebugLog((prev) => [entry, ...prev].slice(0, 50));
+        // Persist so the test run is still reviewable after a refresh.
+        void saveDepositJumpDebugEvent({
+          data: { quoteId: quote.id, event, payload },
+        }).catch(() => {});
       }
     },
-    [debugMode],
+    [debugMode, quote.id],
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(DEBUG_STORAGE_KEY, debugMode ? "true" : "false");
   }, [debugMode]);
+
+  // Rehydrate the saved debug log once, when debug mode is on.
+  useEffect(() => {
+    if (!debugMode || debugHydrated) return;
+    let cancelled = false;
+    setDebugHydrated(true);
+    void listDepositJumpDebugEvents({ data: { quoteId: quote.id, limit: 50 } })
+      .then((rows) => {
+        if (cancelled || !rows?.length) return;
+        setDebugLog((prev) => {
+          const saved: DebugEntry[] = rows.map((r) => ({
+            id: r.id,
+            ts: new Date(r.occurredAt).getTime(),
+            event: r.event,
+            payload: r.payload as Record<string, unknown>,
+          }));
+          const seen = new Set(prev.map((e) => e.id));
+          return [...prev, ...saved.filter((e) => !seen.has(e.id))]
+            .sort((a, b) => b.ts - a.ts)
+            .slice(0, 50);
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [debugMode, debugHydrated, quote.id]);
 
   // Pull keyboard focus onto the not-found heading so the message is read at once.
   useEffect(() => {
@@ -1212,7 +1249,12 @@ export function QuoteDepositPanel({ quote }: Props) {
                 copy json
               </button>
               <button
-                onClick={() => setDebugLog([])}
+                onClick={() => {
+                  setDebugLog([]);
+                  void clearDepositJumpDebugEvents({ data: { quoteId: quote.id } })
+                    .then(() => toast.success("Debug log cleared (saved entries removed)."))
+                    .catch(() => toast.error("Cleared on screen, but saved entries remain."));
+                }}
                 disabled={debugLog.length === 0}
                 className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
               >
@@ -1228,7 +1270,7 @@ export function QuoteDepositPanel({ quote }: Props) {
           </div>
           {debugLog.length === 0 ? (
             <div className="mono text-[11px] text-muted-foreground">
-              // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log.
+              // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log. entries are saved and reloaded after refresh.
             </div>
           ) : (
             <ol className="max-h-64 space-y-2 overflow-auto rounded-sm border border-violet/20 bg-charcoal/40 p-2">
