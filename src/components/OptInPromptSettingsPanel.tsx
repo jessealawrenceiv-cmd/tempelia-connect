@@ -137,6 +137,8 @@ export function OptInPromptSettingsPanel({
       ? null
       : testParsed.error;
 
+  const sampleParsed = normalizeToE164(samplePhone.trim());
+
   const test = useMutation({
     mutationFn: async () => {
       if (!testTarget) throw new Error(testPhoneError ?? "Enter a valid phone number.");
@@ -318,17 +320,34 @@ export function OptInPromptSettingsPanel({
               onChange={(e) => setSamplePhone(e.target.value)}
               placeholder="+15015550123"
               inputMode="tel"
-              className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+              aria-invalid={samplePhone.trim() && !sampleParsed.ok ? true : undefined}
+              className={`mono mt-1 block w-full rounded-sm border bg-background px-3 py-2 text-sm ${
+                samplePhone.trim() && !sampleParsed.ok ? "border-destructive" : "border-border"
+              }`}
             />
+            <span className="mono mt-1 block text-[10px] uppercase tracking-widest">
+              {samplePhone.trim() ? (
+                sampleParsed.ok ? (
+                  <span className="text-moss">To {sampleParsed.e164}</span>
+                ) : (
+                  <span className="text-destructive">{sampleParsed.error}</span>
+                )
+              ) : (
+                <span className="text-muted-foreground">10-digit US or E.164</span>
+              )}
+            </span>
           </label>
         </div>
 
         <dl className="mono mt-3 space-y-1 text-[11px] uppercase tracking-widest text-muted-foreground">
           <div className="flex justify-between gap-3">
             <dt>To</dt>
-            <dd className="text-paper">
-              {samplePhone.trim() || "—"}
-              {sampleName.trim() ? ` (${sampleName.trim()})` : ""}
+            <dd className={samplePhone.trim() && !sampleParsed.ok ? "text-destructive" : "text-paper"}>
+              {samplePhone.trim()
+                ? sampleParsed.ok
+                  ? `${sampleParsed.e164}${sampleName.trim() ? ` (${sampleName.trim()})` : ""}`
+                  : sampleParsed.error
+                : "—"}
             </dd>
           </div>
           <div className="flex justify-between gap-3">
