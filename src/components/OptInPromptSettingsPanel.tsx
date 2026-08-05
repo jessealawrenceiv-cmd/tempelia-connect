@@ -318,10 +318,16 @@ export function OptInPromptSettingsPanel({
       if (!testTarget) throw new Error(testPhoneError ?? "Enter a valid phone number.");
       return await sendTest({ data: { phone: testTarget } });
     },
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       setLastTest({ to: res.to, sid: res.sid, at: new Date().toLocaleTimeString(), status: res.status });
       void pollStatus(res.sid);
       void qc.invalidateQueries({ queryKey: ["opt-in-prompt-test-history"] });
+      // Remember the normalized recipient so the field prefills next visit.
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) {
+        await supabase.from("profiles").update({ last_test_phone: res.to }).eq("id", u.user.id);
+        void qc.invalidateQueries({ queryKey: ["profile"] });
+      }
       toast.success(`Test prompt sent to ${res.to}`);
     },
     onError: (e: Error) => toast.error(e.message),
