@@ -748,7 +748,7 @@ export function QuoteDepositPanel({ quote }: Props) {
                 next event →
               </button>
               {activeEntry && (
-                <span className="ml-auto flex items-center gap-2 text-muted-foreground">
+                <span aria-hidden="true" className="ml-auto flex items-center gap-2 text-muted-foreground">
                   <span className="text-paper">
                     deposit {money(parsePayload(activeEntry).deposit_amount ?? 0)}
                   </span>
@@ -764,6 +764,22 @@ export function QuoteDepositPanel({ quote }: Props) {
               )}
             </div>
           )}
+
+          {/* Screen-reader announcement for the highlighted timeline row */}
+          <div aria-live="polite" aria-atomic="true" className="sr-only">
+            {activeEntry
+              ? `Event ${auditCursor + 1} of ${filteredAudit.length}, ${new Date(
+                  activeEntry.created_at,
+                ).toLocaleString("en-US")}. Deposit ${money(
+                  parsePayload(activeEntry).deposit_amount ?? 0,
+                )}, balance remaining ${money(
+                  parsePayload(activeEntry).balance_remaining ?? 0,
+                )}, quote total ${money(
+                  parsePayload(activeEntry).total_amount ?? quote.total_amount,
+                )}.`
+              : ""}
+          </div>
+
 
 
           {filteredAudit.length === 0 ? (
