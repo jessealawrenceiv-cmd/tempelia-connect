@@ -642,6 +642,7 @@ export function QuoteDepositPanel({ quote }: Props) {
               return (
                 <li
                   key={row.id}
+                  id={`deposit-event-${row.id}`}
                   ref={(el) => {
                     entryRefs.current[row.id] = el;
                   }}
