@@ -99,6 +99,42 @@ export function QuoteDepositPanel({ quote }: Props) {
     enabled: quote.deposit_required,
   });
 
+  const auditActors = Array.from(
+    new Set(
+      (audit ?? [])
+        .map((r) => parsePayload(r).actor_email || parsePayload(r).actor_user_id || "")
+        .filter(Boolean),
+    ),
+  ).sort();
+
+  const term = auditQuery.trim().toLowerCase();
+  const filteredAudit = (audit ?? []).filter((row) => {
+    const p = parsePayload(row);
+    const actor = p.actor_email || p.actor_user_id || "";
+    if (auditAction !== "all" && row.status !== auditAction) return false;
+    if (auditActor !== "all" && actor !== auditActor) return false;
+    if (!term) return true;
+    const haystack = [
+      row.status,
+      actor,
+      p.actor_is_owner === false ? "staff" : "owner",
+      quote.id,
+      quote.id.slice(0, 8),
+      quote.customer_first_name ?? "",
+      quote.customer_last_name ?? "",
+      p.deposit_amount != null ? String(p.deposit_amount) : "",
+      p.balance_remaining != null ? String(p.balance_remaining) : "",
+      new Date(row.created_at).toLocaleString("en-US"),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(term);
+  });
+
+  const auditFiltersActive = term !== "" || auditAction !== "all" || auditActor !== "all";
+
+
+
   const {
     data: preview,
     isFetching: previewLoading,
