@@ -973,6 +973,9 @@ export function OptInPromptSettingsPanel({
                       <td className="py-1.5 pr-3 whitespace-nowrap">
                         {new Date(row.created_at).toLocaleString()}
                       </td>
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
+                        {row.recipient_phone ?? "—"}
+                      </td>
                       <td
                         className={`py-1.5 pr-3 uppercase ${
                           ["failed", "undelivered", "canceled"].includes(row.status ?? "")
