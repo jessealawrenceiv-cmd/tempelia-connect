@@ -157,6 +157,12 @@ export function QuoteDepositPanel({ quote }: Props) {
 
   const activeEntry = filteredAudit[auditCursor];
 
+  const location = useLocation();
+  function eventLinkSuffix(eventId: string) {
+    const returnTo = `${location.pathname}`;
+    return `?depositEvent=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(returnTo)}`;
+  }
+
   function goToEntry(next: number) {
     if (filteredAudit.length === 0) return;
     const clamped = Math.min(Math.max(next, 0), filteredAudit.length - 1);
@@ -166,6 +172,25 @@ export function QuoteDepositPanel({ quote }: Props) {
       entryRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }
+
+  // Focus the event referenced by ?depositEvent= / #deposit-event-<id> on arrival.
+  const incomingEventId =
+    new URLSearchParams(location.searchStr ?? "").get("depositEvent") ??
+    (location.hash?.startsWith("deposit-event-")
+      ? location.hash.replace("deposit-event-", "")
+      : null);
+  const focusedIncomingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!incomingEventId || focusedIncomingRef.current === incomingEventId) return;
+    const idx = filteredAudit.findIndex((r) => r.id === incomingEventId);
+    if (idx < 0) return;
+    focusedIncomingRef.current = incomingEventId;
+    setAuditCursor(idx);
+    requestAnimationFrame(() => {
+      entryRefs.current[incomingEventId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [incomingEventId, filteredAudit]);
+
 
 
 
