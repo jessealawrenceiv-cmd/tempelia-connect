@@ -264,6 +264,12 @@ function SettingsPage() {
           lastTestPhone={profile?.last_test_phone}
         />
 
+        <DepositDefaultsPanel
+          defaultType={profile?.default_deposit_type}
+          defaultFixedAmount={profile?.default_deposit_fixed_amount}
+          allowOverride={profile?.allow_deposit_override_per_quote}
+        />
+
         {!isStaff && <WebhookCheckPanel />}
         {!isStaff && <WebhookEventLogPanel />}
 
