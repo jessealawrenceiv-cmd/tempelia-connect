@@ -252,6 +252,21 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
     enabled: isStandard,
   });
 
+  const { data: lastCleanup } = useQuery({
+    queryKey: ["invite_cleanup_runs", "last"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invite_cleanup_runs")
+        .select("ran_at, deleted_count")
+        .order("ran_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isStandard,
+  });
+
   /**
    * Expiry has no actor — nobody clicks it — so it is derived from the invite
    * row rather than written to the table, and merged into the same timeline.
@@ -542,6 +557,13 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
             Append-only record of every invite action — created, resent, accepted, revoked, plus
             expiries derived from the 7-day window.
           </p>
+          <div className="mono mt-2 text-[10px] uppercase tracking-widest text-moss">
+            Auto-cleanup ·{" "}
+            {lastCleanup
+              ? `last run ${fmtStamp(lastCleanup.ran_at)} · ${lastCleanup.deleted_count} expired invite(s) purged`
+              : "scheduled nightly 03:15 UTC · no run recorded yet"}
+          </div>
+
           {timeline.length === 0 ? (
             <p className="mt-2 text-xs text-muted-foreground">No invite activity recorded yet.</p>
           ) : (
