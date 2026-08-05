@@ -99,6 +99,25 @@ function QuotesListPage() {
     }
   }
 
+  async function handleMarkDeposit(quoteId: string, paid: boolean) {
+    setDepositId(quoteId);
+    try {
+      const { error } = await supabase
+        .from("quotes")
+        .update({ deposit_paid: paid, deposit_paid_at: paid ? new Date().toISOString() : null })
+        .eq("id", quoteId);
+      if (error) throw error;
+      toast.success(paid ? "Deposit marked received." : "Deposit marked unpaid.");
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setDepositId(null);
+    }
+  }
+
+
+
 
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["quotes"],
