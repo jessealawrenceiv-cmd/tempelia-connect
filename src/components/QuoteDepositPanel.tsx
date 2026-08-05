@@ -110,11 +110,16 @@ export function QuoteDepositPanel({ quote }: Props) {
   ).sort();
 
   const term = auditQuery.trim().toLowerCase();
+  const fromMs = auditFrom ? new Date(`${auditFrom}T00:00:00`).getTime() : null;
+  const toMs = auditTo ? new Date(`${auditTo}T23:59:59.999`).getTime() : null;
   const filteredAudit = (audit ?? []).filter((row) => {
     const p = parsePayload(row);
     const actor = p.actor_email || p.actor_user_id || "";
     if (auditAction !== "all" && row.status !== auditAction) return false;
     if (auditActor !== "all" && actor !== auditActor) return false;
+    const t = new Date(row.created_at).getTime();
+    if (fromMs != null && t < fromMs) return false;
+    if (toMs != null && t > toMs) return false;
     if (!term) return true;
     const haystack = [
       row.status,
@@ -133,7 +138,15 @@ export function QuoteDepositPanel({ quote }: Props) {
     return haystack.includes(term);
   });
 
-  const auditFiltersActive = term !== "" || auditAction !== "all" || auditActor !== "all";
+  const dateRangeInvalid = fromMs != null && toMs != null && fromMs > toMs;
+
+  const auditFiltersActive =
+    term !== "" ||
+    auditAction !== "all" ||
+    auditActor !== "all" ||
+    auditFrom !== "" ||
+    auditTo !== "";
+
 
 
 
