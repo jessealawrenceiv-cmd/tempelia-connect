@@ -14,6 +14,11 @@ import { markQuoteDeposit, DEPOSIT_AUDIT_ACTION } from "@/lib/deposit.functions"
 import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
+import {
+  parseDepositDeepLink,
+  resolveDepositJump,
+  type DepositJumpMissReason,
+} from "@/lib/deposit-deep-link";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
