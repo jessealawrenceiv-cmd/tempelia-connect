@@ -75,7 +75,9 @@ export function MissedCallDetailSheet({ log, onClose }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logs")
-        .select("id, created_at, status, message_sent, twilio_message_sid")
+        .select(
+          "id, created_at, status, message_sent, twilio_message_sid, prompt_template, prompt_template_hash, prompt_cooldown_minutes",
+        )
         .eq("customer_id", customerId!)
         .eq("action_type", OPT_IN_PROMPT_ACTION)
         .order("created_at", { ascending: false })
@@ -177,6 +179,22 @@ export function MissedCallDetailSheet({ log, onClose }: Props) {
                     }
                   />
                   <Row label="Body" value={lastPrompt.message_sent || "—"} />
+                  <Row
+                    label="Template used"
+                    value={lastPrompt.prompt_template || "default — {business}:"}
+                  />
+                  <Row
+                    label="Template version"
+                    value={lastPrompt.prompt_template_hash ?? "— (sent before versioning)"}
+                  />
+                  <Row
+                    label="Cooldown in effect"
+                    value={
+                      lastPrompt.prompt_cooldown_minutes != null
+                        ? `${lastPrompt.prompt_cooldown_minutes} min`
+                        : "—"
+                    }
+                  />
                 </>
               ) : (
                 <p className="mono text-xs italic text-muted-foreground">

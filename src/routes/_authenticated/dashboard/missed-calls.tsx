@@ -186,12 +186,21 @@ function MissedCallsPage() {
       // Every opt-in prompt attempt (not just the latest) for the visible contacts.
       const attempts = new Map<
         string,
-        { created_at: string; status: string; twilio_message_sid: string | null }[]
+        {
+          created_at: string;
+          status: string;
+          twilio_message_sid: string | null;
+          prompt_template: string | null;
+          prompt_template_hash: string | null;
+          prompt_cooldown_minutes: number | null;
+        }[]
       >();
       if (customerIds.length > 0) {
         const { data: promptLogs } = await supabase
           .from("logs")
-          .select("customer_id, created_at, status, twilio_message_sid")
+          .select(
+            "customer_id, created_at, status, twilio_message_sid, prompt_template, prompt_template_hash, prompt_cooldown_minutes",
+          )
           .eq("action_type", OPT_IN_PROMPT_ACTION)
           .in("customer_id", customerIds)
           .order("created_at", { ascending: true });
@@ -202,6 +211,9 @@ function MissedCallsPage() {
             created_at: log.created_at,
             status: log.status,
             twilio_message_sid: log.twilio_message_sid,
+            prompt_template: log.prompt_template,
+            prompt_template_hash: log.prompt_template_hash,
+            prompt_cooldown_minutes: log.prompt_cooldown_minutes,
           });
           attempts.set(log.customer_id, list);
         }

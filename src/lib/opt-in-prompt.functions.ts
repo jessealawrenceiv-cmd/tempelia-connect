@@ -5,6 +5,7 @@ import {
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   buildOptInPrompt,
   clampCooldownMinutes,
+  promptVersionHash,
 } from "./opt-in-prompt";
 
 function validate(data: unknown): { customerId: string } {
@@ -80,6 +81,9 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
         message_sent: body,
         status: "sent",
         twilio_message_sid: res.sid,
+        prompt_template: prof?.opt_in_prompt_template ?? null,
+        prompt_template_hash: promptVersionHash(body),
+        prompt_cooldown_minutes: cooldown,
       });
       return { ok: true as const, sid: res.sid };
     } catch (e) {
@@ -90,6 +94,9 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
         action_type: OPT_IN_PROMPT_ACTION,
         message_sent: body,
         status: "failed",
+        prompt_template: prof?.opt_in_prompt_template ?? null,
+        prompt_template_hash: promptVersionHash(body),
+        prompt_cooldown_minutes: cooldown,
       });
       throw new Error(`Send failed — ${msg}`);
     }
@@ -186,6 +193,9 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
         message_sent: body,
         status: "sent",
         twilio_message_sid: res.sid,
+        prompt_template: prof?.opt_in_prompt_template ?? null,
+        prompt_template_hash: promptVersionHash(body),
+        prompt_cooldown_minutes: cooldown,
       });
       return { ok: true as const, to, sid: res.sid, body, cooldown };
     } catch (e) {
@@ -195,6 +205,9 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
         action_type: OPT_IN_PROMPT_TEST_ACTION,
         message_sent: body,
         status: "failed",
+        prompt_template: prof?.opt_in_prompt_template ?? null,
+        prompt_template_hash: promptVersionHash(body),
+        prompt_cooldown_minutes: cooldown,
       });
       throw new Error(`Send failed — ${msg}`);
     }

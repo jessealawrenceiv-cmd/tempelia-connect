@@ -100,3 +100,17 @@ export function validateOptInPromptTemplate(raw: string | null | undefined): Tem
 
   return issues;
 }
+
+/**
+ * Stable, short fingerprint of a rendered prompt body (FNV-1a, 8 hex chars).
+ * Recorded on each opt-in attempt so you can tell which wording version went
+ * out, without storing the whole message twice.
+ */
+export function promptVersionHash(body: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < body.length; i++) {
+    h ^= body.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
