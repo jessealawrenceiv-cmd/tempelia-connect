@@ -4,6 +4,7 @@ import {
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   buildOptInPrompt,
   clampCooldownMinutes,
+  promptVersionHash,
 } from "./opt-in-prompt";
 
 type Client = { from: (t: string) => any };
@@ -83,6 +84,9 @@ export async function sendPromptToCustomer(
       message_sent: body,
       status: "sent",
       twilio_message_sid: res.sid,
+      prompt_template: profile.opt_in_prompt_template ?? null,
+      prompt_template_hash: promptVersionHash(body),
+      prompt_cooldown_minutes: cooldown,
     });
     return { customerId, ok: true, sid: res.sid ?? null, phone: cust.phone_number };
   } catch (e) {
@@ -93,6 +97,9 @@ export async function sendPromptToCustomer(
       action_type: OPT_IN_PROMPT_ACTION,
       message_sent: body,
       status: "failed",
+      prompt_template: profile.opt_in_prompt_template ?? null,
+      prompt_template_hash: promptVersionHash(body),
+      prompt_cooldown_minutes: cooldown,
     });
     return fail(`Send failed — ${msg}`, cust.phone_number);
   }
