@@ -155,7 +155,10 @@ export function QuoteDepositPanel({ quote }: Props) {
 
   const [auditCursor, setAuditCursor] = useState(0);
   const entryRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const popoverFocusedRef = useRef(false);
   const filterKey = `${term}|${auditAction}|${auditActor}|${auditFrom}|${auditTo}|${filteredAudit.length}`;
+
   useEffect(() => {
     setAuditCursor(0);
   }, [filterKey]);
