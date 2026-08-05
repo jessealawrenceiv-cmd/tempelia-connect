@@ -288,6 +288,19 @@ export function QuoteDepositPanel({ quote }: Props) {
       .catch(() => toast.error("Copy failed."));
   }
 
+  function copyShareLink(eventId: string) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("eventId", eventId);
+    url.searchParams.set("depositEvent", eventId);
+    url.searchParams.delete("returnTo");
+    url.hash = "";
+    navigator.clipboard
+      .writeText(url.toString())
+      .then(() => toast.success("Share link copied."))
+      .catch(() => toast.error("Copy failed."));
+  }
+
+
 
   function exportAudit() {
     const rows: DepositAuditCsvRow[] = filteredAudit
@@ -873,8 +886,17 @@ export function QuoteDepositPanel({ quote }: Props) {
                           >
                             customer view ↗
                           </a>
+                          <button
+                            type="button"
+                            onClick={() => copyShareLink(row.id)}
+                            aria-label={`Copy share link for deposit event ${row.id.slice(0, 8)}`}
+                            className="mono inline-flex items-center rounded-sm border border-border bg-background/60 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            copy share link
+                          </button>
                         </div>
                       </PopoverContent>
+
                     </Popover>
                     <span className="text-muted-foreground">
                       {" "}
@@ -909,7 +931,16 @@ export function QuoteDepositPanel({ quote }: Props) {
                     >
                       customer view ↗
                     </a>
+                    <button
+                      type="button"
+                      onClick={() => copyShareLink(row.id)}
+                      aria-label={`Copy share link for deposit event ${row.id.slice(0, 8)}`}
+                      className="text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      copy share link
+                    </button>
                   </div>
+
 
 
                 </li>
