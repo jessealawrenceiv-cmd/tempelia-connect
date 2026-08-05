@@ -22,6 +22,11 @@ import {
 } from "@/lib/deposit-deep-link";
 import { trackDepositJump, trackDepositJumpRecovery } from "@/lib/analytics";
 import { recordDepositJumpRecovery } from "@/lib/deposit-jump-analytics.functions";
+import {
+  saveDepositJumpDebugEvent,
+  listDepositJumpDebugEvents,
+  clearDepositJumpDebugEvents,
+} from "@/lib/deposit-jump-debug.functions";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
