@@ -17,8 +17,15 @@ function readEnv() {
 }
 
 export type DepositJumpResult =
-  | { kind: "success"; quoteId: string; eventId: string; source: string | null }
-  | { kind: "miss"; quoteId: string; eventId: string; reason: string; source: string | null };
+  | { kind: "success"; quoteId: string; eventId: string; source: string | null; durationMs?: number | null }
+  | {
+      kind: "miss";
+      quoteId: string;
+      eventId: string;
+      reason: string;
+      source: string | null;
+      durationMs?: number | null;
+    };
 
 export function createAnalytics(posthogClient: typeof posthog = posthog) {
   let initialized = false;
