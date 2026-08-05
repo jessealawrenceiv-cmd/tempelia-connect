@@ -70,6 +70,11 @@ export function QuoteDepositPanel({ quote }: Props) {
   const previewFn = useServerFn(previewQuoteSms);
   const [busy, setBusy] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [auditQuery, setAuditQuery] = useState("");
+  const [auditAction, setAuditAction] = useState<"all" | "deposit_received" | "deposit_undone">(
+    "all",
+  );
+  const [auditActor, setAuditActor] = useState("all");
 
   const total = Number(quote.total_amount ?? 0);
   const deposit = Number(quote.deposit_amount ?? 0);
