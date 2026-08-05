@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { sendTestOptInPrompt } from "@/lib/opt-in-prompt.functions";
+import { sendTestOptInPrompt, getTestSmsStatus } from "@/lib/opt-in-prompt.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,7 +38,16 @@ export function OptInPromptSettingsPanel({
 }: Props) {
   const qc = useQueryClient();
   const sendTest = useServerFn(sendTestOptInPrompt);
-  const [lastTest, setLastTest] = useState<{ to: string; sid: string; at: string } | null>(null);
+  const checkStatus = useServerFn(getTestSmsStatus);
+  const [lastTest, setLastTest] = useState<{
+    to: string;
+    sid: string;
+    at: string;
+    status: string;
+    errorCode?: number | null;
+    errorMessage?: string | null;
+  } | null>(null);
+  const [polling, setPolling] = useState(false);
   const [sampleName, setSampleName] = useState("Dana Reyes");
   const [samplePhone, setSamplePhone] = useState("+15015550123");
   const [testPhone, setTestPhone] = useState("");
@@ -80,10 +89,35 @@ export function OptInPromptSettingsPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const TERMINAL = ["delivered", "undelivered", "failed", "canceled"];
+
+  async function pollStatus(sid: string) {
+    setPolling(true);
+    try {
+      for (let i = 0; i < 8; i++) {
+        await new Promise((r) => setTimeout(r, i === 0 ? 1500 : 3000));
+        try {
+          const m = await checkStatus({ data: { sid } });
+          setLastTest((prev) =>
+            prev && prev.sid === sid
+              ? { ...prev, status: m.status, errorCode: m.errorCode, errorMessage: m.errorMessage }
+              : prev,
+          );
+          if (TERMINAL.includes(m.status)) break;
+        } catch {
+          break;
+        }
+      }
+    } finally {
+      setPolling(false);
+    }
+  }
+
   const test = useMutation({
     mutationFn: async () => await sendTest({ data: { phone: testPhone.trim() } }),
     onSuccess: (res) => {
-      setLastTest({ to: res.to, sid: res.sid, at: new Date().toLocaleTimeString() });
+      setLastTest({ to: res.to, sid: res.sid, at: new Date().toLocaleTimeString(), status: res.status });
+      void pollStatus(res.sid);
       toast.success(`Test prompt sent to ${res.to}`);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -293,9 +327,57 @@ export function OptInPromptSettingsPanel({
             : "Enter a test number (or add an owner mobile above) to enable test sends"}
       </p>
       {lastTest && (
-        <p className="mono mt-1 text-[10px] uppercase tracking-widest text-moss">
-          Sent {lastTest.at} → {lastTest.to} · SID {lastTest.sid}
-        </p>
+        <div className="mono mt-1 space-y-0.5 text-[10px] uppercase tracking-widest">
+          <p className="text-moss">
+            Sent {lastTest.at} → {lastTest.to} · SID {lastTest.sid}
+          </p>
+          <p>
+            <span className="text-muted-foreground">Delivery status: </span>
+            <span
+              className={
+                lastTest.status === "delivered"
+                  ? "text-moss"
+                  : lastTest.status === "failed" ||
+                      lastTest.status === "undelivered" ||
+                      lastTest.status === "canceled"
+                    ? "text-destructive"
+                    : "text-foreground"
+              }
+            >
+              {lastTest.status}
+            </span>
+            {polling && !TERMINAL.includes(lastTest.status) ? (
+              <span className="text-muted-foreground"> · checking…</span>
+            ) : null}
+            {!polling && !TERMINAL.includes(lastTest.status) ? (
+              <button
+                type="button"
+                onClick={() => void pollStatus(lastTest.sid)}
+                className="ml-2 underline text-muted-foreground hover:text-foreground"
+              >
+                Refresh
+              </button>
+            ) : null}
+          </p>
+          {(lastTest.errorCode || lastTest.errorMessage) && (
+            <p className="text-destructive normal-case tracking-normal">
+              Error {lastTest.errorCode ?? "—"}: {lastTest.errorMessage ?? "no detail returned"}
+              {lastTest.errorCode ? (
+                <>
+                  {" "}
+                  <a
+                    className="underline"
+                    href={`https://www.twilio.com/docs/api/errors/${lastTest.errorCode}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    docs
+                  </a>
+                </>
+              ) : null}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
