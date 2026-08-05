@@ -260,6 +260,8 @@ function SettingsPage() {
           fromNumber={profile?.twilio_phone_number}
         />
 
+        {!isStaff && <WebhookCheckPanel />}
+
         <ExcludedNumbersPanel />
 
         <TeamMembersPanel tier={profile?.subscription_tier} />
