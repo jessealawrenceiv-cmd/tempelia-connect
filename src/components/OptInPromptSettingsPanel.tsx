@@ -415,6 +415,7 @@ export function OptInPromptSettingsPanel({
     const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
     const header = [
       "sent_at",
+      "to_number",
       "delivery_result",
       "twilio_message_sid",
       "template_version",
@@ -427,6 +428,7 @@ export function OptInPromptSettingsPanel({
       const endsAt = new Date(new Date(r.created_at).getTime() + mins * 60_000).toISOString();
       return [
         new Date(r.created_at).toISOString(),
+        r.recipient_phone ?? "",
         r.status ?? "",
         r.twilio_message_sid ?? "",
         r.prompt_template_hash ?? "",
