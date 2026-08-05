@@ -6,6 +6,8 @@ export type DebugEventName =
   | "deposit_jump_miss"
   | "deposit_jump_recovery";
 
+export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
 const EVENT_NAMES: DebugEventName[] = [
   "deposit_jump_success",
   "deposit_jump_miss",
@@ -15,7 +17,7 @@ const EVENT_NAMES: DebugEventName[] = [
 export interface PersistedDebugEntry {
   id: string;
   event: DebugEventName;
-  payload: Record<string, unknown>;
+  payload: Record<string, Json>;
   occurredAt: string;
 }
 
@@ -28,7 +30,7 @@ export const saveDepositJumpDebugEvent = createServerFn({ method: "POST" })
       // Cap payload size so a stray object can't bloat the table.
       const json = JSON.stringify(input.payload ?? {});
       const payload =
-        json.length > 8000 ? { truncated: true, size: json.length } : (JSON.parse(json) as Record<string, unknown>);
+        json.length > 8000 ? ({ truncated: true, size: json.length } as Record<string, Json>) : (JSON.parse(json) as Record<string, Json>);
       return {
         quoteId: typeof input.quoteId === "string" && input.quoteId.trim() ? input.quoteId.trim() : null,
         event: input.event,
@@ -70,7 +72,7 @@ export const listDepositJumpDebugEvents = createServerFn({ method: "GET" })
     return (rows ?? []).map((r) => ({
       id: r.id,
       event: r.event_name as DebugEventName,
-      payload: (r.payload ?? {}) as Record<string, unknown>,
+      payload: (r.payload ?? {}) as Record<string, Json>,
       occurredAt: r.occurred_at,
     }));
   });
