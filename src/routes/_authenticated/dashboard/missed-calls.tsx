@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/AppShell";
 import { getVoicemailProxyUrl } from "@/lib/voicemail.functions";
 import { sendOptInPrompt } from "@/lib/opt-in-prompt.functions";
 import { OPT_IN_PROMPT_ACTION } from "@/lib/opt-in-prompt";
+import { MissedCallDetailSheet, type MissedCallDetail } from "@/components/MissedCallDetailSheet";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/dashboard/missed-calls")({
   component: MissedCallsPage,
@@ -37,19 +39,22 @@ type Row = {
   message_sent: string | null;
   twilio_message_sid: string | null;
   voicemail_url: string | null;
+  call_sid: string | null;
+  recording_sid: string | null;
   customer_id: string | null;
   customers: { phone_number: string; first_name: string | null; opt_in_consent: boolean } | null;
 };
 
 function MissedCallsPage() {
   const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<MissedCallDetail | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["missed-calls"],
     queryFn: async () => {
       const { data } = await supabase
         .from("logs")
         .select(
-          "id, message_sent, created_at, twilio_message_sid, customer_id, voicemail_url, action_type, status, customers(phone_number, first_name, opt_in_consent)",
+          "id, message_sent, created_at, twilio_message_sid, customer_id, voicemail_url, call_sid, recording_sid, action_type, status, customers(phone_number, first_name, opt_in_consent)",
         )
         .in("action_type", ["missed_call_text", "missed_call_autotext", "missed_call_excluded"])
         .order("created_at", { ascending: false })
@@ -112,19 +117,20 @@ function MissedCallsPage() {
                 <Th>Voicemail</Th>
                 <Th>Status</Th>
                 <Th>Opt-in prompt</Th>
+                <Th>Detail</Th>
               </tr>
             </thead>
             <tbody className="mono divide-y divide-border">
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="p-5 text-muted-foreground">
+                  <td colSpan={7} className="p-5 text-muted-foreground">
                     Loading…
                   </td>
                 </tr>
               )}
               {!isLoading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-5 text-muted-foreground">
+                  <td colSpan={7} className="p-5 text-muted-foreground">
                     No missed calls yet.
                   </td>
                 </tr>
@@ -184,6 +190,15 @@ function MissedCallsPage() {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </Td>
+                    <Td>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(row as MissedCallDetail)}
+                        className="rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper"
+                      >
+                        View
+                      </button>
+                    </Td>
                   </tr>
                 );
               })}
@@ -191,6 +206,7 @@ function MissedCallsPage() {
           </table>
         </div>
       </div>
+      <MissedCallDetailSheet log={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
