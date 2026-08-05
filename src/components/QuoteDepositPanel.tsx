@@ -1478,6 +1478,7 @@ export function QuoteDepositPanel({ quote }: Props) {
                 className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
               >
                 export csv
+              </button>
               <button
                 onClick={() => {
                   setDebugLog([]);
