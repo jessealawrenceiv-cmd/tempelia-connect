@@ -108,8 +108,9 @@ function QuotesListPage() {
     if (!paid && !window.confirm("Undo this deposit? The action is recorded in the log.")) return;
     setDepositId(quoteId);
     try {
-      await markDepositFn({ data: { quoteId, paid } });
+      const res = await markDepositFn({ data: { quoteId, paid } });
       toast.success(paid ? "Deposit marked received." : "Deposit receipt undone.");
+      if (res && res.audited === false) toast.warning("Action saved, but the audit entry failed to write.");
       qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["quote-deposit-audit", quoteId] });
     } catch (e) {
