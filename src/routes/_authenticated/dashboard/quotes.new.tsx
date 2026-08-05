@@ -187,6 +187,38 @@ function NewQuotePage() {
   const [taxRateInput, setTaxRateInput] = useState("9.5");
   const [validUntil, setValidUntil] = useState<string>("");
 
+  // Deposit (tracking only — no payment collection)
+  const { data: depositProfile } = useQuery({
+    queryKey: ["profile-deposit-defaults"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("default_deposit_type, default_deposit_fixed_amount, allow_deposit_override_per_quote")
+        .eq("id", u.user.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const companyDefaultType = (depositProfile?.default_deposit_type ?? "none") as CompanyDefaultDepositType;
+  const companyDefaultFixed = depositProfile?.default_deposit_fixed_amount ?? null;
+  const allowOverride = depositProfile?.allow_deposit_override_per_quote ?? true;
+
+  const [depositSelection, setDepositSelection] = useState<DepositSelection>("none");
+  const [depositCustomType, setDepositCustomType] = useState<DepositCustomType>("percentage");
+  const [depositCustomValue, setDepositCustomValue] = useState("");
+
+  // When overrides are disabled company-wide, the quote is locked to the default.
+  useEffect(() => {
+    if (!depositProfile) return;
+    if (!allowOverride) {
+      setDepositSelection(companyDefaultType === "none" ? "none" : "company_default");
+    }
+  }, [depositProfile, allowOverride, companyDefaultType]);
+
+
+
   // Seed all state from existingQuote once loaded
   useEffect(() => {
     if (!existingQuote || seeded) return;
