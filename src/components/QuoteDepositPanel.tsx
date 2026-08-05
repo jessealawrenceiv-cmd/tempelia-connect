@@ -436,12 +436,51 @@ export function QuoteDepositPanel({ quote }: Props) {
                 </option>
               ))}
             </select>
+            <label className="mono flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              from
+              <input
+                type="date"
+                value={auditFrom}
+                max={auditTo || undefined}
+                onChange={(e) => setAuditFrom(e.target.value)}
+                className="mono rounded-sm border border-border bg-background/60 px-2 py-1 text-[11px] text-paper focus:border-primary focus:outline-none"
+              />
+            </label>
+            <label className="mono flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              to
+              <input
+                type="date"
+                value={auditTo}
+                min={auditFrom || undefined}
+                onChange={(e) => setAuditTo(e.target.value)}
+                className="mono rounded-sm border border-border bg-background/60 px-2 py-1 text-[11px] text-paper focus:border-primary focus:outline-none"
+              />
+            </label>
+            {[
+              { label: "7d", days: 7 },
+              { label: "30d", days: 30 },
+            ].map((r) => (
+              <button
+                key={r.label}
+                onClick={() => {
+                  const to = new Date();
+                  const from = new Date(to.getTime() - (r.days - 1) * 86400000);
+                  setAuditFrom(from.toISOString().slice(0, 10));
+                  setAuditTo(to.toISOString().slice(0, 10));
+                }}
+                className="mono rounded-sm border border-border px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
+              >
+                last {r.label}
+              </button>
+            ))}
             {auditFiltersActive && (
               <button
                 onClick={() => {
                   setAuditQuery("");
                   setAuditAction("all");
                   setAuditActor("all");
+                  setAuditFrom("");
+                  setAuditTo("");
                 }}
                 className="mono rounded-sm border border-border px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-orange hover:text-orange"
               >
@@ -449,6 +488,13 @@ export function QuoteDepositPanel({ quote }: Props) {
               </button>
             )}
           </div>
+
+          {dateRangeInvalid && (
+            <div className="mono mb-2 text-[10px] uppercase tracking-widest text-orange">
+              // from date is after to date — no entries can match
+            </div>
+          )}
+
 
           {filteredAudit.length === 0 ? (
             <div className="mono text-[11px] text-muted-foreground">
