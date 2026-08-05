@@ -43,9 +43,25 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
     if (roleErr) throw new Error(roleErr.message);
     if (!isAdmin) throw new Error("Forbidden");
 
+    // Audit + throttle helpers (server-only module, loaded after the role gate).
+    const { recordAdminAccess, checkAdminRateLimit } = await import("@/lib/admin-audit.server");
+
+    const rate = await checkAdminRateLimit(context.userId, "listProvisionedNumbers");
+    if (!rate.allowed) {
+      await recordAdminAccess({
+        actorUserId: context.userId,
+        functionName: "listProvisionedNumbers",
+        outcome: "rate_limited",
+        detail: `${rate.recentCalls} calls in the last 60s (limit ${rate.limit})`,
+      });
+      throw new Error(
+        `Rate limit exceeded: ${rate.limit} calls/minute for listProvisionedNumbers. Try again in a minute.`,
+      );
+    }
 
     // Elevate to service-role for the cross-tenant read.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
 
     const { data: profiles, error: profErr } = await supabaseAdmin
       .from("profiles")
