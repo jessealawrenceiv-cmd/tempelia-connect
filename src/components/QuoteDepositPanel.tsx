@@ -241,6 +241,15 @@ export function QuoteDepositPanel({ quote }: Props) {
       .catch(() => toast.error("Copy failed."));
   }
 
+  function copyShortId(id: string) {
+    const short = id.slice(0, 8);
+    navigator.clipboard
+      .writeText(short)
+      .then(() => toast.success(`Quote ID ${short} copied.`))
+      .catch(() => toast.error("Copy failed."));
+  }
+
+
   function exportAudit() {
     const rows: DepositAuditCsvRow[] = filteredAudit
       .slice()
