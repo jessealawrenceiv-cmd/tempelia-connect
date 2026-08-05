@@ -12,7 +12,14 @@ export type MissedCallCsvRow = {
   recording_sid: string;
   opt_in_consent: string;
   /** Every opt-in prompt attempt for this contact, oldest first. */
-  prompt_attempts: { created_at: string; status: string; twilio_message_sid: string | null }[];
+  prompt_attempts: {
+    created_at: string;
+    status: string;
+    twilio_message_sid: string | null;
+    prompt_template: string | null;
+    prompt_template_hash: string | null;
+    prompt_cooldown_minutes: number | null;
+  }[];
 };
 
 const HEADERS = [
@@ -29,6 +36,9 @@ const HEADERS = [
   "opt_in_prompt_attempts",
   "opt_in_prompt_timestamps",
   "opt_in_prompt_sids",
+  "opt_in_prompt_template_versions",
+  "opt_in_prompt_templates",
+  "opt_in_prompt_cooldowns_minutes",
 ];
 
 function escapeCell(value: string): string {
@@ -56,6 +66,9 @@ export function buildMissedCallsCsv(rows: MissedCallCsvRow[]): string {
         String(attempts.length),
         attempts.map((a) => `${a.created_at} (${a.status})`).join(" | "),
         attempts.map((a) => a.twilio_message_sid ?? "no-sid").join(" | "),
+        attempts.map((a) => a.prompt_template_hash ?? "unversioned").join(" | "),
+        attempts.map((a) => a.prompt_template ?? "default").join(" | "),
+        attempts.map((a) => (a.prompt_cooldown_minutes ?? "")).join(" | "),
       ]
         .map((v) => escapeCell(v ?? ""))
         .join(","),
