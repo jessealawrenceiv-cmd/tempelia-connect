@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/AppShell";
 import { ExcludedNumbersPanel } from "@/components/ExcludedNumbersPanel";
 import { TeamMembersPanel } from "@/components/TeamMembersPanel";
 import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel";
+import { WebhookCheckPanel } from "@/components/WebhookCheckPanel";
 import { useTeamRole } from "@/hooks/useTeamRole";
 
 import { useEffect, useState } from "react";
