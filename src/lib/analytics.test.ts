@@ -149,3 +149,52 @@ describe("deposit jump timing", () => {
     });
   });
 });
+
+describe("deposit jump correlation ids", () => {
+  it("stamps correlation_id on success, miss and recovery events", () => {
+    const events: { event: string; props: Record<string, unknown> }[] = [];
+    const client = {
+      init: () => {},
+      capture: (event: string, props: Record<string, unknown>) => events.push({ event, props }),
+      identify: () => {},
+      reset: () => {},
+    } as unknown as typeof import("posthog-js").default;
+    const a = createAnalytics(client);
+    const correlationId = createDepositJumpCorrelationId();
+    expect(correlationId.startsWith("djp-")).toBe(true);
+
+    a.trackDepositJump({ kind: "success", quoteId: "q1", eventId: "e1", source: "hash", correlationId });
+    a.trackDepositJump({
+      kind: "miss",
+      quoteId: "q1",
+      eventId: "e1",
+      reason: "empty",
+      source: "hash",
+      correlationId,
+    });
+    a.trackDepositJumpRecovery({
+      action: "return_to_top",
+      quoteId: "q1",
+      eventId: "e1",
+      reason: "empty",
+      correlationId,
+    });
+
+    if (events.length) {
+      for (const e of events) expect(e.props.correlation_id).toBe(correlationId);
+    }
+  });
+
+  it("omits correlation_id when not provided", () => {
+    const events: { event: string; props: Record<string, unknown> }[] = [];
+    const client = {
+      init: () => {},
+      capture: (event: string, props: Record<string, unknown>) => events.push({ event, props }),
+      identify: () => {},
+      reset: () => {},
+    } as unknown as typeof import("posthog-js").default;
+    const a = createAnalytics(client);
+    a.trackDepositJump({ kind: "success", quoteId: "q1", eventId: "e1", source: null });
+    for (const e of events) expect("correlation_id" in e.props).toBe(false);
+  });
+});
