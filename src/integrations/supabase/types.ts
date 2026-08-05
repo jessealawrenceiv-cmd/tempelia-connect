@@ -339,6 +339,9 @@ export type Database = {
           customer_id: string | null
           id: string
           message_sent: string | null
+          prompt_cooldown_minutes: number | null
+          prompt_template: string | null
+          prompt_template_hash: string | null
           recording_sid: string | null
           status: string
           twilio_message_sid: string | null
@@ -352,6 +355,9 @@ export type Database = {
           customer_id?: string | null
           id?: string
           message_sent?: string | null
+          prompt_cooldown_minutes?: number | null
+          prompt_template?: string | null
+          prompt_template_hash?: string | null
           recording_sid?: string | null
           status?: string
           twilio_message_sid?: string | null
@@ -365,6 +371,9 @@ export type Database = {
           customer_id?: string | null
           id?: string
           message_sent?: string | null
+          prompt_cooldown_minutes?: number | null
+          prompt_template?: string | null
+          prompt_template_hash?: string | null
           recording_sid?: string | null
           status?: string
           twilio_message_sid?: string | null
