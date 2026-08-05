@@ -196,8 +196,17 @@ export function QuoteDepositPanel({ quote }: Props) {
     setAuditCursor(idx);
     requestAnimationFrame(() => {
       entryRefs.current[incomingEventId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Clear the jump params (and hash) so refresh / back doesn't re-scroll.
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("eventId");
+        url.searchParams.delete("depositEvent");
+        url.hash = "";
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
+      }
     });
   }, [incomingEventId, filteredAudit]);
+
 
 
 
