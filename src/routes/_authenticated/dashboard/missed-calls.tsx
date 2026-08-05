@@ -9,8 +9,23 @@ import { sendOptInPrompt, sendOptInPromptBatch } from "@/lib/opt-in-prompt.funct
 import { OPT_IN_PROMPT_ACTION } from "@/lib/opt-in-prompt";
 import { MissedCallDetailSheet, type MissedCallDetail } from "@/components/MissedCallDetailSheet";
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+
+type StatusFilter = "all" | "sent" | "failed" | "unconfirmed" | "skipped";
+
+const STATUS_OPTIONS: StatusFilter[] = ["all", "sent", "failed", "unconfirmed", "skipped"];
+
+function asString(v: unknown, fallback = ""): string {
+  return typeof v === "string" ? v : fallback;
+}
 
 export const Route = createFileRoute("/_authenticated/dashboard/missed-calls")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: asString(search.q),
+    status: asString(search.status, "all"),
+    from: asString(search.from),
+    to: asString(search.to),
+  }),
   component: MissedCallsPage,
   head: () => ({
     meta: [
@@ -45,20 +60,33 @@ type Row = {
   customers: { phone_number: string; first_name: string | null; opt_in_consent: boolean } | null;
 };
 
+/** The badge/filter status derived from the log row. */
+function rowStatus(row: Row): Exclude<StatusFilter, "all"> {
+  if (row.action_type === "missed_call_excluded") return "skipped";
+  if (row.status === "failed") return "failed";
+  if (!row.twilio_message_sid) return "unconfirmed";
+  return "sent";
+}
+
 function MissedCallsPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { q, status, from, to } = Route.useSearch();
+  const setFilter = (patch: Partial<{ q: string; status: string; from: string; to: string }>) =>
+    navigate({ search: (prev) => ({ ...prev, ...patch }) });
   const [selected, setSelected] = useState<MissedCallDetail | null>(null);
   const { data, isLoading } = useQuery({
-    queryKey: ["missed-calls"],
+    queryKey: ["missed-calls", from, to],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("logs")
         .select(
           "id, message_sent, created_at, twilio_message_sid, customer_id, voicemail_url, call_sid, recording_sid, action_type, status, customers(phone_number, first_name, opt_in_consent)",
         )
-        .in("action_type", ["missed_call_text", "missed_call_autotext", "missed_call_excluded"])
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .in("action_type", ["missed_call_text", "missed_call_autotext", "missed_call_excluded"]);
+      if (from) query = query.gte("created_at", new Date(`${from}T00:00:00`).toISOString());
+      if (to) query = query.lte("created_at", new Date(`${to}T23:59:59.999`).toISOString());
+      const { data } = await query.order("created_at", { ascending: false }).limit(200);
       return (data ?? []) as unknown as Row[];
     },
   });
@@ -113,7 +141,20 @@ function MissedCallsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const rows = data ?? [];
+  const allRows = data ?? [];
+  const needle = q.trim().toLowerCase();
+  const digits = needle.replace(/\D+/g, "");
+  const rows = allRows.filter((r) => {
+    if (status !== "all" && rowStatus(r) !== status) return false;
+    if (!needle) return true;
+    const name = (r.customers?.first_name ?? "").toLowerCase();
+    const phone = r.customers?.phone_number ?? "";
+    return (
+      name.includes(needle) ||
+      phone.toLowerCase().includes(needle) ||
+      (digits.length > 0 && phone.replace(/\D+/g, "").includes(digits))
+    );
+  });
   const needsConsent = rows.filter((r) => r.customers && !r.customers.opt_in_consent).length;
 
   // One row per contact: bulk selection is per customer, not per call event.
@@ -139,6 +180,63 @@ function MissedCallsPage() {
         <div className="grid grid-cols-2 gap-3 md:max-w-md">
           <Stat label="Calls logged" value={rows.length} />
           <Stat label="Awaiting consent" value={needsConsent} />
+        </div>
+
+        <div className="panel flex flex-wrap items-end gap-3 p-4">
+          <label className="flex flex-col gap-1">
+            <span className="label-eyebrow">Search name / phone</span>
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setFilter({ q: e.target.value })}
+              placeholder="e.g. Dana or 501365"
+              className="mono w-52 rounded-sm border border-border bg-background/60 px-2 py-1.5 text-xs text-paper placeholder:text-muted-foreground"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="label-eyebrow">Auto-reply status</span>
+            <select
+              value={STATUS_OPTIONS.includes(status as StatusFilter) ? status : "all"}
+              onChange={(e) => setFilter({ status: e.target.value })}
+              className="mono rounded-sm border border-border bg-background/60 px-2 py-1.5 text-xs uppercase tracking-wider text-paper"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s === "all" ? "All" : s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="label-eyebrow">From</span>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFilter({ from: e.target.value })}
+              className="mono rounded-sm border border-border bg-background/60 px-2 py-1.5 text-xs text-paper"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="label-eyebrow">To</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setFilter({ to: e.target.value })}
+              className="mono rounded-sm border border-border bg-background/60 px-2 py-1.5 text-xs text-paper"
+            />
+          </label>
+          {(q || from || to || status !== "all") && (
+            <button
+              type="button"
+              onClick={() => setFilter({ q: "", status: "all", from: "", to: "" })}
+              className="rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper"
+            >
+              Clear filters
+            </button>
+          )}
+          <span className="mono ml-auto text-[10px] uppercase tracking-widest text-muted-foreground">
+            {rows.length} of {allRows.length} shown
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -228,7 +326,7 @@ function MissedCallsPage() {
               {!isLoading && rows.length === 0 && (
                 <tr>
                   <td colSpan={bulkMode ? 8 : 7} className="p-5 text-muted-foreground">
-                    No missed calls yet.
+                    {allRows.length === 0 ? "No missed calls yet." : "No calls match these filters."}
                   </td>
                 </tr>
               )}
@@ -268,11 +366,11 @@ function MissedCallsPage() {
                       )}
                     </Td>
                     <Td>
-                      {row.action_type === "missed_call_excluded" ? (
+                      {rowStatus(row) === "skipped" ? (
                         <Badge tone="muted">Skipped</Badge>
-                      ) : row.status === "failed" ? (
+                      ) : rowStatus(row) === "failed" ? (
                         <Badge tone="bad">Failed</Badge>
-                      ) : !row.twilio_message_sid ? (
+                      ) : rowStatus(row) === "unconfirmed" ? (
                         <Badge tone="bad">Unconfirmed</Badge>
                       ) : row.customers?.opt_in_consent === false ? (
                         <Badge tone="bad">Needs consent</Badge>
