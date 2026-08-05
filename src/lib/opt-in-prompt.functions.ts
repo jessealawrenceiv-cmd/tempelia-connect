@@ -127,3 +127,75 @@ export const sendOptInPromptBatch = createServerFn({ method: "POST" })
       results,
     };
   });
+
+/**
+ * Send the currently-saved opt-in prompt to the owner's own mobile number so
+ * they can verify the template and cooldown for real. Restricted to the
+ * profile's `owner_phone` (no arbitrary destinations) and rate-limited by the
+ * same configured cooldown as real sends.
+ */
+export const sendTestOptInPrompt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { sendTwilioSms } = await import("./twilio.server");
+    const { OPT_IN_PROMPT_TEST_ACTION } = await import("./opt-in-prompt");
+
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select(
+        "business_name, twilio_phone_number, owner_phone, opt_in_prompt_template, opt_in_prompt_cooldown_minutes",
+      )
+      .eq("id", userId)
+      .maybeSingle();
+
+    const to = (prof?.owner_phone ?? "").trim();
+    if (!to) throw new Error("Add your owner mobile number in Settings first.");
+    const from = prof?.twilio_phone_number;
+    if (!from) throw new Error("Provision your Temaro number before sending a test.");
+
+    const cooldown = clampCooldownMinutes(
+      prof?.opt_in_prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES,
+    );
+    const since = new Date(Date.now() - cooldown * 60_000).toISOString();
+    const { data: recent } = await supabase
+      .from("logs")
+      .select("created_at")
+      .eq("user_id", userId)
+      .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (recent) {
+      const waitMin = Math.max(
+        1,
+        cooldown - Math.floor((Date.now() - new Date(recent.created_at).getTime()) / 60_000),
+      );
+      throw new Error(
+        `Cooldown active — a test was sent in the last ${cooldown} min. Try again in ${waitMin} min.`,
+      );
+    }
+
+    const body = buildOptInPrompt(prof?.business_name ?? "", prof?.opt_in_prompt_template ?? null);
+    try {
+      const res = await sendTwilioSms(from, to, body);
+      await supabase.from("logs").insert({
+        user_id: userId,
+        action_type: OPT_IN_PROMPT_TEST_ACTION,
+        message_sent: body,
+        status: "sent",
+        twilio_message_sid: res.sid,
+      });
+      return { ok: true as const, to, sid: res.sid, body, cooldown };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await supabase.from("logs").insert({
+        user_id: userId,
+        action_type: OPT_IN_PROMPT_TEST_ACTION,
+        message_sent: body,
+        status: "failed",
+      });
+      throw new Error(`Send failed — ${msg}`);
+    }
+  });
