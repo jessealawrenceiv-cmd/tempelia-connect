@@ -75,6 +75,8 @@ export function QuoteDepositPanel({ quote }: Props) {
     "all",
   );
   const [auditActor, setAuditActor] = useState("all");
+  const [auditFrom, setAuditFrom] = useState("");
+  const [auditTo, setAuditTo] = useState("");
 
   const total = Number(quote.total_amount ?? 0);
   const deposit = Number(quote.deposit_amount ?? 0);
