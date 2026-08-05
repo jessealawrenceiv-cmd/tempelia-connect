@@ -70,7 +70,7 @@ export function OptInPromptSettingsPanel({
       const { data, error } = await supabase
         .from("logs")
         .select(
-          "id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash, message_sent",
+          "id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash, message_sent, recipient_phone",
         )
         .eq("user_id", u.user.id)
         .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
@@ -415,6 +415,7 @@ export function OptInPromptSettingsPanel({
     const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
     const header = [
       "sent_at",
+      "to_number",
       "delivery_result",
       "twilio_message_sid",
       "template_version",
@@ -427,6 +428,7 @@ export function OptInPromptSettingsPanel({
       const endsAt = new Date(new Date(r.created_at).getTime() + mins * 60_000).toISOString();
       return [
         new Date(r.created_at).toISOString(),
+        r.recipient_phone ?? "",
         r.status ?? "",
         r.twilio_message_sid ?? "",
         r.prompt_template_hash ?? "",
@@ -935,8 +937,8 @@ export function OptInPromptSettingsPanel({
           </button>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Last 50 test sends from this account, newest first — timestamp, template version, cooldown
-          used and final delivery result.
+          Last 50 test sends from this account, newest first — timestamp, destination number, Twilio
+          SID, template version, cooldown used and final delivery result.
         </p>
 
         {testHistory.isLoading ? (
@@ -953,6 +955,7 @@ export function OptInPromptSettingsPanel({
               <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 <tr className="text-left">
                   <th className="py-1 pr-3 font-normal">Sent</th>
+                  <th className="py-1 pr-3 font-normal">To</th>
                   <th className="py-1 pr-3 font-normal">Result</th>
                   <th className="py-1 pr-3 font-normal">Twilio SID</th>
                   <th className="py-1 pr-3 font-normal">Version</th>
@@ -969,6 +972,9 @@ export function OptInPromptSettingsPanel({
                     <tr key={row.id} className="border-t border-border/60 align-top">
                       <td className="py-1.5 pr-3 whitespace-nowrap">
                         {new Date(row.created_at).toLocaleString()}
+                      </td>
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
+                        {row.recipient_phone ?? "—"}
                       </td>
                       <td
                         className={`py-1.5 pr-3 uppercase ${
