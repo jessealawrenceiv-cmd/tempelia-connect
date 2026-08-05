@@ -24,7 +24,7 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
     const { data: q, error: qErr } = await supabase
       .from("quotes")
       .select(
-        "id, status, customer_first_name, customer_phone, valid_until, last_sms_sent_at, customer_id",
+        "id, status, customer_first_name, customer_phone, valid_until, last_sms_sent_at, customer_id, total_amount, deposit_required, deposit_amount",
       )
       .eq("id", data.quoteId)
       .maybeSingle();
@@ -62,7 +62,14 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
     const validLine = q.valid_until
       ? ` Valid until ${new Date(q.valid_until).toLocaleDateString("en-US")}.`
       : "";
-    const message = `Hi ${q.customer_first_name || "there"}, here's your quote from ${biz}: ${link}.${validLine}${STOP_SUFFIX}`;
+    const { depositCustomerLine } = await import("./deposit");
+    const depositLine = depositCustomerLine({
+      depositRequired: q.deposit_required,
+      depositAmount: q.deposit_amount,
+      total: q.total_amount,
+    });
+    const depositSuffix = depositLine ? ` ${depositLine}` : "";
+    const message = `Hi ${q.customer_first_name || "there"}, here's your quote from ${biz}: ${link}.${validLine}${depositSuffix}${STOP_SUFFIX}`;
 
     try {
       const res = await sendTwilioSms(from, q.customer_phone, message);

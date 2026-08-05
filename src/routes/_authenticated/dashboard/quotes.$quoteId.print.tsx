@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { depositBalanceAfterDeposit } from "@/lib/deposit";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/$quoteId/print")({
   component: PrintQuotePage,
@@ -164,8 +165,35 @@ function PrintQuotePage() {
                 <span className="uppercase tracking-wider text-lg font-bold">Total</span>
                 <span className="mono text-lg font-bold">{money(quote.total_amount)}</span>
               </div>
+              {quote.deposit_required && Number(quote.deposit_amount) > 0 && (
+                <>
+                  <div className="flex justify-between pt-2">
+                    <span className="text-gray-600">Deposit due to book</span>
+                    <span className="mono">{money(quote.deposit_amount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      {quote.deposit_paid ? "Balance remaining" : "Balance due on completion"}
+                    </span>
+                    <span className="mono">
+                      {money(
+                        depositBalanceAfterDeposit({
+                          total: quote.total_amount,
+                          depositAmount: quote.deposit_amount,
+                        }),
+                      )}
+                    </span>
+                  </div>
+                  {quote.deposit_paid && (
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mono">
+                      deposit received
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
+
 
           <div className="mt-10 pt-4 border-t border-gray-300 text-[10px] text-gray-500 mono uppercase tracking-widest">
             Thank you — prepared by {profile?.business_name || "your contractor"}

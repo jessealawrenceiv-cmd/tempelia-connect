@@ -8,7 +8,9 @@ import { PageHeader } from "@/components/AppShell";
 import { CustomerHistory } from "@/components/CustomerHistory";
 import { sendQuoteSms } from "@/lib/quote-sms.functions";
 import { sendDeclineFollowup } from "@/lib/decline-followup.functions";
-import { depositSelectionLabel, type DepositSelection } from "@/lib/deposit";
+import { depositBalanceRemaining, depositSelectionLabel, type DepositSelection } from "@/lib/deposit";
+import { markQuoteDeposit } from "@/lib/deposit.functions";
+import { QuoteDepositPanel } from "@/components/QuoteDepositPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
   component: QuotesListPage,
@@ -62,6 +64,7 @@ function QuotesListPage() {
   const [depositId, setDepositId] = useState<string | null>(null);
   const sendSmsFn = useServerFn(sendQuoteSms);
   const askWhyFn = useServerFn(sendDeclineFollowup);
+  const markDepositFn = useServerFn(markQuoteDeposit);
   const qc = useQueryClient();
   const toggle = (id: string) => setExpanded((prev) => {
     const next = new Set(prev);
@@ -102,21 +105,21 @@ function QuotesListPage() {
   }
 
   async function handleMarkDeposit(quoteId: string, paid: boolean) {
+    if (!paid && !window.confirm("Undo this deposit? The action is recorded in the log.")) return;
     setDepositId(quoteId);
     try {
-      const { error } = await supabase
-        .from("quotes")
-        .update({ deposit_paid: paid, deposit_paid_at: paid ? new Date().toISOString() : null })
-        .eq("id", quoteId);
-      if (error) throw error;
-      toast.success(paid ? "Deposit marked received." : "Deposit marked unpaid.");
+      const res = await markDepositFn({ data: { quoteId, paid } });
+      toast.success(paid ? "Deposit marked received." : "Deposit receipt undone.");
+      if (res && res.audited === false) toast.warning("Action saved, but the audit entry failed to write.");
       qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["quote-deposit-audit", quoteId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Update failed");
     } finally {
       setDepositId(null);
     }
   }
+
 
 
 
@@ -178,7 +181,7 @@ function QuotesListPage() {
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Job site</th>
                   <th className="px-4 py-3 text-right">Total</th>
-                  <th className="px-4 py-3 text-right">Deposit</th>
+                  <th className="px-4 py-3 text-right">Deposit / balance</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left hidden lg:table-cell">Valid until</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Created</th>
@@ -221,7 +224,12 @@ function QuotesListPage() {
                         <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
                         <td className="px-4 py-3 mono text-right whitespace-nowrap">
                           {!q.deposit_required ? (
-                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">none</span>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">none</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                bal {fmtMoney(depositBalanceRemaining({ total: q.total_amount, depositAmount: q.deposit_amount, depositPaid: q.deposit_paid }))}
+                              </span>
+                            </div>
                           ) : (
                             <div className="flex flex-col items-end gap-0.5">
                               <span>{fmtMoney(Number(q.deposit_amount))}</span>
@@ -241,9 +249,13 @@ function QuotesListPage() {
                                   unpaid
                                 </span>
                               )}
+                              <span className="text-[10px] text-moss">
+                                bal {fmtMoney(depositBalanceRemaining({ total: q.total_amount, depositAmount: q.deposit_amount, depositPaid: q.deposit_paid }))}
+                              </span>
                             </div>
                           )}
                         </td>
+
                         <td className="px-4 py-3">
                           <span className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider mono ${STATUS_STYLES[q.status]}`}>
                             {q.status}
@@ -330,14 +342,18 @@ function QuotesListPage() {
                       {isOpen && (
                         <tr className="border-b border-border/50 bg-background/40">
                           <td></td>
-                          <td colSpan={8} className="px-4 py-4">
-                            <div className="label-eyebrow mb-3">
-                              Quote detail + customer history {name ? `· ${name}` : ""}
+                          <td colSpan={8} className="px-4 py-4 space-y-4">
+                            <QuoteDepositPanel quote={q} />
+                            <div>
+                              <div className="label-eyebrow mb-3">
+                                Quote detail + customer history {name ? `· ${name}` : ""}
+                              </div>
+                              <CustomerHistory customerId={q.customer_id} />
                             </div>
-                            <CustomerHistory customerId={q.customer_id} />
                           </td>
                         </tr>
                       )}
+
                     </Fragment>
                   );
                 })}

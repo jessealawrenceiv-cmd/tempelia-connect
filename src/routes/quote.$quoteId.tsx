@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { getPublicQuote, respondToQuote } from "@/lib/quote-public.functions";
+import { depositBalanceAfterDeposit, depositCustomerLine } from "@/lib/deposit";
 
 export const Route = createFileRoute("/quote/$quoteId")({
   head: () => ({
@@ -123,6 +124,46 @@ function PublicQuotePage() {
             </div>
           </div>
         </section>
+
+        {data.deposit_required && Number(data.deposit_amount) > 0 && (
+          <section className="panel p-6">
+            <div className="label-eyebrow mb-3">Deposit required</div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between mono">
+                <span className="text-muted-foreground">Deposit due to book</span>
+                <span className="text-paper">{fmtMoney(data.deposit_amount)}</span>
+              </div>
+              <div className="flex justify-between mono">
+                <span className="text-muted-foreground">
+                  {data.deposit_paid ? "Balance remaining" : "Balance due on completion"}
+                </span>
+                <span className="text-paper">
+                  {fmtMoney(
+                    depositBalanceAfterDeposit({
+                      total: data.total_amount,
+                      depositAmount: data.deposit_amount,
+                    }),
+                  )}
+                </span>
+              </div>
+              {data.deposit_paid && (
+                <div className="mono text-[11px] text-moss">
+                  Deposit received{data.deposit_paid_at ? ` ${fmtDate(data.deposit_paid_at)}` : ""} — thank you.
+                </div>
+              )}
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {depositCustomerLine({
+                depositRequired: data.deposit_required,
+                depositAmount: data.deposit_amount,
+                total: data.total_amount,
+              })}{" "}
+              {data.business_name || "The business"} will contact you with payment details — no payment
+              is collected on this page.
+            </p>
+          </section>
+        )}
+
 
         <section className="panel p-6">
           {showButtons ? (

@@ -11,7 +11,7 @@ export const getPublicQuote = createServerFn({ method: "GET" })
     const { data: q, error } = await supabaseAdmin
       .from("quotes")
       .select(
-        "id, user_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, line_items, subtotal, tax_rate, tax_amount, total_amount, valid_until, status, responded_at, created_at",
+        "id, user_id, customer_first_name, customer_last_name, customer_business_name, job_site_address, line_items, subtotal, tax_rate, tax_amount, total_amount, valid_until, status, responded_at, created_at, deposit_required, deposit_amount, deposit_paid, deposit_paid_at",
       )
       .eq("id", data.quoteId)
       .maybeSingle();
