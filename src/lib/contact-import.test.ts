@@ -142,6 +142,7 @@ describe("summaryHeadline", () => {
       totalRows: 150,
       imported: 142,
       updated: 0,
+      matchedExisting: 0,
       skipped: 8,
       collapsedDuplicates: 0,
       skippedReasons: Array.from({ length: 8 }, (_, i) => ({ rowNumber: i, reason: "Missing phone number" })),

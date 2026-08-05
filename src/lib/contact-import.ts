@@ -265,6 +265,7 @@ export type ImportSummary = {
   totalRows: number;
   imported: number;
   updated: number;
+  matchedExisting: number;
   skipped: number;
   collapsedDuplicates: number;
   skippedReasons: SkipReason[];
@@ -274,6 +275,9 @@ export type ImportSummary = {
 export function summaryHeadline(s: ImportSummary): string {
   const bits = [`${s.imported} imported`];
   if (s.updated) bits.push(`${s.updated} merged into existing contacts`);
+  if (s.matchedExisting - s.updated > 0) {
+    bits.push(`${s.matchedExisting - s.updated} already on file, left unchanged`);
+  }
   bits.push(`${s.skipped} skipped`);
   let line = bits.join(", ");
   if (s.skipped) {

@@ -124,6 +124,7 @@ export const commitContactImport = createServerFn({ method: "POST" })
       totalRows: data.rows.length,
       imported,
       updated,
+      matchedExisting: valid.filter((r) => existingByPhone.has(r.phone!)).length,
       skipped: skippedReasons.length,
       collapsedDuplicates: 0,
       skippedReasons,

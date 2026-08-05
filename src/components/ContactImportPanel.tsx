@@ -291,7 +291,7 @@ export function ContactImportPanel({ onClose }: { onClose: () => void }) {
             <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">// import summary</div>
             <div className="mt-1 font-display text-lg uppercase tracking-wide">{summaryHeadline(summary)}</div>
             <div className="mono mt-2 text-xs text-muted-foreground">
-              {summary.totalRows} rows read · {summary.imported} new · {summary.updated} merged · {summary.skipped} skipped
+              {summary.totalRows} rows read · {summary.imported} new · {summary.updated} merged · {summary.matchedExisting} matched an existing contact · {summary.skipped} skipped
               {summary.collapsedDuplicates > 0 && ` · ${summary.collapsedDuplicates} in-file duplicate(s) merged`}
               {eventId && <> · log {eventId.slice(0, 8)}</>}
             </div>
