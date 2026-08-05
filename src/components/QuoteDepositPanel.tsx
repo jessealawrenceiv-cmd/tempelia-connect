@@ -249,6 +249,29 @@ export function QuoteDepositPanel({ quote }: Props) {
   const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
   const debugLogRef = useRef<HTMLDivElement | null>(null);
   const [debugHydrated, setDebugHydrated] = useState(false);
+  // Debug-log filters: event type, success vs miss, and time range.
+  const [debugEventFilter, setDebugEventFilter] = useState<DebugEventFilter>("all");
+  const [debugOutcomeFilter, setDebugOutcomeFilter] = useState<DebugOutcomeFilter>("all");
+  const [debugRangeFilter, setDebugRangeFilter] = useState<DebugRangeFilter>("all");
+  // Re-evaluate relative time ranges on a tick so entries age out of view.
+  const [debugNow, setDebugNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!debugMode || debugRangeFilter === "all") return;
+    const t = window.setInterval(() => setDebugNow(Date.now()), 5000);
+    return () => window.clearInterval(t);
+  }, [debugMode, debugRangeFilter]);
+  const filteredDebugLog = useMemo(
+    () =>
+      filterDebugEntries(
+        debugLog,
+        { event: debugEventFilter, outcome: debugOutcomeFilter, range: debugRangeFilter },
+        debugNow,
+      ),
+    [debugLog, debugEventFilter, debugOutcomeFilter, debugRangeFilter, debugNow],
+  );
+  const debugFiltersActive =
+    debugEventFilter !== "all" || debugOutcomeFilter !== "all" || debugRangeFilter !== "all";
+
 
   const logDepositJumpDebug = useCallback(
     (
