@@ -511,25 +511,42 @@ export function OptInPromptSettingsPanel({
             <span className="text-moss">{OPT_IN_PROMPT_COMPLIANCE_TEXT}</span>
           </p>
         </div>
-        <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <p className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Green text is the fixed YES-to-opt-in / STOP wording and cannot be edited
           </p>
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(preview);
-                toast.success("Copied rendered SMS text to clipboard");
-              } catch {
-                toast.error("Could not copy — copy manually from the preview box");
-              }
-            }}
-            className="mono shrink-0 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper"
-          >
-            Copy SMS text
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(preview);
+                  toast.success("Copied rendered SMS text to clipboard");
+                } catch {
+                  toast.error("Could not copy — copy manually from the preview box");
+                }
+              }}
+              className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper"
+            >
+              Copy SMS text
+            </button>
+            <button
+              type="button"
+              onClick={() => exportPreview("txt")}
+              className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper"
+            >
+              Export preview (TXT)
+            </button>
+            <button
+              type="button"
+              onClick={() => exportPreview("csv")}
+              className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper"
+            >
+              CSV
+            </button>
+          </div>
         </div>
+
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
