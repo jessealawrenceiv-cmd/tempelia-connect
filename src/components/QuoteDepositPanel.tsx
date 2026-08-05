@@ -20,6 +20,7 @@ import {
   resolveDepositJump,
   type DepositJumpMissReason,
 } from "@/lib/deposit-deep-link";
+import { trackDepositJump } from "@/lib/analytics";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
@@ -194,7 +195,10 @@ export function QuoteDepositPanel({ quote }: Props) {
   }
 
   // Focus the event referenced by ?eventId= / ?depositEvent= / #deposit-event-<id> on arrival.
-  const { eventId: incomingEventId } = parseDepositDeepLink(location.searchStr, location.hash);
+  const { eventId: incomingEventId, source: incomingSource } = parseDepositDeepLink(
+    location.searchStr,
+    location.hash,
+  );
   const focusedIncomingRef = useRef<string | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const [jumpedId, setJumpedId] = useState<string | null>(null);
@@ -246,6 +250,13 @@ export function QuoteDepositPanel({ quote }: Props) {
     if (resolution.kind === "miss") {
       // Graceful fallback: the linked event isn't in view. Explain why and land
       // the reader at the closest available spot (first entry / timeline top).
+      trackDepositJump({
+        kind: "miss",
+        quoteId: quote.id,
+        eventId: incomingEventId,
+        reason: resolution.reason,
+        source: incomingSource,
+      });
       setJumpMiss({ id: incomingEventId, reason: resolution.reason });
       setAuditCursor(resolution.fallbackIndex);
       requestAnimationFrame(() => {
@@ -258,6 +269,12 @@ export function QuoteDepositPanel({ quote }: Props) {
       return;
     }
 
+    trackDepositJump({
+      kind: "success",
+      quoteId: quote.id,
+      eventId: incomingEventId,
+      source: incomingSource,
+    });
     setJumpMiss(null);
     setAuditCursor(resolution.index);
     setJumpedId(incomingEventId);
