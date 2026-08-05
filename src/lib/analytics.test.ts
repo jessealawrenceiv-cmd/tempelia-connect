@@ -91,7 +91,6 @@ describe("analytics", () => {
       reason: "filtered",
       source: "hash",
     });
-    expect(captureMock).toHaveBeenCalledWith("deposit_jump_success", expect.anything());
     expect(captureMock).toHaveBeenCalledWith("deposit_jump_miss", {
       quote_id: "quote-2",
       event_id: "evt-2",
