@@ -88,19 +88,14 @@ export function OptInPromptSettingsPanel({
 
   const save = useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
       const trimmed = draft.trim();
       const blocking = validateOptInPromptTemplate(trimmed).filter((i) => i.level === "error");
       if (blocking.length > 0) throw new Error(blocking[0]!.message);
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          opt_in_prompt_template: trimmed || null,
-          opt_in_prompt_cooldown_minutes: clampCooldownMinutes(cooldown),
-        })
-        .eq("id", u.user.id);
-      if (error) throw error;
+      // Saved through a server function so the same placeholder rules are
+      // enforced server-side, not just in this form.
+      await persistSettings({
+        data: { template: trimmed || null, cooldownMinutes: clampCooldownMinutes(cooldown) },
+      });
     },
     onSuccess: () => {
       toast.success("Opt-in prompt settings saved.");
