@@ -250,6 +250,13 @@ export function QuoteDepositPanel({ quote }: Props) {
     if (resolution.kind === "miss") {
       // Graceful fallback: the linked event isn't in view. Explain why and land
       // the reader at the closest available spot (first entry / timeline top).
+      trackDepositJump({
+        kind: "miss",
+        quoteId: quote.id,
+        eventId: incomingEventId,
+        reason: resolution.reason,
+        source: incomingSource,
+      });
       setJumpMiss({ id: incomingEventId, reason: resolution.reason });
       setAuditCursor(resolution.fallbackIndex);
       requestAnimationFrame(() => {
@@ -262,6 +269,12 @@ export function QuoteDepositPanel({ quote }: Props) {
       return;
     }
 
+    trackDepositJump({
+      kind: "success",
+      quoteId: quote.id,
+      eventId: incomingEventId,
+      source: incomingSource,
+    });
     setJumpMiss(null);
     setAuditCursor(resolution.index);
     setJumpedId(incomingEventId);
