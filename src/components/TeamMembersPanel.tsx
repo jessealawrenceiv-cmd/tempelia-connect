@@ -192,6 +192,34 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
 
   const rows = members ?? [];
 
+  const [tab, setTab] = useState<Status | "all">("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+
+  const counts = {
+    all: rows.length,
+    pending: rows.filter((m) => statusOf(m) === "pending").length,
+    accepted: rows.filter((m) => statusOf(m) === "accepted").length,
+    expired: rows.filter((m) => statusOf(m) === "expired").length,
+  };
+
+  const needle = search.trim().toLowerCase();
+  const filtered = rows.filter(
+    (m) =>
+      (tab === "all" || statusOf(m) === tab) &&
+      (!needle || m.invited_email.toLowerCase().includes(needle)),
+  );
+
+  const PAGE_SIZE = 8;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const paged = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
+  const changeTab = (next: Status | "all") => {
+    setTab(next);
+    setPage(0);
+  };
+
   const { data: auditRows } = useQuery({
     queryKey: ["team_invite_events"],
     queryFn: async () => {
@@ -288,13 +316,46 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
 
       <div className="mt-5">
         <div className="mono text-[10px] uppercase tracking-widest text-moss">
-          All invites ({rows.length})
+          Invites ({filtered.length}
+          {filtered.length !== rows.length ? ` of ${rows.length}` : ""})
         </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {(["all", "pending", "accepted", "expired"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => changeTab(t)}
+              className={`mono rounded-sm border px-2.5 py-1 text-[10px] uppercase tracking-widest transition-colors ${
+                tab === t
+                  ? "border-violet bg-violet/15 text-violet"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t} ({counts[t]})
+            </button>
+          ))}
+        </div>
+
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          placeholder="Search by email…"
+          className="mt-2 w-full rounded-sm border border-border bg-background px-3 py-2 text-sm sm:max-w-xs"
+        />
+
         {rows.length === 0 ? (
           <p className="mt-2 text-xs text-muted-foreground">No invites yet.</p>
+        ) : filtered.length === 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            No {tab === "all" ? "" : `${tab} `}invites match “{search.trim()}”.
+          </p>
         ) : (
           <div className="mt-2 space-y-2">
-            {rows.map((m) => {
+            {paged.map((m) => {
               const status = statusOf(m);
               return (
                 <div
@@ -367,7 +428,35 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
             })}
           </div>
         )}
+
+        {filtered.length > PAGE_SIZE && (
+          <div className="mono mt-3 flex items-center justify-between border-t border-border pt-2 text-[10px] uppercase tracking-widest">
+            <span className="text-muted-foreground">
+              {safePage * PAGE_SIZE + 1}–{safePage * PAGE_SIZE + paged.length} of {filtered.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(Math.max(0, safePage - 1))}
+                disabled={safePage === 0}
+                className="rounded-sm border border-border px-3 py-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <span className="text-moss">
+                {safePage + 1}/{pageCount}
+              </span>
+              <button
+                onClick={() => setPage(Math.min(pageCount - 1, safePage + 1))}
+                disabled={safePage >= pageCount - 1}
+                className="rounded-sm border border-border px-3 py-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
 
       {preview && (
         <InviteEmailPreviewDialog
