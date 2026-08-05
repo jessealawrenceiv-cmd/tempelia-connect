@@ -839,8 +839,10 @@ export function QuoteDepositPanel({ quote }: Props) {
                       <PopoverContent
                         align="start"
                         role="dialog"
-                        aria-label="Deposit event quote preview"
+                        aria-labelledby={`deposit-preview-title-${row.id}`}
+                        aria-describedby={`deposit-preview-summary-${row.id}`}
                         className="w-64 space-y-1 border-border bg-card p-3"
+
                         onOpenAutoFocus={(e) => {
                           // Hover-opened popovers must not steal focus; keyboard/click opens trap focus.
                           if (openModeRef.current === "hover") e.preventDefault();
@@ -862,9 +864,13 @@ export function QuoteDepositPanel({ quote }: Props) {
                         }}
                       >
 
-                        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        <h3
+                          id={`deposit-preview-title-${row.id}`}
+                          className="mono text-[10px] uppercase tracking-widest text-muted-foreground"
+                        >
                           quote preview
-                        </div>
+                        </h3>
+
                         <div className="flex items-center gap-2">
                           <div className="mono text-[11px] text-foreground">
                             short id {(p.quote_id ?? quote.id).slice(0, 8)}
@@ -878,19 +884,28 @@ export function QuoteDepositPanel({ quote }: Props) {
                             copy
                           </button>
                         </div>
-                        <div className="mono text-[11px] text-muted-foreground">
-                          deposit at event · {money(p.deposit_amount ?? 0)}
-                        </div>
+                        <dl
+                          id={`deposit-preview-summary-${row.id}`}
+                          className="mono space-y-1 text-[11px] text-muted-foreground"
+                        >
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-muted-foreground">deposit at event</dt>
+                            <dd className="text-paper">{money(p.deposit_amount ?? 0)}</dd>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-muted-foreground">balance at event</dt>
+                            <dd className="text-paper">{money(p.balance_remaining ?? 0)}</dd>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-muted-foreground">quote total</dt>
+                            <dd className="text-paper">{money(p.total_amount ?? quote.total_amount)}</dd>
+                          </div>
+                          <div className="flex justify-between gap-2 border-t border-border/60 pt-1 text-violet">
+                            <dt>current balance</dt>
+                            <dd className="text-paper">{money(currentBalanceRemaining)}</dd>
+                          </div>
+                        </dl>
 
-                        <div className="mono text-[11px] text-muted-foreground">
-                          balance at event · {money(p.balance_remaining ?? 0)}
-                        </div>
-                        <div className="mono text-[11px] text-muted-foreground">
-                          quote total · {money(p.total_amount ?? quote.total_amount)}
-                        </div>
-                        <div className="mono border-t border-border/60 pt-1 text-[11px] text-violet">
-                          current balance · {money(currentBalanceRemaining)}
-                        </div>
                         <div className="flex flex-wrap gap-2 pt-1">
                           <a
                             href={`/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`}
