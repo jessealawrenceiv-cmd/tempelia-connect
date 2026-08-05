@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from "react";
-import { describe, expect, it, vi, beforeAll } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi, beforeAll } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DepositRowPopover } from "./DepositRowPopover";
 
@@ -23,6 +23,8 @@ beforeAll(() => {
     Element.prototype.scrollIntoView = () => {};
   }
 });
+
+afterEach(() => cleanup());
 
 const copyShortId = vi.fn();
 const copyShareLink = vi.fn();
