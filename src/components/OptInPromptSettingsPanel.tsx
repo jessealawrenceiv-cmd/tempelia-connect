@@ -346,6 +346,10 @@ export function OptInPromptSettingsPanel({
 
   const preview = buildOptInPrompt(savedBusinessName, draft);
 
+  /** Exactly what a test send delivers today: saved template, not the draft. */
+  const sentPreview = buildOptInPrompt(savedBusinessName, template ?? "");
+
+
   const segments = preview.length <= 160 ? 1 : Math.ceil(preview.length / 153);
 
   /** Downloads the rendered preview + metadata as a small record file. */
@@ -758,6 +762,50 @@ export function OptInPromptSettingsPanel({
           )}
         </div>
       </div>
+
+      {/* Live preview of the exact message the test send will deliver. Uses the
+          SAVED template (not the draft) because the server reads saved settings. */}
+      <div className="mt-3 rounded-sm border border-border bg-background/60 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="label-eyebrow">Live test SMS preview</span>
+          <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            v{promptVersionHash(sentPreview)}
+          </span>
+        </div>
+        <p className="mono mt-2 whitespace-pre-wrap text-[12px] leading-relaxed text-paper">
+          {sentPreview}
+        </p>
+        <dl className="mono mt-2 space-y-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+          <div className="flex justify-between gap-3">
+            <dt>To</dt>
+            <dd className={testTarget ? "text-paper" : "text-destructive"}>
+              {testTarget ?? testPhoneError ?? "—"}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>From</dt>
+            <dd className="text-paper">{fromNumber || "no Temaro number provisioned"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>Length / segments</dt>
+            <dd className="text-paper">
+              {sentPreview.length} chars ·{" "}
+              {sentPreview.length <= 160 ? 1 : Math.ceil(sentPreview.length / 153)} SMS
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>Cooldown</dt>
+            <dd className="text-paper">{effectiveCooldown} min per contact</dd>
+          </div>
+        </dl>
+        {templateDirty && (
+          <p className="mono mt-2 text-[10px] normal-case tracking-normal text-primary">
+            Unsaved lead-in edits — the test send uses the saved template shown above. Save to test
+            your changes.
+          </p>
+        )}
+      </div>
+
 
       <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
         {testPhone.trim()
