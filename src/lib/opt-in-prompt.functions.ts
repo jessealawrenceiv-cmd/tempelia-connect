@@ -265,15 +265,8 @@ export const getTestSmsStatus = createServerFn({ method: "POST" })
     // trail (and CSV export) reflects the final Twilio result, not just "sent".
     const TERMINAL = ["delivered", "undelivered", "failed", "canceled"];
     if (TERMINAL.includes(m.status)) {
-      await supabase
-        .from("logs")
-        .update({
-          status: m.status,
-          ...(m.errorCode || m.errorMessage
-            ? { message_sent: undefined }
-            : {}),
-        })
-        .eq("id", owned.id);
+      await supabase.from("logs").update({ status: m.status }).eq("id", owned.id);
+
     }
 
     return {
