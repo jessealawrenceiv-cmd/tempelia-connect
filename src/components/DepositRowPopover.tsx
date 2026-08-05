@@ -24,7 +24,7 @@ export type DepositRowPopoverProps = {
  * - hover opens the popover without stealing focus
  * - Enter/Space on the focused trigger opens it and traps focus inside
  * - Escape closes it and returns focus to the exact trigger
- * - tab order inside: copy · open quote · customer view · copy share link
+ * - tab order inside: copy · open quote · customer view · copy event link
  */
 export function DepositRowPopover({
   rowId,
@@ -177,10 +177,10 @@ export function DepositRowPopover({
           <button
             type="button"
             onClick={onCopyShareLink}
-            aria-label={`Copy share link for deposit event ${rowId.slice(0, 8)}`}
+            aria-label={`Copy event link for deposit event ${rowId.slice(0, 8)}`}
             className="mono inline-flex items-center rounded-sm border border-border bg-background/60 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            copy share link
+            copy event link
           </button>
         </div>
       </PopoverContent>
