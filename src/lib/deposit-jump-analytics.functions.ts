@@ -40,6 +40,7 @@ export interface DepositRecoveryStats {
     eventId: string | null;
     reason: string | null;
     msSinceMiss: number | null;
+    correlationId: string | null;
     occurredAt: string;
   }[];
 }
@@ -78,6 +79,7 @@ export const recordDepositJumpRecovery = createServerFn({ method: "POST" })
       eventId: string | null;
       reason: string | null;
       msSinceMiss: number | null;
+      correlationId?: string | null;
     }) => {
       if (!RECOVERY_ACTIONS.includes(input.action)) throw new Error("Invalid action");
       const ms =
@@ -92,6 +94,7 @@ export const recordDepositJumpRecovery = createServerFn({ method: "POST" })
         eventId: trim(input.eventId, 128),
         reason: trim(input.reason, 128),
         msSinceMiss: ms,
+        correlationId: trim(input.correlationId ?? null, 64),
       };
     },
   )
@@ -103,6 +106,7 @@ export const recordDepositJumpRecovery = createServerFn({ method: "POST" })
       reason: data.reason,
       action: data.action,
       ms_since_miss: data.msSinceMiss,
+      correlation_id: data.correlationId,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -138,7 +142,7 @@ export const getDepositRecoveryStats = createServerFn({ method: "GET" })
     const since = new Date(Date.now() - data.days * 24 * 60 * 60 * 1000).toISOString();
     const { data: rows, error } = await supabase
       .from("deposit_jump_recovery_events")
-      .select("id, action, event_id, reason, ms_since_miss, occurred_at")
+      .select("id, action, event_id, reason, ms_since_miss, correlation_id, occurred_at")
       .gte("occurred_at", since)
       .order("occurred_at", { ascending: false })
       .limit(5000);
@@ -183,6 +187,7 @@ export const getDepositRecoveryStats = createServerFn({ method: "GET" })
         eventId: r.event_id,
         reason: r.reason,
         msSinceMiss: r.ms_since_miss,
+        correlationId: r.correlation_id ?? null,
         occurredAt: r.occurred_at,
       })),
     };
