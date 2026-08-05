@@ -153,8 +153,19 @@ export function OptInPromptSettingsPanel({
 
   const issues = validateOptInPromptTemplate(draft);
   const hasError = issues.some((i) => i.level === "error");
+  const missingBusiness = issues.some(
+    (i) => i.level === "warning" && i.message.includes("{business}"),
+  );
 
   const preview = buildOptInPrompt(businessName ?? "", draft);
+
+  /** Lead-ins that pass validation, shown as one-tap fixes. */
+  const exampleTemplates = [
+    DEFAULT_OPT_IN_PROMPT_TEMPLATE,
+    "{business} here — thanks for calling.",
+    "Sorry we missed your call, this is {business}.",
+  ];
+
 
   return (
     <div className="panel p-6 md:col-span-2">
