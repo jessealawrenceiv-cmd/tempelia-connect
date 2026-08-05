@@ -768,9 +768,104 @@ function NewQuotePage() {
               <div className="flex justify-between border-t border-border pt-1.5 text-base font-display uppercase tracking-wider">
                 <span>Total</span><span>{money(total)}</span>
               </div>
+              {depositRequired && (
+                <>
+                  <div className="flex justify-between text-moss">
+                    <span>Deposit due</span><span>{money(depositAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Balance after deposit</span><span>{money(round2(total - depositAmount))}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>
+
+        {/* Deposit */}
+        <section className="panel p-5 space-y-3">
+          <div className="label-eyebrow">Deposit</div>
+          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            // tracking only — no payment is collected here
+          </div>
+
+          {!allowOverride ? (
+            <div className="rounded-sm border border-border bg-background/50 p-3 space-y-1">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                // locked to company default by settings
+              </div>
+              <div className="text-sm">
+                Company default: <span className="mono">{describeCompanyDefault(companyDefaultType, companyDefaultFixed != null ? Number(companyDefaultFixed) : null)}</span>
+              </div>
+              <div className="mono text-sm text-moss">= {money(depositAmount)}</div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {DEPOSIT_SELECTIONS.map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="deposit_selection"
+                    className="h-4 w-4 accent-primary"
+                    checked={depositSelection === opt.value}
+                    onChange={() => setDepositSelection(opt.value)}
+                  />
+                  <span>{opt.label}</span>
+                  {opt.value === "company_default" && (
+                    <span className="mono text-[10px] text-muted-foreground">
+                      ({describeCompanyDefault(companyDefaultType, companyDefaultFixed != null ? Number(companyDefaultFixed) : null)})
+                    </span>
+                  )}
+                </label>
+              ))}
+
+              {depositSelection === "custom" && (
+                <div className="ml-6 flex flex-col gap-1 pt-1">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={depositCustomType}
+                      onChange={(e) => setDepositCustomType(e.target.value as DepositCustomType)}
+                      className="mono rounded-sm border border-border bg-background px-2 py-1.5 text-xs"
+                    >
+                      <option value="percentage">% of total</option>
+                      <option value="fixed">Fixed $</option>
+                    </select>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={depositCustomValue}
+                      onChange={(e) => setDepositCustomValue(e.target.value)}
+                      placeholder={depositCustomType === "percentage" ? "25" : "500.00"}
+                      aria-invalid={depositCustomError !== null}
+                      className={`mono w-28 rounded-sm border bg-background px-2 py-1.5 text-sm text-right ${
+                        depositCustomError ? "border-destructive" : "border-border"
+                      }`}
+                    />
+                    <span className="mono text-xs text-muted-foreground">
+                      {depositCustomType === "percentage" ? "%" : ""}
+                    </span>
+                  </div>
+                  {depositCustomError && (
+                    <span className="mono text-[10px] text-destructive">{depositCustomError}</span>
+                  )}
+                </div>
+              )}
+
+              <div className="border-t border-border pt-3 mono text-sm">
+                Deposit due: <span className="text-moss">{money(depositAmount)}</span>
+                {depositRequired && (
+                  <span className="text-muted-foreground"> · balance {money(round2(total - depositAmount))}</span>
+                )}
+              </div>
+              {depositTooLarge && (
+                <div className="mono text-[10px] text-destructive">
+                  Deposit can't exceed the quote total ({money(total)}).
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
 
         <div className="flex flex-col items-end gap-2">
           {hasInvalidInput && (
