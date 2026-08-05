@@ -12,6 +12,7 @@ import {
   OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH,
   buildOptInPrompt,
   clampCooldownMinutes,
+  validateOptInPromptTemplate,
 } from "@/lib/opt-in-prompt";
 
 type Props = {
@@ -50,9 +51,8 @@ export function OptInPromptSettingsPanel({
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
       const trimmed = draft.trim();
-      if (trimmed.length > OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH) {
-        throw new Error(`Lead-in must be ${OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH} characters or fewer.`);
-      }
+      const blocking = validateOptInPromptTemplate(trimmed).filter((i) => i.level === "error");
+      if (blocking.length > 0) throw new Error(blocking[0]!.message);
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -77,6 +77,9 @@ export function OptInPromptSettingsPanel({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const issues = validateOptInPromptTemplate(draft);
+  const hasError = issues.some((i) => i.level === "error");
 
   const preview = buildOptInPrompt(businessName ?? "", draft);
 
@@ -123,6 +126,21 @@ export function OptInPromptSettingsPanel({
         </label>
       </div>
 
+      {issues.length > 0 && (
+        <ul className="mt-4 space-y-1">
+          {issues.map((i) => (
+            <li
+              key={i.message}
+              className={`mono text-[11px] leading-relaxed ${
+                i.level === "error" ? "text-destructive" : "text-primary"
+              }`}
+            >
+              {i.level === "error" ? "✕" : "⚠"} {i.message}
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="mt-4 rounded-sm border border-border bg-background/60 p-3">
         <div className="label-eyebrow">Message preview</div>
         <p className="mono mt-2 text-xs leading-relaxed text-paper">{preview}</p>
@@ -135,7 +153,7 @@ export function OptInPromptSettingsPanel({
         <button
           type="button"
           onClick={() => save.mutate()}
-          disabled={save.isPending}
+          disabled={save.isPending || hasError}
           className="rounded-sm border border-border bg-card px-4 py-2 text-xs uppercase tracking-widest text-paper transition-colors hover:bg-muted disabled:opacity-50"
         >
           {save.isPending ? "Saving…" : "Save prompt settings"}

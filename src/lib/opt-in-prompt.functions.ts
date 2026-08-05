@@ -5,7 +5,6 @@ import {
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   buildOptInPrompt,
   clampCooldownMinutes,
-  validateOptInPromptTemplate,
 } from "./opt-in-prompt";
 
 function validate(data: unknown): { customerId: string } {
