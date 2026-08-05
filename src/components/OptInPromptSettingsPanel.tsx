@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendTestOptInPrompt, getTestSmsStatus } from "@/lib/opt-in-prompt.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeToE164 } from "@/lib/phone";
 import {
   OPT_IN_PROMPT_TEST_ACTION,
   DEFAULT_OPT_IN_PROMPT_TEMPLATE,
