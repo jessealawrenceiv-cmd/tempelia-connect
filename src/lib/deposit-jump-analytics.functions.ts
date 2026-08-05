@@ -1,13 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type RecoveryAction = "return_to_top" | "show_latest" | "clear_filters" | "dismiss";
+export type RecoveryAction =
+  | "return_to_top"
+  | "show_latest"
+  | "clear_filters"
+  | "dismiss"
+  | "retry_jump";
 
 export const RECOVERY_ACTIONS: RecoveryAction[] = [
   "return_to_top",
   "show_latest",
   "clear_filters",
   "dismiss",
+  "retry_jump",
 ];
 
 export interface RecoveryBucket {
@@ -28,9 +34,23 @@ export interface RecoveryActionStat {
   avgMs: number | null;
 }
 
+export interface RetryStats {
+  /** Rows recorded as retry_jump. */
+  total: number;
+  /** Highest attempt index seen in the window. */
+  maxAttemptIndex: number | null;
+  /** Distribution of attempt_index -> count. */
+  byAttemptIndex: { attemptIndex: number; count: number }[];
+  /** Time from the original miss to the retry. */
+  medianMsSinceFirstMiss: number | null;
+  p90MsSinceFirstMiss: number | null;
+  avgMsSinceFirstMiss: number | null;
+}
+
 export interface DepositRecoveryStats {
   days: number;
   total: number;
+  retries: RetryStats;
   byAction: RecoveryActionStat[];
   histogram: RecoveryBucket[];
   overall: { medianMs: number | null; p90Ms: number | null; avgMs: number | null };
@@ -41,6 +61,8 @@ export interface DepositRecoveryStats {
     reason: string | null;
     msSinceMiss: number | null;
     correlationId: string | null;
+    attemptIndex: number | null;
+    msSinceFirstMiss: number | null;
     occurredAt: string;
   }[];
 }
@@ -80,6 +102,8 @@ export const recordDepositJumpRecovery = createServerFn({ method: "POST" })
       reason: string | null;
       msSinceMiss: number | null;
       correlationId?: string | null;
+      attemptIndex?: number | null;
+      msSinceFirstMiss?: number | null;
     }) => {
       if (!RECOVERY_ACTIONS.includes(input.action)) throw new Error("Invalid action");
       const ms =
@@ -95,6 +119,14 @@ export const recordDepositJumpRecovery = createServerFn({ method: "POST" })
         reason: trim(input.reason, 128),
         msSinceMiss: ms,
         correlationId: trim(input.correlationId ?? null, 64),
+        attemptIndex:
+          typeof input.attemptIndex === "number" && Number.isFinite(input.attemptIndex)
+            ? Math.max(0, Math.min(1000, Math.round(input.attemptIndex)))
+            : null,
+        msSinceFirstMiss:
+          typeof input.msSinceFirstMiss === "number" && Number.isFinite(input.msSinceFirstMiss)
+            ? Math.max(0, Math.min(86_400_000, Math.round(input.msSinceFirstMiss)))
+            : null,
       };
     },
   )
@@ -107,6 +139,8 @@ export const recordDepositJumpRecovery = createServerFn({ method: "POST" })
       action: data.action,
       ms_since_miss: data.msSinceMiss,
       correlation_id: data.correlationId,
+      attempt_index: data.attemptIndex,
+      ms_since_first_miss: data.msSinceFirstMiss,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -142,7 +176,9 @@ export const getDepositRecoveryStats = createServerFn({ method: "GET" })
     const since = new Date(Date.now() - data.days * 24 * 60 * 60 * 1000).toISOString();
     const { data: rows, error } = await supabase
       .from("deposit_jump_recovery_events")
-      .select("id, action, event_id, reason, ms_since_miss, correlation_id, occurred_at")
+      .select(
+        "id, action, event_id, reason, ms_since_miss, correlation_id, attempt_index, ms_since_first_miss, occurred_at",
+      )
       .gte("occurred_at", since)
       .order("occurred_at", { ascending: false })
       .limit(5000);
@@ -175,9 +211,31 @@ export const getDepositRecoveryStats = createServerFn({ method: "GET" })
       detail: `${data.days}d window`,
     });
 
+    const retryRows = all.filter((r) => r.action === "retry_jump");
+    const retryElapsed = retryRows
+      .map((r) => r.ms_since_first_miss)
+      .filter((v): v is number => typeof v === "number");
+    const attemptCounts = new Map<number, number>();
+    for (const r of retryRows) {
+      if (typeof r.attempt_index !== "number") continue;
+      attemptCounts.set(r.attempt_index, (attemptCounts.get(r.attempt_index) ?? 0) + 1);
+    }
+    const retrySummary = summarize(retryElapsed);
+    const retries: RetryStats = {
+      total: retryRows.length,
+      maxAttemptIndex: attemptCounts.size ? Math.max(...attemptCounts.keys()) : null,
+      byAttemptIndex: [...attemptCounts.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([attemptIndex, count]) => ({ attemptIndex, count })),
+      medianMsSinceFirstMiss: retrySummary.medianMs,
+      p90MsSinceFirstMiss: retrySummary.p90Ms,
+      avgMsSinceFirstMiss: retrySummary.avgMs,
+    };
+
     return {
       days: data.days,
       total: all.length,
+      retries,
       byAction,
       histogram,
       overall: summarize(timedAll),
@@ -188,6 +246,8 @@ export const getDepositRecoveryStats = createServerFn({ method: "GET" })
         reason: r.reason,
         msSinceMiss: r.ms_since_miss,
         correlationId: r.correlation_id ?? null,
+        attemptIndex: r.attempt_index ?? null,
+        msSinceFirstMiss: r.ms_since_first_miss ?? null,
         occurredAt: r.occurred_at,
       })),
     };
