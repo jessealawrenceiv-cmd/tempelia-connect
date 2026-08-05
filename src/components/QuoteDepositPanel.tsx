@@ -641,8 +641,9 @@ export function QuoteDepositPanel({ quote }: Props) {
 
       {jumpMiss && (
         <div
-          role="status"
-          aria-live="polite"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
           className="mono rounded-sm border border-orange/60 bg-orange/10 px-4 py-3 text-[11px] text-orange"
         >
           <div className="flex items-start gap-3">
@@ -650,9 +651,13 @@ export function QuoteDepositPanel({ quote }: Props) {
               🔎
             </div>
             <div className="flex-1">
-              <div className="font-semibold uppercase tracking-widest text-[10px]">
+              <h3
+                ref={jumpMissHeadingRef}
+                tabIndex={-1}
+                className="font-semibold uppercase tracking-widest text-[10px] outline-none focus-visible:ring-2 focus-visible:ring-orange/70"
+              >
                 // we couldn't find that deposit row
-              </div>
+              </h3>
               <p className="mt-1 normal-case text-muted-foreground">
                 {jumpMiss.reason === "empty"
                   ? "This quote doesn't have any deposit events yet, so there's nothing to jump to."
