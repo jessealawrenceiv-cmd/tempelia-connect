@@ -130,6 +130,7 @@ export function DepositRowPopover({
         </button>
       </PopoverTrigger>
       <PopoverContent
+        ref={contentRef}
         align="start"
         role="dialog"
         aria-labelledby={`deposit-preview-title-${rowId}`}
