@@ -69,11 +69,14 @@ export function OptInPromptSettingsPanel({
       if (!u.user) return [];
       const { data, error } = await supabase
         .from("logs")
-        .select("id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash")
+        .select(
+          "id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash, message_sent",
+        )
         .eq("user_id", u.user.id)
         .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(50);
+
       if (error) throw error;
       return data ?? [];
     },
