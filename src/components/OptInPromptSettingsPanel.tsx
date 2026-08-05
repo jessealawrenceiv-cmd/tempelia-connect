@@ -54,8 +54,11 @@ export function OptInPromptSettingsPanel({
     status: string;
     errorCode?: number | null;
     errorMessage?: string | null;
+    /** Raw Twilio Message resource from the last status poll. */
+    raw?: Record<string, unknown> | null;
   } | null>(null);
   const [polling, setPolling] = useState(false);
+  const [showRaw, setShowRaw] = useState(false);
   const [sampleName, setSampleName] = useState("Dana Reyes");
   const [samplePhone, setSamplePhone] = useState("+15015550123");
   const [testPhone, setTestPhone] = useState("");
@@ -125,7 +128,13 @@ export function OptInPromptSettingsPanel({
           const m = await checkStatus({ data: { sid } });
           setLastTest((prev) =>
             prev && prev.sid === sid
-              ? { ...prev, status: m.status, errorCode: m.errorCode, errorMessage: m.errorMessage }
+              ? {
+                  ...prev,
+                  status: m.status,
+                  errorCode: m.errorCode,
+                  errorMessage: m.errorMessage,
+                  raw: m.raw ?? null,
+                }
               : prev,
           );
           if (TERMINAL.includes(m.status)) {
@@ -942,6 +951,52 @@ export function OptInPromptSettingsPanel({
                 </>
               ) : null}
             </p>
+          )}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => setShowRaw((v) => !v)}
+              className="underline text-muted-foreground hover:text-foreground"
+            >
+              {showRaw ? "Hide" : "Show"} raw webhook payload (JSON)
+            </button>
+          </div>
+          {showRaw && (
+            <div className="mt-1 space-y-1">
+              {lastTest.raw ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-muted-foreground">
+                      Twilio delivery-status payload · SID {lastTest.sid}
+                    </span>
+                    <button
+                      type="button"
+                      className="underline text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        void navigator.clipboard
+                          .writeText(JSON.stringify(lastTest.raw, null, 2))
+                          .then(() => toast.success("Raw payload copied."))
+                          .catch(() => toast.error("Could not copy payload."));
+                      }}
+                    >
+                      Copy JSON
+                    </button>
+                  </div>
+                  <pre className="max-h-72 overflow-auto rounded border border-border bg-muted/30 p-3 text-[10px] normal-case tracking-normal text-foreground">
+{JSON.stringify(lastTest.raw, null, 2)}
+                  </pre>
+                  <p className="text-muted-foreground normal-case tracking-normal">
+                    error_code: {String(lastTest.raw["error_code"] ?? "null")} · error_message:{" "}
+                    {String(lastTest.raw["error_message"] ?? "null")}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground normal-case tracking-normal">
+                  No payload yet — it arrives with the first delivery-status check. Use Refresh
+                  above to fetch it.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
