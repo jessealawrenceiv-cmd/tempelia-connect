@@ -410,6 +410,8 @@ export type Database = {
           email: string | null
           id: string
           intake_enabled: boolean
+          opt_in_prompt_cooldown_minutes: number
+          opt_in_prompt_template: string | null
           owner_phone: string | null
           review_requests_enabled: boolean
           stripe_customer_id: string | null
@@ -429,6 +431,8 @@ export type Database = {
           email?: string | null
           id: string
           intake_enabled?: boolean
+          opt_in_prompt_cooldown_minutes?: number
+          opt_in_prompt_template?: string | null
           owner_phone?: string | null
           review_requests_enabled?: boolean
           stripe_customer_id?: string | null
@@ -448,6 +452,8 @@ export type Database = {
           email?: string | null
           id?: string
           intake_enabled?: boolean
+          opt_in_prompt_cooldown_minutes?: number
+          opt_in_prompt_template?: string | null
           owner_phone?: string | null
           review_requests_enabled?: boolean
           stripe_customer_id?: string | null

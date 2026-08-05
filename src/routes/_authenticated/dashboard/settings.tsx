@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { ExcludedNumbersPanel } from "@/components/ExcludedNumbersPanel";
 import { TeamMembersPanel } from "@/components/TeamMembersPanel";
+import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel";
 import { useTeamRole } from "@/hooks/useTeamRole";
 
 import { useEffect, useState } from "react";
@@ -250,6 +251,12 @@ function SettingsPage() {
             Stripe checkout & portal wire up in Phase 2.
           </p>
         </div>
+
+        <OptInPromptSettingsPanel
+          businessName={profile?.business_name}
+          template={profile?.opt_in_prompt_template}
+          cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
+        />
 
         <ExcludedNumbersPanel />
 

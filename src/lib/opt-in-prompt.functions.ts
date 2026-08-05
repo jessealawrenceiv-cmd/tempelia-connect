@@ -4,6 +4,7 @@ import {
   OPT_IN_PROMPT_ACTION,
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   buildOptInPrompt,
+  clampCooldownMinutes,
 } from "./opt-in-prompt";
 
 function validate(data: unknown): { customerId: string } {
@@ -42,7 +43,16 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
       throw new Error("This number is on your exclusion list.");
     }
 
-    const since = new Date(Date.now() - OPT_IN_PROMPT_COOLDOWN_MINUTES * 60_000).toISOString();
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("business_name, twilio_phone_number, opt_in_prompt_template, opt_in_prompt_cooldown_minutes")
+      .eq("id", userId)
+      .maybeSingle();
+    const cooldown = clampCooldownMinutes(
+      prof?.opt_in_prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES,
+    );
+
+    const since = new Date(Date.now() - cooldown * 60_000).toISOString();
     const { data: recent } = await supabase
       .from("logs")
       .select("id, created_at")
@@ -53,19 +63,14 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
       .maybeSingle();
     if (recent) {
       throw new Error(
-        `An opt-in prompt was already sent in the last ${OPT_IN_PROMPT_COOLDOWN_MINUTES} minutes.`,
+        `An opt-in prompt was already sent in the last ${cooldown} minutes.`,
       );
     }
 
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("business_name, twilio_phone_number")
-      .eq("id", userId)
-      .maybeSingle();
     const from = prof?.twilio_phone_number;
     if (!from) throw new Error("Provision your Temaro number in Settings before sending.");
 
-    const body = buildOptInPrompt(prof?.business_name ?? "");
+    const body = buildOptInPrompt(prof?.business_name ?? "", prof?.opt_in_prompt_template ?? null);
     try {
       const res = await sendTwilioSms(from, cust.phone_number, body);
       await supabase.from("logs").insert({
