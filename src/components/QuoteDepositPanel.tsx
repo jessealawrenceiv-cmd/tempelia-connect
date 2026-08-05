@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -37,6 +37,13 @@ import {
   listDepositJumpDebugEvents,
   clearDepositJumpDebugEvents,
 } from "@/lib/deposit-jump-debug.functions";
+import {
+  filterDebugEntries,
+  describeDebugFilters,
+  type DebugEventFilter,
+  type DebugOutcomeFilter,
+  type DebugRangeFilter,
+} from "@/lib/deposit-jump-debug-filter";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
@@ -249,6 +256,29 @@ export function QuoteDepositPanel({ quote }: Props) {
   const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
   const debugLogRef = useRef<HTMLDivElement | null>(null);
   const [debugHydrated, setDebugHydrated] = useState(false);
+  // Debug-log filters: event type, success vs miss, and time range.
+  const [debugEventFilter, setDebugEventFilter] = useState<DebugEventFilter>("all");
+  const [debugOutcomeFilter, setDebugOutcomeFilter] = useState<DebugOutcomeFilter>("all");
+  const [debugRangeFilter, setDebugRangeFilter] = useState<DebugRangeFilter>("all");
+  // Re-evaluate relative time ranges on a tick so entries age out of view.
+  const [debugNow, setDebugNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!debugMode || debugRangeFilter === "all") return;
+    const t = window.setInterval(() => setDebugNow(Date.now()), 5000);
+    return () => window.clearInterval(t);
+  }, [debugMode, debugRangeFilter]);
+  const filteredDebugLog = useMemo(
+    () =>
+      filterDebugEntries(
+        debugLog,
+        { event: debugEventFilter, outcome: debugOutcomeFilter, range: debugRangeFilter },
+        debugNow,
+      ),
+    [debugLog, debugEventFilter, debugOutcomeFilter, debugRangeFilter, debugNow],
+  );
+  const debugFiltersActive =
+    debugEventFilter !== "all" || debugOutcomeFilter !== "all" || debugRangeFilter !== "all";
+
 
   const logDepositJumpDebug = useCallback(
     (
@@ -1380,8 +1410,9 @@ export function QuoteDepositPanel({ quote }: Props) {
         >
           <div className="flex items-center justify-between gap-2">
             <div className="mono text-[10px] uppercase tracking-widest text-violet">
-              // deposit jump debug log · {debugLog.length} event
-              {debugLog.length === 1 ? "" : "s"}
+              // deposit jump debug log · {filteredDebugLog.length}
+              {debugFiltersActive ? ` of ${debugLog.length}` : ""} event
+              {filteredDebugLog.length === 1 && !debugFiltersActive ? "" : "s"}
               <button
                 type="button"
                 onClick={() => {
@@ -1406,11 +1437,17 @@ export function QuoteDepositPanel({ quote }: Props) {
               <button
                 onClick={() => {
                   navigator.clipboard
-                    .writeText(JSON.stringify(debugLog, null, 2))
-                    .then(() => toast.success("Debug log copied as JSON."))
+                    .writeText(JSON.stringify(filteredDebugLog, null, 2))
+                    .then(() =>
+                      toast.success(
+                        debugFiltersActive
+                          ? "Filtered debug log copied as JSON."
+                          : "Debug log copied as JSON.",
+                      ),
+                    )
                     .catch(() => toast.error("Copy failed."));
                 }}
-                disabled={debugLog.length === 0}
+                disabled={filteredDebugLog.length === 0}
                 className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
               >
                 copy json
@@ -1435,13 +1472,102 @@ export function QuoteDepositPanel({ quote }: Props) {
               </button>
             </div>
           </div>
+
+          {/* Filters: event type, success vs miss, and time range. */}
+          <div
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-sm border border-violet/20 bg-charcoal/30 p-2"
+            role="group"
+            aria-label="Debug log filters"
+          >
+            {(
+              [
+                {
+                  label: "event",
+                  value: debugEventFilter,
+                  set: (v: string) => setDebugEventFilter(v as DebugEventFilter),
+                  options: [
+                    ["all", "all"],
+                    ["deposit_jump_success", "success"],
+                    ["deposit_jump_miss", "miss"],
+                    ["deposit_jump_recovery", "recovery"],
+                  ],
+                },
+                {
+                  label: "outcome",
+                  value: debugOutcomeFilter,
+                  set: (v: string) => setDebugOutcomeFilter(v as DebugOutcomeFilter),
+                  options: [
+                    ["all", "all"],
+                    ["success", "success"],
+                    ["miss", "miss"],
+                  ],
+                },
+                {
+                  label: "range",
+                  value: debugRangeFilter,
+                  set: (v: string) => setDebugRangeFilter(v as DebugRangeFilter),
+                  options: [
+                    ["all", "all time"],
+                    ["5m", "last 5m"],
+                    ["1h", "last 1h"],
+                    ["24h", "last 24h"],
+                  ],
+                },
+              ] as const
+            ).map((group) => (
+              <div key={group.label} className="flex items-center gap-1">
+                <span className="mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                  {group.label}
+                </span>
+                {group.options.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={group.value === value}
+                    onClick={() => group.set(value)}
+                    className={`mono rounded-sm border px-2 py-0.5 text-[10px] lowercase tracking-wider ${
+                      group.value === value
+                        ? "border-violet/60 bg-violet/20 text-violet"
+                        : "border-border text-muted-foreground hover:text-paper"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ))}
+            {debugFiltersActive && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDebugEventFilter("all");
+                  setDebugOutcomeFilter("all");
+                  setDebugRangeFilter("all");
+                }}
+                className="mono rounded-sm border border-violet/40 px-2 py-0.5 text-[10px] lowercase tracking-wider text-violet hover:bg-violet/20"
+              >
+                reset filters
+              </button>
+            )}
+          </div>
+
           {debugLog.length === 0 ? (
             <div className="mono text-[11px] text-muted-foreground">
               // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log. entries are saved and reloaded after refresh.
             </div>
+          ) : filteredDebugLog.length === 0 ? (
+            <div className="mono text-[11px] text-muted-foreground">
+              // {debugLog.length} saved entr{debugLog.length === 1 ? "y" : "ies"}, none match{" "}
+              {describeDebugFilters({
+                event: debugEventFilter,
+                outcome: debugOutcomeFilter,
+                range: debugRangeFilter,
+              })}
+              .
+            </div>
           ) : (
             <ol className="max-h-64 space-y-2 overflow-auto rounded-sm border border-violet/20 bg-charcoal/40 p-2">
-              {debugLog.map((entry) => (
+              {filteredDebugLog.map((entry) => (
                 <li key={entry.id} className="mono text-[11px]">
                   <div className="flex items-center gap-2">
                     <span
