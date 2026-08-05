@@ -9,6 +9,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Copy, Check } from "lucide-react";
+import { ContactImportPanel } from "@/components/ContactImportPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
   component: ContactsPage,
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
 
 
 const phoneSchema = z.string().trim().regex(/^\+?[1-9]\d{7,14}$/, "Use E.164 format e.g. +15551234567");
-const SOURCES = ["all", "intake", "manual", "seeded"] as const;
+const SOURCES = ["all", "intake", "manual", "import", "seeded"] as const;
 const SMS_FILTERS = ["all", "opted_in", "no_consent"] as const;
 const FORM_FILTERS = ["all", "signed", "unsigned"] as const;
 
@@ -77,6 +78,7 @@ function ContactsPage() {
   const [since, setSince] = useState<string>("");
   const [editing, setEditing] = useState<Contact | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleExpand = (id: string) => setExpanded((prev) => {
@@ -189,6 +191,7 @@ function ContactsPage() {
     <div>
       <PageHeader eyebrow="Roster" title="Contacts" />
       <div className="p-5 md:p-8 space-y-5">
+        {showImport && <ContactImportPanel onClose={() => setShowImport(false)} />}
         {/* Filters */}
         <div className="panel p-4">
           <div className="grid gap-3 md:grid-cols-[1.4fr_repeat(4,1fr)_auto]">
@@ -222,6 +225,10 @@ function ContactsPage() {
               onClick={() => setShowNew(true)}
               className="rounded-sm bg-primary px-4 py-2 text-xs font-display uppercase tracking-wider text-primary-foreground"
             >+ New</button>
+            <button
+              onClick={() => setShowImport((v) => !v)}
+              className="rounded-sm border border-border px-4 py-2 text-xs font-display uppercase tracking-wider text-muted-foreground hover:text-paper"
+            >Import CSV</button>
           </div>
           <div className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
             // {filtered.length} of {contacts?.length ?? 0} contacts

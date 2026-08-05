@@ -114,6 +114,57 @@ export type Database = {
           },
         ]
       }
+      contact_import_events: {
+        Row: {
+          actor_user_id: string | null
+          attestation_accepted_at: string
+          attestation_text: string
+          column_mapping: Json
+          created_at: string
+          file_name: string | null
+          id: string
+          imported_count: number
+          occurred_at: string
+          skipped_count: number
+          skipped_reasons: Json
+          total_rows: number
+          updated_count: number
+          user_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          attestation_accepted_at?: string
+          attestation_text: string
+          column_mapping?: Json
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          imported_count?: number
+          occurred_at?: string
+          skipped_count?: number
+          skipped_reasons?: Json
+          total_rows?: number
+          updated_count?: number
+          user_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          attestation_accepted_at?: string
+          attestation_text?: string
+          column_mapping?: Json
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          imported_count?: number
+          occurred_at?: string
+          skipped_count?: number
+          skipped_reasons?: Json
+          total_rows?: number
+          updated_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           consent_form_signed: boolean
