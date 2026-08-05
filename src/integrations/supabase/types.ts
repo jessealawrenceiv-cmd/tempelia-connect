@@ -680,6 +680,50 @@ export type Database = {
         }
         Relationships: []
       }
+      team_invite_events: {
+        Row: {
+          actor_user_id: string | null
+          business_owner_id: string
+          created_at: string
+          detail: string | null
+          event_type: string
+          id: string
+          invited_email: string
+          occurred_at: string
+          team_member_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          business_owner_id: string
+          created_at?: string
+          detail?: string | null
+          event_type: string
+          id?: string
+          invited_email: string
+          occurred_at?: string
+          team_member_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          business_owner_id?: string
+          created_at?: string
+          detail?: string | null
+          event_type?: string
+          id?: string
+          invited_email?: string
+          occurred_at?: string
+          team_member_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invite_events_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           accepted_at: string | null
