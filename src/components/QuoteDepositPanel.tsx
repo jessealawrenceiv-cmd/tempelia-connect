@@ -839,8 +839,10 @@ export function QuoteDepositPanel({ quote }: Props) {
                       <PopoverContent
                         align="start"
                         role="dialog"
-                        aria-label="Deposit event quote preview"
+                        aria-labelledby={`deposit-preview-title-${row.id}`}
+                        aria-describedby={`deposit-preview-summary-${row.id}`}
                         className="w-64 space-y-1 border-border bg-card p-3"
+
                         onOpenAutoFocus={(e) => {
                           // Hover-opened popovers must not steal focus; keyboard/click opens trap focus.
                           if (openModeRef.current === "hover") e.preventDefault();
