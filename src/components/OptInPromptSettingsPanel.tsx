@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { sendTestOptInPrompt, getTestSmsStatus } from "@/lib/opt-in-prompt.functions";
@@ -68,6 +68,14 @@ export function OptInPromptSettingsPanel({
     raw?: Record<string, unknown> | null;
   } | null>(null);
   const [polling, setPolling] = useState(false);
+  /** Attempt count + last check time for the in-progress status poll. */
+  const [pollInfo, setPollInfo] = useState<{
+    sid: string | null;
+    attempts: number;
+    lastCheckedAt: string | null;
+  }>({ sid: null, attempts: 0, lastCheckedAt: null });
+  /** Flipped by the Stop polling control so the loop bails out early. */
+  const stopPollingRef = useRef(false);
   const [showRaw, setShowRaw] = useState(false);
   const [sampleName, setSampleName] = useState("Dana Reyes");
   const [samplePhone, setSamplePhone] = useState("+15015550123");
@@ -129,13 +137,31 @@ export function OptInPromptSettingsPanel({
 
   const TERMINAL = ["delivered", "undelivered", "failed", "canceled"];
 
+  const MAX_POLL_ATTEMPTS = 8;
+
+  function stopPolling() {
+    stopPollingRef.current = true;
+    setPolling(false);
+  }
+
   async function pollStatus(sid: string) {
+    stopPollingRef.current = false;
     setPolling(true);
+    // Resuming the same message keeps its running attempt count.
+    setPollInfo((prev) =>
+      prev.sid === sid ? prev : { sid, attempts: 0, lastCheckedAt: null },
+    );
     try {
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         await new Promise((r) => setTimeout(r, i === 0 ? 1500 : 3000));
+        if (stopPollingRef.current) break;
         try {
           const m = await checkStatus({ data: { sid } });
+          setPollInfo((prev) => ({
+            sid,
+            attempts: (prev.sid === sid ? prev.attempts : 0) + 1,
+            lastCheckedAt: new Date().toLocaleTimeString(),
+          }));
           setLastTest((prev) =>
             prev && prev.sid === sid
               ? {
@@ -932,7 +958,16 @@ export function OptInPromptSettingsPanel({
               {lastTest.status}
             </span>
             {polling && !TERMINAL.includes(lastTest.status) ? (
-              <span className="text-muted-foreground"> · checking…</span>
+              <>
+                <span className="text-muted-foreground"> · checking…</span>
+                <button
+                  type="button"
+                  onClick={stopPolling}
+                  className="ml-2 underline text-muted-foreground hover:text-foreground"
+                >
+                  Stop polling
+                </button>
+              </>
             ) : null}
             {!polling && !TERMINAL.includes(lastTest.status) ? (
               <button
@@ -940,10 +975,17 @@ export function OptInPromptSettingsPanel({
                 onClick={() => void pollStatus(lastTest.sid)}
                 className="ml-2 underline text-muted-foreground hover:text-foreground"
               >
-                Refresh
+                {pollInfo.attempts > 0 ? "Resume checking" : "Refresh"}
               </button>
             ) : null}
           </p>
+          {!TERMINAL.includes(lastTest.status) ? (
+            <p className="text-muted-foreground">
+              Checks: {pollInfo.attempts}/{MAX_POLL_ATTEMPTS} · Last check:{" "}
+              {pollInfo.lastCheckedAt ?? "—"}
+              {!polling && pollInfo.attempts > 0 ? " · stopped" : ""}
+            </p>
+          ) : null}
           {(lastTest.errorCode || lastTest.errorMessage) && (
             <p className="text-destructive normal-case tracking-normal">
               Error {lastTest.errorCode ?? "—"}: {lastTest.errorMessage ?? "no detail returned"}
