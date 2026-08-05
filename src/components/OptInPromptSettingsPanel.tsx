@@ -138,6 +138,109 @@ export function OptInPromptSettingsPanel({
       : testParsed.error;
 
   const sampleParsed = normalizeToE164(samplePhone.trim());
+  const sampleE164 = sampleParsed.ok ? sampleParsed.e164 : null;
+  const effectiveCooldown = clampCooldownMinutes(cooldown);
+
+  /**
+   * Real eligibility for the previewed contact: mirrors the server checks in
+   * sendPromptToCustomer (already opted in, exclusion list, per-contact
+   * cooldown against the latest opt_in_prompt log).
+   */
+  const eligibility = useQuery({
+    queryKey: ["opt-in-eligibility", sampleE164, effectiveCooldown],
+    enabled: !!sampleE164,
+    queryFn: async () => {
+      const digits = (sampleE164 ?? "").replace(/\D+/g, "");
+      const last10 = digits.slice(-10);
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+
+      const [{ data: customers }, { data: excluded }] = await Promise.all([
+        supabase
+          .from("customers")
+          .select("id, first_name, last_name, phone_number, opt_in_consent")
+          .eq("user_id", u.user.id)
+          .ilike("phone_number", `%${last10}%`)
+          .limit(5),
+        supabase.from("excluded_numbers").select("phone_number").eq("user_id", u.user.id),
+      ]);
+
+      const isExcluded = (excluded ?? []).some(
+        (r) => (r.phone_number || "").replace(/\D+/g, "").slice(-10) === last10,
+      );
+      const customer =
+        (customers ?? []).find(
+          (c) => (c.phone_number || "").replace(/\D+/g, "").slice(-10) === last10,
+        ) ?? null;
+
+      let lastAttempt: { created_at: string; status: string; cooldown: number | null } | null = null;
+      if (customer) {
+        const { data: log } = await supabase
+          .from("logs")
+          .select("created_at, status, prompt_cooldown_minutes")
+          .eq("customer_id", customer.id)
+          .eq("action_type", OPT_IN_PROMPT_ACTION)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (log)
+          lastAttempt = {
+            created_at: log.created_at,
+            status: log.status,
+            cooldown: log.prompt_cooldown_minutes,
+          };
+      }
+      return { customer, isExcluded, lastAttempt };
+    },
+  });
+
+  /** Derived verdict for the preview eligibility strip. */
+  const verdict = (() => {
+    if (!sampleE164) return { state: "unknown" as const, label: "Enter a valid number", detail: null as string | null };
+    if (eligibility.isLoading) return { state: "unknown" as const, label: "Checking…", detail: null };
+    const e = eligibility.data;
+    if (!e) return { state: "unknown" as const, label: "Unavailable", detail: null };
+    if (!e.customer)
+      return {
+        state: "eligible" as const,
+        label: "Eligible",
+        detail: "No contact on file for this number yet — the first prompt would send immediately.",
+      };
+    if (e.customer.opt_in_consent)
+      return {
+        state: "blocked" as const,
+        label: "Not eligible — already opted in",
+        detail: "This contact already consented, so Temaro never re-sends the opt-in prompt.",
+      };
+    if (e.isExcluded)
+      return {
+        state: "blocked" as const,
+        label: "Not eligible — excluded number",
+        detail: "This number is on your exclusion list, so no automated SMS goes out to it.",
+      };
+    if (e.lastAttempt) {
+      const ageMs = Date.now() - new Date(e.lastAttempt.created_at).getTime();
+      const remaining = Math.ceil((effectiveCooldown * 60_000 - ageMs) / 60_000);
+      const when = new Date(e.lastAttempt.created_at).toLocaleString();
+      if (remaining > 0)
+        return {
+          state: "blocked" as const,
+          label: `Cooldown — ${remaining} min left`,
+          detail: `Last prompt ${e.lastAttempt.status} at ${when}. Your cooldown is ${effectiveCooldown} min per contact, so a new prompt is blocked until it elapses.`,
+        };
+      return {
+        state: "eligible" as const,
+        label: "Eligible",
+        detail: `Last prompt ${e.lastAttempt.status} at ${when} — older than the ${effectiveCooldown} min cooldown.`,
+      };
+    }
+    return {
+      state: "eligible" as const,
+      label: "Eligible",
+      detail: "Contact on file with no opt-in prompt attempts recorded yet.",
+    };
+  })();
+
 
   const test = useMutation({
     mutationFn: async () => {
