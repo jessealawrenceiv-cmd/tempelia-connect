@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { getPublicQuote, respondToQuote } from "@/lib/quote-public.functions";
 import { depositBalanceAfterDeposit, depositCustomerLine } from "@/lib/deposit";
+import { BackToTimelineEventLink } from "@/components/BackToTimelineEventLink";
 
 export const Route = createFileRoute("/quote/$quoteId")({
   head: () => ({
