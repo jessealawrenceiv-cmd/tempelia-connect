@@ -89,3 +89,36 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
       throw new Error(`Send failed — ${msg}`);
     }
   });
+
+function validateBatch(data: unknown): { customerIds: string[] } {
+  const { customerIds } = (data ?? {}) as { customerIds?: unknown };
+  if (!Array.isArray(customerIds) || customerIds.length === 0) {
+    throw new Error("Select at least one contact");
+  }
+  if (customerIds.length > 50) throw new Error("Select at most 50 contacts at a time");
+  const ids = customerIds.filter((v): v is string => typeof v === "string" && v.length >= 8);
+  if (ids.length !== customerIds.length) throw new Error("Invalid customerId in selection");
+  return { customerIds: Array.from(new Set(ids)) };
+}
+
+/** Bulk send: one prompt per selected contact, each independently enforced. */
+export const sendOptInPromptBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(validateBatch)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { loadPromptContext, sendPromptToCustomer } = await import("./opt-in-prompt.server");
+    const { profile, excludedDigits } = await loadPromptContext(supabase as never, userId);
+
+    const results = [] as Awaited<ReturnType<typeof sendPromptToCustomer>>[];
+    for (const id of data.customerIds) {
+      results.push(
+        await sendPromptToCustomer(supabase as never, userId, id, profile, excludedDigits),
+      );
+    }
+    return {
+      sent: results.filter((r) => r.ok).length,
+      failed: results.filter((r) => !r.ok).length,
+      results,
+    };
+  });
