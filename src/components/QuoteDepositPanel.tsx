@@ -197,9 +197,11 @@ export function QuoteDepositPanel({ quote }: Props) {
       : null);
   const focusedIncomingRef = useRef<string | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
+  const [jumpedId, setJumpedId] = useState<string | null>(null);
   const [jumpMiss, setJumpMiss] = useState<
     { id: string; reason: "filtered" | "missing" | "empty" } | null
   >(null);
+
 
   function clearJumpParams() {
     if (typeof window === "undefined") return;
@@ -237,12 +239,24 @@ export function QuoteDepositPanel({ quote }: Props) {
 
     setJumpMiss(null);
     setAuditCursor(idx);
+    setJumpedId(incomingEventId);
     requestAnimationFrame(() => {
-      entryRefs.current[incomingEventId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const el = entryRefs.current[incomingEventId];
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Move keyboard focus onto the row so screen readers announce it on arrival.
+      el?.focus({ preventScroll: true });
       // Clear the jump params (and hash) so refresh / back doesn't re-scroll.
       clearJumpParams();
     });
   }, [incomingEventId, filteredAudit, audit, auditLoading]);
+
+  // Fade the arrival highlight after a moment, keeping focus where it is.
+  useEffect(() => {
+    if (!jumpedId) return;
+    const t = setTimeout(() => setJumpedId(null), 6000);
+    return () => clearTimeout(t);
+  }, [jumpedId]);
+
 
 
 
@@ -814,6 +828,7 @@ export function QuoteDepositPanel({ quote }: Props) {
               const received = row.status === "deposit_received";
               const actor = p.actor_email || p.actor_user_id || "unknown";
               const isActive = idx === auditCursor && filteredAudit.length > 1;
+              const isJumped = jumpedId === row.id;
               return (
                 <li
                   key={row.id}
@@ -821,10 +836,26 @@ export function QuoteDepositPanel({ quote }: Props) {
                   ref={(el) => {
                     entryRefs.current[row.id] = el;
                   }}
-                  className={`relative ${
+                  tabIndex={-1}
+                  aria-current={isJumped ? "true" : undefined}
+                  aria-label={
+                    isJumped
+                      ? `Linked deposit event ${idx + 1} of ${filteredAudit.length}: ${
+                          received ? "deposit received" : "deposit undone"
+                        }, deposit ${money(p.deposit_amount ?? 0)}, balance ${money(
+                          p.balance_remaining ?? 0,
+                        )}, total ${money(p.total_amount ?? quote.total_amount)}, by ${actor}`
+                      : undefined
+                  }
+                  className={`relative outline-none ${
                     isActive ? "-ml-2 rounded-sm border-l-2 border-primary bg-primary/5 pl-2" : ""
+                  } ${
+                    isJumped
+                      ? "-ml-2 rounded-sm bg-primary/10 pl-2 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      : ""
                   }`}
                 >
+
 
                   <span
                     className={`absolute -left-[21px] top-1 h-2 w-2 rounded-full ${
