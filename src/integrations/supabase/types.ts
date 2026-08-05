@@ -440,6 +440,7 @@ export type Database = {
           email: string | null
           id: string
           intake_enabled: boolean
+          last_test_phone: string | null
           opt_in_prompt_cooldown_minutes: number
           opt_in_prompt_template: string | null
           owner_phone: string | null
@@ -461,6 +462,7 @@ export type Database = {
           email?: string | null
           id: string
           intake_enabled?: boolean
+          last_test_phone?: string | null
           opt_in_prompt_cooldown_minutes?: number
           opt_in_prompt_template?: string | null
           owner_phone?: string | null
@@ -482,6 +484,7 @@ export type Database = {
           email?: string | null
           id?: string
           intake_enabled?: boolean
+          last_test_phone?: string | null
           opt_in_prompt_cooldown_minutes?: number
           opt_in_prompt_template?: string | null
           owner_phone?: string | null
