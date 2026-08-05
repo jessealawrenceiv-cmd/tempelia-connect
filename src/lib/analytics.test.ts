@@ -107,3 +107,45 @@ describe("analytics", () => {
     expect(resetMock).toHaveBeenCalled();
   });
 });
+
+describe("deposit jump timing", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setEnv("phc_test", "us");
+  });
+
+  it("includes a rounded duration_ms when measured", () => {
+    const { trackDepositJump } = createAnalytics(fakePosthog);
+    trackDepositJump({
+      kind: "success",
+      quoteId: "q",
+      eventId: "e",
+      source: "eventId",
+      durationMs: 123.6,
+    });
+    expect(captureMock).toHaveBeenCalledWith("deposit_jump_success", {
+      quote_id: "q",
+      event_id: "e",
+      source: "eventId",
+      duration_ms: 124,
+    });
+  });
+
+  it("omits duration_ms when not measured", () => {
+    const { trackDepositJump } = createAnalytics(fakePosthog);
+    trackDepositJump({
+      kind: "miss",
+      quoteId: "q",
+      eventId: "e",
+      reason: "not_found",
+      source: null,
+      durationMs: null,
+    });
+    expect(captureMock).toHaveBeenCalledWith("deposit_jump_miss", {
+      quote_id: "q",
+      event_id: "e",
+      reason: "not_found",
+      source: null,
+    });
+  });
+});
