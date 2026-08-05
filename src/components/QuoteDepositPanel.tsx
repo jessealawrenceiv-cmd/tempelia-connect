@@ -1249,7 +1249,12 @@ export function QuoteDepositPanel({ quote }: Props) {
                 copy json
               </button>
               <button
-                onClick={() => setDebugLog([])}
+                onClick={() => {
+                  setDebugLog([]);
+                  void clearDepositJumpDebugEvents({ data: { quoteId: quote.id } })
+                    .then(() => toast.success("Debug log cleared (saved entries removed)."))
+                    .catch(() => toast.error("Cleared on screen, but saved entries remain."));
+                }}
                 disabled={debugLog.length === 0}
                 className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
               >
@@ -1265,7 +1270,7 @@ export function QuoteDepositPanel({ quote }: Props) {
           </div>
           {debugLog.length === 0 ? (
             <div className="mono text-[11px] text-muted-foreground">
-              // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log.
+              // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log. entries are saved and reloaded after refresh.
             </div>
           ) : (
             <ol className="max-h-64 space-y-2 overflow-auto rounded-sm border border-violet/20 bg-charcoal/40 p-2">
