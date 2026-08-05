@@ -10,6 +10,9 @@ import {
   type DepositSelection,
 } from "@/lib/deposit";
 import { markQuoteDeposit, DEPOSIT_AUDIT_ACTION } from "@/lib/deposit.functions";
+import { previewQuoteSms } from "@/lib/quote-sms.functions";
+import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
+import { downloadCsv } from "@/lib/missed-calls-csv";
 
 type Props = {
   quote: {
@@ -23,6 +26,8 @@ type Props = {
     deposit_paid: boolean;
     deposit_paid_at: string | null;
     status: string;
+    customer_first_name?: string | null;
+    customer_last_name?: string | null;
   };
 };
 
@@ -37,10 +42,34 @@ type AuditRow = {
   created_at: string;
 };
 
+type AuditPayload = {
+  quote_id?: string;
+  actor_user_id?: string;
+  actor_email?: string;
+  actor_is_owner?: boolean;
+  deposit_amount?: number;
+  total_amount?: number;
+  balance_remaining?: number;
+  previous_paid?: boolean;
+  previous_paid_at?: string | null;
+  new_paid?: boolean;
+  new_paid_at?: string | null;
+};
+
+function parsePayload(row: AuditRow): AuditPayload {
+  try {
+    return JSON.parse(row.message_sent ?? "{}") as AuditPayload;
+  } catch {
+    return {};
+  }
+}
+
 export function QuoteDepositPanel({ quote }: Props) {
   const qc = useQueryClient();
   const markFn = useServerFn(markQuoteDeposit);
+  const previewFn = useServerFn(previewQuoteSms);
   const [busy, setBusy] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const total = Number(quote.total_amount ?? 0);
   const deposit = Number(quote.deposit_amount ?? 0);
@@ -60,15 +89,21 @@ export function QuoteDepositPanel({ quote }: Props) {
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data ?? []).filter((r) => {
-        try {
-          return JSON.parse(r.message_sent ?? "{}").quote_id === quote.id;
-        } catch {
-          return false;
-        }
-      });
+      return (data ?? []).filter((r) => parsePayload(r as AuditRow).quote_id === quote.id);
     },
     enabled: quote.deposit_required,
+  });
+
+  const {
+    data: preview,
+    isFetching: previewLoading,
+    error: previewError,
+    refetch: refetchPreview,
+  } = useQuery({
+    queryKey: ["quote-sms-preview", quote.id],
+    queryFn: () => previewFn({ data: { quoteId: quote.id } }),
+    enabled: showPreview,
+    staleTime: 0,
   });
 
   async function act(paid: boolean) {
@@ -79,6 +114,7 @@ export function QuoteDepositPanel({ quote }: Props) {
       toast.success(paid ? "Deposit marked received." : "Deposit receipt undone.");
       qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["quote-deposit-audit", quote.id] });
+      qc.invalidateQueries({ queryKey: ["quote-sms-preview", quote.id] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Update failed");
     } finally {
@@ -86,16 +122,141 @@ export function QuoteDepositPanel({ quote }: Props) {
     }
   }
 
+  function copyPreview() {
+    if (!preview?.message) return;
+    navigator.clipboard
+      .writeText(preview.message)
+      .then(() => toast.success("SMS text copied."))
+      .catch(() => toast.error("Copy failed."));
+  }
+
+  function exportAudit() {
+    const rows: DepositAuditCsvRow[] = (audit ?? [])
+      .slice()
+      .reverse()
+      .map((row) => {
+        const p = parsePayload(row);
+        const name = [quote.customer_first_name, quote.customer_last_name]
+          .filter(Boolean)
+          .join(" ");
+        return {
+          created_at: row.created_at,
+          status: row.status,
+          quote_id: quote.id,
+          quote_short_id: quote.id.slice(0, 8),
+          customer_name: name,
+          actor_email: p.actor_email ?? "",
+          actor_user_id: p.actor_user_id ?? "",
+          actor_is_owner: p.actor_is_owner == null ? "" : String(p.actor_is_owner),
+          deposit_amount: p.deposit_amount != null ? p.deposit_amount.toFixed(2) : "",
+          total_amount: p.total_amount != null ? p.total_amount.toFixed(2) : "",
+          balance_remaining: p.balance_remaining != null ? p.balance_remaining.toFixed(2) : "",
+          previous_paid: p.previous_paid == null ? "" : String(p.previous_paid),
+          previous_paid_at: p.previous_paid_at ?? "",
+          new_paid: p.new_paid == null ? "" : String(p.new_paid),
+          new_paid_at: p.new_paid_at ?? "",
+        };
+      });
+    if (rows.length === 0) {
+      toast.error("No deposit audit entries to export yet.");
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    downloadCsv(`deposit-audit-${quote.id.slice(0, 8)}-${stamp}.csv`, buildDepositAuditCsv(rows));
+    toast.success(`Exported ${rows.length} entr${rows.length === 1 ? "y" : "ies"}`);
+  }
+
+  const previewButton = (
+    <button
+      onClick={() => {
+        if (showPreview) {
+          refetchPreview();
+        } else {
+          setShowPreview(true);
+        }
+      }}
+      className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
+    >
+      {showPreview ? "refresh sms preview" : "deposit sms preview"}
+    </button>
+  );
+
+  const previewBlock = showPreview && (
+    <div className="rounded-sm border border-border bg-charcoal/40 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          // outbound sms preview · not sent
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={copyPreview}
+            disabled={!preview?.message}
+            className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper disabled:opacity-50"
+          >
+            copy sms text
+          </button>
+          <button
+            onClick={() => setShowPreview(false)}
+            className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-paper"
+          >
+            hide
+          </button>
+        </div>
+      </div>
+
+      {previewLoading && (
+        <div className="mono text-[11px] text-muted-foreground">building preview…</div>
+      )}
+      {previewError && (
+        <div className="mono text-[11px] text-orange">
+          {previewError instanceof Error ? previewError.message : "Preview failed"}
+        </div>
+      )}
+
+      {preview && (
+        <>
+          <pre className="mono whitespace-pre-wrap break-words rounded-sm border border-border/60 bg-background/60 p-3 text-[12px] text-paper">
+{preview.message}
+          </pre>
+          <div className="mono flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span>
+              {preview.chars} chars · {preview.segments} segment
+              {preview.segments === 1 ? "" : "s"}
+              {preview.unicode ? " · unicode" : ""}
+            </span>
+            <span>from {preview.fromNumber ?? "— no number provisioned"}</span>
+            <span>to {preview.toNumber ?? "— no phone on quote"}</span>
+            {preview.cooldownMinutesLeft > 0 && (
+              <span className="text-orange">
+                cooldown {preview.cooldownMinutesLeft}m left
+              </span>
+            )}
+            {!preview.sendable && <span className="text-orange">not sendable as-is</span>}
+          </div>
+          <div className="mono text-[10px] uppercase tracking-widest text-moss">
+            {preview.depositLine
+              ? "// deposit wording included above"
+              : "// no deposit wording — quote has no deposit"}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   if (!quote.deposit_required) {
     return (
-      <div className="rounded-sm border border-border bg-background/50 p-4">
-        <div className="label-eyebrow mb-1">Deposit</div>
-        <div className="mono text-[11px] uppercase tracking-widest text-muted-foreground">
-          // no deposit required on this quote
+      <div className="rounded-sm border border-border bg-background/50 p-4 space-y-3">
+        <div>
+          <div className="label-eyebrow mb-1">Deposit</div>
+          <div className="mono text-[11px] uppercase tracking-widest text-muted-foreground">
+            // no deposit required on this quote
+          </div>
+          <div className="mt-2 mono text-sm">
+            Balance remaining <span className="text-paper">{money(total)}</span>
+          </div>
         </div>
-        <div className="mt-2 mono text-sm">
-          Balance remaining <span className="text-paper">{money(total)}</span>
-        </div>
+        <div className="flex gap-2">{previewButton}</div>
+        {previewBlock}
       </div>
     );
   }
@@ -148,9 +309,9 @@ export function QuoteDepositPanel({ quote }: Props) {
         </div>
       )}
 
-      {quote.status !== "archived" && (
-        <div className="flex gap-2">
-          {quote.deposit_paid ? (
+      <div className="flex flex-wrap gap-2">
+        {quote.status !== "archived" &&
+          (quote.deposit_paid ? (
             <button
               disabled={busy}
               onClick={() => act(false)}
@@ -166,38 +327,58 @@ export function QuoteDepositPanel({ quote }: Props) {
             >
               {busy ? "…" : "mark deposit received"}
             </button>
-          )}
-        </div>
-      )}
+          ))}
+        {previewButton}
+        <button
+          onClick={exportAudit}
+          className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
+        >
+          export deposit audit (csv)
+        </button>
+      </div>
+
+      {previewBlock}
 
       {audit && audit.length > 0 && (
-        <div className="border-t border-border pt-2">
-          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-            // deposit audit trail
+        <div className="border-t border-border pt-3">
+          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+            // deposit status timeline · {audit.length} entr{audit.length === 1 ? "y" : "ies"}
           </div>
-          <ul className="space-y-1">
+          <ol className="relative space-y-3 border-l border-border/70 pl-4">
             {audit.map((row) => {
-              let actor = "unknown";
-              try {
-                const p = JSON.parse(row.message_sent ?? "{}");
-                actor = p.actor_email || p.actor_user_id || "unknown";
-              } catch {
-                /* ignore */
-              }
+              const p = parsePayload(row);
+              const received = row.status === "deposit_received";
+              const actor = p.actor_email || p.actor_user_id || "unknown";
               return (
-                <li key={row.id} className="mono text-[11px] text-muted-foreground">
+                <li key={row.id} className="relative">
                   <span
-                    className={
-                      row.status === "deposit_received" ? "text-moss" : "text-orange"
-                    }
-                  >
-                    {row.status.replace(/_/g, " ")}
-                  </span>{" "}
-                  · {actor} · {new Date(row.created_at).toLocaleString("en-US")}
+                    className={`absolute -left-[21px] top-1 h-2 w-2 rounded-full ${
+                      received ? "bg-moss" : "bg-orange"
+                    }`}
+                  />
+                  <div className="mono text-[11px]">
+                    <span className={received ? "text-moss" : "text-orange"}>
+                      {received ? "deposit received" : "deposit undone"}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {new Date(row.created_at).toLocaleString("en-US")}
+                    </span>
+                  </div>
+                  <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    by {actor}
+                    {p.actor_is_owner === false ? " (staff)" : ""}
+                  </div>
+                  <div className="mono text-[10px] text-muted-foreground">
+                    {p.deposit_amount != null && <>deposit {money(p.deposit_amount)} · </>}
+                    {p.balance_remaining != null && (
+                      <>balance {money(p.balance_remaining)}</>
+                    )}
+                  </div>
                 </li>
               );
             })}
-          </ul>
+          </ol>
         </div>
       )}
     </div>
