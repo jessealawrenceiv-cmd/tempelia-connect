@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { depositBalanceAfterDeposit } from "@/lib/deposit";
+import { BackToTimelineEventLink } from "@/components/BackToTimelineEventLink";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/$quoteId/print")({
   component: PrintQuotePage,
