@@ -205,6 +205,16 @@ export function QuoteDepositPanel({ quote }: Props) {
   const [jumpMiss, setJumpMiss] = useState<
     { id: string; reason: DepositJumpMissReason } | null
   >(null);
+  const jumpMissHeadingRef = useRef<HTMLHeadingElement | null>(null);
+
+  // Pull keyboard focus onto the not-found heading so the message is read at once.
+  useEffect(() => {
+    if (!jumpMiss) return;
+    const t = requestAnimationFrame(() => {
+      jumpMissHeadingRef.current?.focus({ preventScroll: false });
+    });
+    return () => cancelAnimationFrame(t);
+  }, [jumpMiss]);
 
 
   function clearJumpParams() {
