@@ -253,6 +253,42 @@ export function OptInPromptSettingsPanel({
     },
   });
 
+  /**
+   * When preview validation passes and the matched contact's stored number is
+   * not already the normalized E.164 form, write the normalized value back so
+   * the database matches exactly what Twilio would be handed. Runs once per
+   * (contact, number) pair.
+   */
+  const normalizedWrites = useRef<Set<string>>(new Set());
+  const normalizeCustomerPhone = useMutation({
+    mutationFn: async ({ id, e164 }: { id: string; e164: string }) => {
+      const { error } = await supabase
+        .from("customers")
+        .update({ phone_number: e164 })
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+      return e164;
+    },
+    onSuccess: (e164) => {
+      toast.success(`Contact number normalized to ${e164}`);
+      qc.invalidateQueries({ queryKey: ["opt-in-eligibility"] });
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof Error ? e.message : "Could not save normalized number");
+    },
+  });
+
+  const matchedCustomer = eligibility.data?.customer ?? null;
+  useEffect(() => {
+    if (!sampleE164 || !matchedCustomer) return;
+    if (matchedCustomer.phone_number === sampleE164) return;
+    const key = `${matchedCustomer.id}:${sampleE164}`;
+    if (normalizedWrites.current.has(key)) return;
+    normalizedWrites.current.add(key);
+    normalizeCustomerPhone.mutate({ id: matchedCustomer.id, e164: sampleE164 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sampleE164, matchedCustomer?.id, matchedCustomer?.phone_number]);
+
   /** Derived verdict for the preview eligibility strip. */
   const verdict = (() => {
     if (!sampleE164) return { state: "unknown" as const, label: "Enter a valid number", detail: null as string | null };
@@ -705,6 +741,19 @@ export function OptInPromptSettingsPanel({
                 : "—"}
             </dd>
           </div>
+          {sampleE164 && matchedCustomer && (
+            <div className="flex justify-between gap-3">
+              <dt>Stored on contact</dt>
+              <dd className={matchedCustomer.phone_number === sampleE164 ? "text-moss" : "text-primary"}>
+                {matchedCustomer.phone_number === sampleE164
+                  ? `${sampleE164} · matches`
+                  : normalizeCustomerPhone.isPending
+                    ? `${matchedCustomer.phone_number} · saving ${sampleE164}…`
+                    : `${matchedCustomer.phone_number} · normalizing`}
+              </dd>
+            </div>
+          )}
+
           <div className="flex justify-between gap-3">
             <dt>From</dt>
             <dd className="text-paper">{fromNumber || "no Temaro number provisioned"}</dd>
