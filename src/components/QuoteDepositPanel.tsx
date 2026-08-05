@@ -475,6 +475,7 @@ export function QuoteDepositPanel({ quote }: Props) {
               );
             })}
           </ol>
+          )}
         </div>
       )}
     </div>
