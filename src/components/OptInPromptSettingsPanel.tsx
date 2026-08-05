@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { sendTestOptInPrompt, getTestSmsStatus } from "@/lib/opt-in-prompt.functions";
+import { saveOptInPromptSettings } from "@/lib/opt-in-prompt-settings.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeToE164 } from "@/lib/phone";
