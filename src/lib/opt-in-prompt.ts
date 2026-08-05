@@ -38,3 +38,65 @@ export function buildOptInPrompt(businessName: string, template?: string | null)
     .slice(0, OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH);
   return `${leadIn} ${OPT_IN_PROMPT_COMPLIANCE_TEXT}`.trim();
 }
+
+export type TemplateIssue = { level: "error" | "warning"; message: string };
+
+/** The only placeholder the lead-in supports. */
+export const OPT_IN_PROMPT_PLACEHOLDERS = ["business"] as const;
+
+/**
+ * Validates the owner's lead-in template. Errors block saving; warnings are
+ * advisory (e.g. a missing {business} placeholder, which means the message
+ * goes out without naming the sender). The compliant YES-to-opt-in / STOP body
+ * is appended separately and is never validated or altered here.
+ */
+export function validateOptInPromptTemplate(raw: string | null | undefined): TemplateIssue[] {
+  const issues: TemplateIssue[] = [];
+  const value = (raw ?? "").trim();
+
+  if (value.length > OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH) {
+    issues.push({
+      level: "error",
+      message: `Lead-in must be ${OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH} characters or fewer (currently ${value.length}).`,
+    });
+  }
+
+  const tokens = value.match(/\{[^{}]*\}/g) ?? [];
+  const unknown = Array.from(
+    new Set(
+      tokens.filter(
+        (t) => !OPT_IN_PROMPT_PLACEHOLDERS.includes(t.slice(1, -1).trim().toLowerCase() as "business"),
+      ),
+    ),
+  );
+  if (unknown.length > 0) {
+    issues.push({
+      level: "error",
+      message: `Unsupported placeholder ${unknown.join(", ")} — only {business} is available, and anything else is sent literally.`,
+    });
+  }
+
+  if (/\{[^{}]*$|^[^{}]*\}/.test(value) && tokens.length === 0 && /[{}]/.test(value)) {
+    issues.push({
+      level: "error",
+      message: "Unbalanced braces — write the placeholder exactly as {business}.",
+    });
+  }
+
+  if (value && !/\{business\}/.test(value)) {
+    if (/\{\s*business\s*\}/i.test(value)) {
+      issues.push({
+        level: "error",
+        message: "Placeholder must be written exactly as {business} — lowercase, no spaces.",
+      });
+    } else {
+      issues.push({
+        level: "warning",
+        message:
+          "No {business} placeholder — the prompt will go out without naming your business. Carriers expect the sender to be identified.",
+      });
+    }
+  }
+
+  return issues;
+}
