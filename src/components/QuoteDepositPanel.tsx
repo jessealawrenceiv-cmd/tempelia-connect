@@ -15,6 +15,7 @@ import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
 import {
+  consumeDepositJump,
   parseDepositDeepLink,
   resolveDepositJump,
   type DepositJumpMissReason,
