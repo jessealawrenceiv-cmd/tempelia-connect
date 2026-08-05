@@ -282,6 +282,16 @@ export function QuoteDepositPanel({ quote }: Props) {
         reason: jumpMiss?.reason ?? null,
         msSinceMiss,
       });
+      // Persist for the operator analytics page; never block the UI on it.
+      void recordDepositJumpRecovery({
+        data: {
+          action,
+          quoteId: quote.id,
+          eventId: jumpMiss?.id ?? null,
+          reason: jumpMiss?.reason ?? null,
+          msSinceMiss,
+        },
+      }).catch(() => {});
       logDepositJumpDebug("deposit_jump_recovery", payload);
     },
     [jumpMiss, quote.id, logDepositJumpDebug],
