@@ -15,6 +15,10 @@ import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
+import {
+  DepositInlinePreviewDialog,
+  type DepositInlinePreviewTarget,
+} from "@/components/DepositInlinePreviewDialog";
 
 type Props = {
   quote: {
@@ -74,6 +78,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [auditQuery, setAuditQuery] = useState("");
   const [openPreviewId, setOpenPreviewId] = useState<string | null>(null);
+  const [inlinePreview, setInlinePreview] = useState<DepositInlinePreviewTarget | null>(null);
   const openModeRef = useRef<"hover" | "keyboard" | null>(null);
   const currentBalanceRemaining =
     Number(quote.total_amount ?? 0) - (quote.deposit_paid ? Number(quote.deposit_amount ?? 0) : 0);
@@ -800,8 +805,20 @@ export function QuoteDepositPanel({ quote }: Props) {
                       balanceAtEvent={money(p.balance_remaining ?? 0)}
                       quoteTotal={money(p.total_amount ?? quote.total_amount)}
                       currentBalance={money(currentBalanceRemaining)}
-                      quoteHref={`/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`}
-                      customerHref={`/quote/${p.quote_id ?? quote.id}${eventLinkSuffix(row.id)}`}
+                      onPreviewQuote={() =>
+                        setInlinePreview({
+                          kind: "quote",
+                          shortId: (p.quote_id ?? quote.id).slice(0, 8),
+                          href: `/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`,
+                        })
+                      }
+                      onPreviewCustomer={() =>
+                        setInlinePreview({
+                          kind: "customer",
+                          shortId: (p.quote_id ?? quote.id).slice(0, 8),
+                          href: `/quote/${p.quote_id ?? quote.id}${eventLinkSuffix(row.id)}`,
+                        })
+                      }
                       onCopyShortId={() => copyShortId(p.quote_id ?? quote.id)}
                       onCopyShareLink={() => copyShareLink(row.id)}
                     />
