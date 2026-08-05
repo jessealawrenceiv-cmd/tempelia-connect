@@ -15,6 +15,7 @@ import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
 import {
+  consumeDepositJump,
   parseDepositDeepLink,
   resolveDepositJump,
   type DepositJumpMissReason,
@@ -211,11 +212,31 @@ export function QuoteDepositPanel({ quote }: Props) {
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
   }
 
+  // Disables the scroll-jump entirely after the first attempt in this mount, so
+  // re-renders / lingering params can never re-scroll the timeline.
+  const jumpDisabledRef = useRef(false);
+
   useEffect(() => {
-    if (!incomingEventId || focusedIncomingRef.current === incomingEventId) return;
+    if (!incomingEventId || jumpDisabledRef.current) return;
+    if (focusedIncomingRef.current === incomingEventId) return;
     if (auditLoading) return;
 
     focusedIncomingRef.current = incomingEventId;
+    jumpDisabledRef.current = true;
+
+    // Already handled this link earlier in the session (back/forward/refresh):
+    // strip the params and leave the scroll position alone.
+    const allowed = consumeDepositJump(
+      typeof window === "undefined" ? null : window.sessionStorage,
+      location.pathname,
+      incomingEventId,
+    );
+    if (!allowed) {
+      clearJumpParams();
+      return;
+    }
+
+
     const resolution = resolveDepositJump(
       incomingEventId,
       filteredAudit.map((r) => r.id),

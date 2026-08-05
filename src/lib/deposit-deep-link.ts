@@ -95,3 +95,39 @@ export function resolveDepositJump(
 
   return { kind: "miss", reason, fallbackIndex: 0 };
 }
+
+/**
+ * One-shot consumption of a deposit deep link.
+ *
+ * A shared link may still carry ?eventId= after we scroll (SSR replay, browser
+ * back/forward restore, or a manual refresh where the address bar was never
+ * rewritten). We mark the link as consumed in sessionStorage so the scroll-jump
+ * runs at most once per document/route, then simply strip the params on any
+ * later visit instead of yanking the viewport again.
+ */
+export function depositJumpKey(pathname: string, eventId: string) {
+  return `temaro:deposit-jump:${pathname}:${eventId}`;
+}
+
+type JumpStorage = Pick<Storage, "getItem" | "setItem">;
+
+/**
+ * Returns true when the jump should run (and marks it consumed), false when this
+ * link was already handled in this session.
+ */
+export function consumeDepositJump(
+  storage: JumpStorage | null | undefined,
+  pathname: string,
+  eventId: string,
+): boolean {
+  if (!storage) return true;
+  const key = depositJumpKey(pathname, eventId);
+  try {
+    if (storage.getItem(key)) return false;
+    storage.setItem(key, "1");
+  } catch {
+    // Private-mode / quota failures shouldn't block the jump.
+    return true;
+  }
+  return true;
+}
