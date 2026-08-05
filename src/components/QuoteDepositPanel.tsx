@@ -828,6 +828,7 @@ export function QuoteDepositPanel({ quote }: Props) {
               const received = row.status === "deposit_received";
               const actor = p.actor_email || p.actor_user_id || "unknown";
               const isActive = idx === auditCursor && filteredAudit.length > 1;
+              const isJumped = jumpedId === row.id;
               return (
                 <li
                   key={row.id}
@@ -835,10 +836,26 @@ export function QuoteDepositPanel({ quote }: Props) {
                   ref={(el) => {
                     entryRefs.current[row.id] = el;
                   }}
-                  className={`relative ${
+                  tabIndex={-1}
+                  aria-current={isJumped ? "true" : undefined}
+                  aria-label={
+                    isJumped
+                      ? `Linked deposit event ${idx + 1} of ${filteredAudit.length}: ${
+                          received ? "deposit received" : "deposit undone"
+                        }, deposit ${money(p.deposit_amount ?? 0)}, balance ${money(
+                          p.balance_remaining ?? 0,
+                        )}, total ${money(p.total_amount ?? quote.total_amount)}, by ${actor}`
+                      : undefined
+                  }
+                  className={`relative outline-none ${
                     isActive ? "-ml-2 rounded-sm border-l-2 border-primary bg-primary/5 pl-2" : ""
+                  } ${
+                    isJumped
+                      ? "-ml-2 rounded-sm bg-primary/10 pl-2 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      : ""
                   }`}
                 >
+
 
                   <span
                     className={`absolute -left-[21px] top-1 h-2 w-2 rounded-full ${
