@@ -166,7 +166,7 @@ export const getDepositRecoveryStats = createServerFn({ method: "GET" })
     await recordAdminAccess({
       actorUserId: context.userId,
       functionName: "getDepositRecoveryStats",
-      outcome: "ok",
+      outcome: "allowed",
       rowCount: all.length,
       detail: `${data.days}d window`,
     });
