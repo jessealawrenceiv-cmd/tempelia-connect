@@ -44,6 +44,10 @@ import {
   type DebugOutcomeFilter,
   type DebugRangeFilter,
 } from "@/lib/deposit-jump-debug-filter";
+import {
+  buildDepositJumpDebugCsv,
+  depositJumpDebugCsvFilename,
+} from "@/lib/deposit-jump-debug-csv";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
@@ -1452,6 +1456,28 @@ export function QuoteDepositPanel({ quote }: Props) {
               >
                 copy json
               </button>
+              <button
+                onClick={() => {
+                  const csv = buildDepositJumpDebugCsv(
+                    filteredDebugLog.map((e) => ({
+                      ts: e.ts,
+                      event: e.event,
+                      correlationId: e.correlationId,
+                      payload: e.payload,
+                    })),
+                  );
+                  downloadCsv(depositJumpDebugCsvFilename(quote.id.slice(0, 8)), csv);
+                  toast.success(
+                    `Exported ${filteredDebugLog.length} debug entr${
+                      filteredDebugLog.length === 1 ? "y" : "ies"
+                    } to CSV.`,
+                  );
+                }}
+                disabled={filteredDebugLog.length === 0}
+                title="Download the saved debug entries currently shown as a CSV file"
+                className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
+              >
+                export csv
               <button
                 onClick={() => {
                   setDebugLog([]);
