@@ -58,18 +58,19 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
     const from = prof?.twilio_phone_number;
     if (!from) throw new Error("Provision your Temaro number in Settings before sending.");
 
-    const link = `${PROJECT_PUBLIC_BASE}/quote/${q.id}`;
-    const validLine = q.valid_until
-      ? ` Valid until ${new Date(q.valid_until).toLocaleDateString("en-US")}.`
-      : "";
-    const { depositCustomerLine } = await import("./deposit");
-    const depositLine = depositCustomerLine({
+    const { buildQuoteSmsBody } = await import("./quote-sms-body");
+    const { message } = buildQuoteSmsBody({
+      firstName: q.customer_first_name,
+      businessName: biz,
+      quoteId: q.id,
+      validUntil: q.valid_until,
+      total: q.total_amount,
       depositRequired: q.deposit_required,
       depositAmount: q.deposit_amount,
-      total: q.total_amount,
+      publicBase: PROJECT_PUBLIC_BASE,
+      stopSuffix: STOP_SUFFIX,
     });
-    const depositSuffix = depositLine ? ` ${depositLine}` : "";
-    const message = `Hi ${q.customer_first_name || "there"}, here's your quote from ${biz}: ${link}.${validLine}${depositSuffix}${STOP_SUFFIX}`;
+
 
     try {
       const res = await sendTwilioSms(from, q.customer_phone, message);
