@@ -14,7 +14,7 @@ import { markQuoteDeposit, DEPOSIT_AUDIT_ACTION } from "@/lib/deposit.functions"
 import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DepositRowPopover } from "@/components/DepositRowPopover";
 
 type Props = {
   quote: {
