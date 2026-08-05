@@ -74,6 +74,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [auditQuery, setAuditQuery] = useState("");
   const [openPreviewId, setOpenPreviewId] = useState<string | null>(null);
+  const openModeRef = useRef<"hover" | "keyboard" | null>(null);
   const currentBalanceRemaining =
     Number(quote.total_amount ?? 0) - (quote.deposit_paid ? Number(quote.deposit_amount ?? 0) : 0);
   const [auditAction, setAuditAction] = useState<"all" | "deposit_received" | "deposit_undone">(
@@ -666,14 +667,32 @@ export function QuoteDepositPanel({ quote }: Props) {
                   <div className="mono text-[11px]">
                     <Popover
                       open={openPreviewId === row.id}
-                      onOpenChange={(o) => setOpenPreviewId(o ? row.id : null)}
+                      onOpenChange={(o) => {
+                        if (!o) openModeRef.current = null;
+                        setOpenPreviewId(o ? row.id : null);
+                      }}
                     >
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          onMouseEnter={() => setOpenPreviewId(row.id)}
-                          onMouseLeave={() => setOpenPreviewId((c) => (c === row.id ? null : c))}
-                          className={`underline decoration-dotted underline-offset-2 ${
+                          aria-label={`Preview quote ${(p.quote_id ?? quote.id).slice(0, 8)} deposit details`}
+                          onPointerDown={() => {
+                            openModeRef.current = "keyboard";
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") openModeRef.current = "keyboard";
+                            if (e.key === "Escape") setOpenPreviewId(null);
+                          }}
+                          onMouseEnter={() => {
+                            if (openPreviewId === row.id) return;
+                            openModeRef.current = "hover";
+                            setOpenPreviewId(row.id);
+                          }}
+                          onMouseLeave={() => {
+                            if (openModeRef.current !== "hover") return;
+                            setOpenPreviewId((c) => (c === row.id ? null : c));
+                          }}
+                          className={`rounded-sm underline decoration-dotted underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                             received ? "text-moss" : "text-orange"
                           }`}
                         >
@@ -682,10 +701,23 @@ export function QuoteDepositPanel({ quote }: Props) {
                       </PopoverTrigger>
                       <PopoverContent
                         align="start"
+                        role="dialog"
+                        aria-label="Deposit event quote preview"
                         className="w-64 space-y-1 border-border bg-card p-3"
-                        onMouseEnter={() => setOpenPreviewId(row.id)}
-                        onMouseLeave={() => setOpenPreviewId((c) => (c === row.id ? null : c))}
+                        onOpenAutoFocus={(e) => {
+                          // Hover-opened popovers must not steal focus; keyboard/click opens trap focus.
+                          if (openModeRef.current === "hover") e.preventDefault();
+                        }}
+                        onEscapeKeyDown={() => setOpenPreviewId(null)}
+                        onMouseEnter={() => {
+                          if (openModeRef.current === "hover") setOpenPreviewId(row.id);
+                        }}
+                        onMouseLeave={() => {
+                          if (openModeRef.current !== "hover") return;
+                          setOpenPreviewId((c) => (c === row.id ? null : c));
+                        }}
                       >
+
                         <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                           quote preview
                         </div>
