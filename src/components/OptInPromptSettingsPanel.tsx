@@ -137,6 +137,8 @@ export function OptInPromptSettingsPanel({
       ? null
       : testParsed.error;
 
+  const sampleParsed = normalizeToE164(samplePhone.trim());
+
   const test = useMutation({
     mutationFn: async () => {
       if (!testTarget) throw new Error(testPhoneError ?? "Enter a valid phone number.");
