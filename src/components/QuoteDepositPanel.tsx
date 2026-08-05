@@ -288,6 +288,19 @@ export function QuoteDepositPanel({ quote }: Props) {
       .catch(() => toast.error("Copy failed."));
   }
 
+  function copyShareLink(eventId: string) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("eventId", eventId);
+    url.searchParams.set("depositEvent", eventId);
+    url.searchParams.delete("returnTo");
+    url.hash = "";
+    navigator.clipboard
+      .writeText(url.toString())
+      .then(() => toast.success("Share link copied."))
+      .catch(() => toast.error("Copy failed."));
+  }
+
+
 
   function exportAudit() {
     const rows: DepositAuditCsvRow[] = filteredAudit
