@@ -113,7 +113,7 @@ export const previewQuoteSms = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { STOP_SUFFIX } = await import("./twilio.server");
-    const { buildQuoteSmsBody, smsSegmentCount } = await import("./quote-sms-body");
+    const { buildQuoteSmsBody, smsSegmentDetail } = await import("./quote-sms-body");
 
     const { data: q, error: qErr } = await supabase
       .from("quotes")
