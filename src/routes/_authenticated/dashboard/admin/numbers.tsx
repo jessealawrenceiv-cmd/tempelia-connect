@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader } from "@/components/AppShell";
-import { listProvisionedNumbers } from "@/lib/admin.functions";
-import { Shield, Phone, MessageSquare, DollarSign, ExternalLink, AlertTriangle } from "lucide-react";
+import { listProvisionedNumbers, listAdminAccessLog } from "@/lib/admin.functions";
+import { Shield, Phone, MessageSquare, DollarSign, ExternalLink, AlertTriangle, ScrollText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/numbers")({
   component: AdminNumbersPage,
@@ -128,10 +128,89 @@ function AdminNumbersPage() {
             </div>
           )}
         </div>
+        <AdminAccessLogPanel />
+
         <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
           Churned rows are still incurring Twilio rental until released. Base cost estimate ≈ $1.15/mo per US local number — Twilio console is the billing source of truth.
         </p>
       </div>
+    </div>
+  );
+}
+
+const fmtStamp = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+
+function AdminAccessLogPanel() {
+  const logFn = useServerFn(listAdminAccessLog);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin", "access-log"],
+    queryFn: () => logFn(),
+    retry: false,
+  });
+
+  return (
+    <div className="panel mt-6 overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-border bg-card px-5 py-3">
+        <ScrollText size={14} className="text-orange" />
+        <div className="label-eyebrow">Admin access log</div>
+        <span className="mono ml-auto text-[10px] uppercase tracking-widest text-muted-foreground">
+          last 25 calls
+        </span>
+      </div>
+      {isLoading ? (
+        <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+      ) : error ? (
+        <div className="p-6 text-sm text-orange">{(error as Error).message}</div>
+      ) : (data?.length ?? 0) === 0 ? (
+        <div className="p-6 text-sm text-muted-foreground">No admin access recorded yet.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-background">
+                <Th>Timestamp</Th>
+                <Th>Function</Th>
+                <Th>Outcome</Th>
+                <Th className="text-right">Rows</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {data!.map((r) => {
+                const blocked = r.outcome === "rate_limited";
+                return (
+                  <tr
+                    key={r.id}
+                    className={`border-b border-border/50 last:border-0 ${blocked ? "bg-orange/5" : ""}`}
+                  >
+                    <Td><span className="mono text-xs">{fmtStamp(r.occurredAt)}</span></Td>
+                    <Td><span className="mono text-xs">{r.functionName}</span></Td>
+                    <Td>
+                      <span
+                        className={`mono inline-block rounded-sm border px-2 py-0.5 text-[10px] uppercase tracking-widest ${
+                          blocked
+                            ? "border-orange/50 bg-orange/10 text-orange"
+                            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                        }`}
+                      >
+                        {r.outcome.replace(/_/g, " ")}
+                      </span>
+                      {r.detail ? (
+                        <div className="mono mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {r.detail}
+                        </div>
+                      ) : null}
+                    </Td>
+                    <Td className="text-right"><span className="mono">{r.rowCount ?? "—"}</span></Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
