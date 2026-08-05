@@ -283,6 +283,18 @@ export function QuoteDepositPanel({ quote }: Props) {
   const debugFiltersActive =
     debugEventFilter !== "all" || debugOutcomeFilter !== "all" || debugRangeFilter !== "all";
 
+  // On-screen persistence status so a tester can see whether saving/loading
+  // saved debug rows is actually working (especially right after a refresh).
+  type PersistStatus =
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "loaded"; count: number; at: number }
+    | { kind: "saving" }
+    | { kind: "saved"; at: number }
+    | { kind: "error"; op: "load" | "save" | "clear"; message: string; at: number };
+  const [persistStatus, setPersistStatus] = useState<PersistStatus>({ kind: "idle" });
+  const errText = (e: unknown) =>
+    e instanceof Error ? e.message : typeof e === "string" ? e : "unknown error";
 
   const logDepositJumpDebug = useCallback(
     (
@@ -303,13 +315,19 @@ export function QuoteDepositPanel({ quote }: Props) {
       if (debugMode) {
         setDebugLog((prev) => [entry, ...prev].slice(0, 50));
         // Persist so the test run is still reviewable after a refresh.
+        setPersistStatus({ kind: "saving" });
         void saveDepositJumpDebugEvent({
           data: { quoteId: quote.id, event, payload: stamped, correlationId },
-        }).catch(() => {});
+        })
+          .then(() => setPersistStatus({ kind: "saved", at: Date.now() }))
+          .catch((e) =>
+            setPersistStatus({ kind: "error", op: "save", message: errText(e), at: Date.now() }),
+          );
       }
     },
     [debugMode, quote.id, correlationId],
   );
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
