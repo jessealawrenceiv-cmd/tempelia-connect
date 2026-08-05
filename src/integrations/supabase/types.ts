@@ -207,10 +207,12 @@ export type Database = {
       deposit_jump_recovery_events: {
         Row: {
           action: string
+          attempt_index: number | null
           correlation_id: string | null
           created_at: string
           event_id: string | null
           id: string
+          ms_since_first_miss: number | null
           ms_since_miss: number | null
           occurred_at: string
           quote_id: string | null
@@ -219,10 +221,12 @@ export type Database = {
         }
         Insert: {
           action: string
+          attempt_index?: number | null
           correlation_id?: string | null
           created_at?: string
           event_id?: string | null
           id?: string
+          ms_since_first_miss?: number | null
           ms_since_miss?: number | null
           occurred_at?: string
           quote_id?: string | null
@@ -231,10 +235,12 @@ export type Database = {
         }
         Update: {
           action?: string
+          attempt_index?: number | null
           correlation_id?: string | null
           created_at?: string
           event_id?: string | null
           id?: string
+          ms_since_first_miss?: number | null
           ms_since_miss?: number | null
           occurred_at?: string
           quote_id?: string | null
