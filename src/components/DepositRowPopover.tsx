@@ -37,8 +37,9 @@ export function DepositRowPopover({
   balanceAtEvent,
   quoteTotal,
   currentBalance,
-  quoteHref,
-  customerHref,
+  onPreviewQuote,
+  onPreviewCustomer,
+
   onCopyShortId,
   onCopyShareLink,
 }: DepositRowPopoverProps) {
