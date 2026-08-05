@@ -346,6 +346,10 @@ export function OptInPromptSettingsPanel({
 
   const preview = buildOptInPrompt(savedBusinessName, draft);
 
+  /** Exactly what a test send delivers today: saved template, not the draft. */
+  const sentPreview = buildOptInPrompt(savedBusinessName, template ?? "");
+
+
   const segments = preview.length <= 160 ? 1 : Math.ceil(preview.length / 153);
 
   /** Downloads the rendered preview + metadata as a small record file. */
