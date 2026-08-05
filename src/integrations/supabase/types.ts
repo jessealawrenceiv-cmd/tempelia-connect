@@ -470,9 +470,12 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allow_deposit_override_per_quote: boolean
           business_name: string
           created_at: string
           decline_followup_mode: string
+          default_deposit_fixed_amount: number | null
+          default_deposit_type: string
           email: string | null
           id: string
           intake_enabled: boolean
@@ -492,9 +495,12 @@ export type Database = {
           voicemail_enabled: boolean
         }
         Insert: {
+          allow_deposit_override_per_quote?: boolean
           business_name?: string
           created_at?: string
           decline_followup_mode?: string
+          default_deposit_fixed_amount?: number | null
+          default_deposit_type?: string
           email?: string | null
           id: string
           intake_enabled?: boolean
@@ -514,9 +520,12 @@ export type Database = {
           voicemail_enabled?: boolean
         }
         Update: {
+          allow_deposit_override_per_quote?: boolean
           business_name?: string
           created_at?: string
           decline_followup_mode?: string
+          default_deposit_fixed_amount?: number | null
+          default_deposit_type?: string
           email?: string | null
           id?: string
           intake_enabled?: boolean
@@ -549,6 +558,13 @@ export type Database = {
           customer_phone: string
           decline_followup_sent_at: string | null
           decline_reason: string | null
+          deposit_amount: number
+          deposit_custom_type: string | null
+          deposit_custom_value: number | null
+          deposit_paid: boolean
+          deposit_paid_at: string | null
+          deposit_required: boolean
+          deposit_selection: string
           description: string | null
           id: string
           job_site_address: string
@@ -579,6 +595,13 @@ export type Database = {
           customer_phone: string
           decline_followup_sent_at?: string | null
           decline_reason?: string | null
+          deposit_amount?: number
+          deposit_custom_type?: string | null
+          deposit_custom_value?: number | null
+          deposit_paid?: boolean
+          deposit_paid_at?: string | null
+          deposit_required?: boolean
+          deposit_selection?: string
           description?: string | null
           id?: string
           job_site_address: string
@@ -609,6 +632,13 @@ export type Database = {
           customer_phone?: string
           decline_followup_sent_at?: string | null
           decline_reason?: string | null
+          deposit_amount?: number
+          deposit_custom_type?: string | null
+          deposit_custom_value?: number | null
+          deposit_paid?: boolean
+          deposit_paid_at?: string | null
+          deposit_required?: boolean
+          deposit_selection?: string
           description?: string | null
           id?: string
           job_site_address?: string
@@ -920,6 +950,17 @@ export type Database = {
         }[]
       }
       mcp_rate_limits_prune: { Args: never; Returns: undefined }
+      resolve_deposit_amount: {
+        Args: {
+          _custom_type: string
+          _custom_value: number
+          _default_fixed: number
+          _default_type: string
+          _selection: string
+          _total: number
+        }
+        Returns: number
+      }
       team_seat_usage: {
         Args: never
         Returns: {
