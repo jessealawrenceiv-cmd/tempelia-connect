@@ -157,7 +157,13 @@ export function OptInPromptSettingsPanel({
     (i) => i.level === "warning" && i.message.includes("{business}"),
   );
 
-  const preview = buildOptInPrompt(businessName ?? "", draft);
+  /** The exact value substituted for {business}; buildOptInPrompt falls back to "Our team". */
+  const savedBusinessName = (businessName ?? "").trim();
+  const resolvedBusiness = savedBusinessName || "Our team";
+  const templateDirty = draft.trim() !== (template ?? "").trim();
+
+  const preview = buildOptInPrompt(savedBusinessName, draft);
+
 
   /** Lead-ins that pass validation, shown as one-tap fixes. */
   const exampleTemplates = [
