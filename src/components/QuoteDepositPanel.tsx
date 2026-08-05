@@ -378,7 +378,7 @@ export function QuoteDepositPanel({ quote }: Props) {
           onClick={exportAudit}
           className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
         >
-          export deposit audit (csv)
+          export deposit audit (csv){auditFiltersActive ? " · filtered" : ""}
         </button>
       </div>
 
@@ -387,10 +387,61 @@ export function QuoteDepositPanel({ quote }: Props) {
       {audit && audit.length > 0 && (
         <div className="border-t border-border pt-3">
           <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-            // deposit status timeline · {audit.length} entr{audit.length === 1 ? "y" : "ies"}
+            // deposit status timeline · {filteredAudit.length} of {audit.length} entr
+            {audit.length === 1 ? "y" : "ies"}
           </div>
+
+          <div className="mb-3 flex flex-wrap gap-2">
+            <input
+              value={auditQuery}
+              onChange={(e) => setAuditQuery(e.target.value)}
+              placeholder="search actor, quote id, amount, date…"
+              className="mono min-w-[200px] flex-1 rounded-sm border border-border bg-background/60 px-2 py-1.5 text-[11px] text-paper placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            />
+            <select
+              value={auditAction}
+              onChange={(e) =>
+                setAuditAction(e.target.value as "all" | "deposit_received" | "deposit_undone")
+              }
+              className="mono rounded-sm border border-border bg-background/60 px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground focus:border-primary focus:outline-none"
+            >
+              <option value="all">all actions</option>
+              <option value="deposit_received">received</option>
+              <option value="deposit_undone">undone</option>
+            </select>
+            <select
+              value={auditActor}
+              onChange={(e) => setAuditActor(e.target.value)}
+              className="mono max-w-[220px] rounded-sm border border-border bg-background/60 px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground focus:border-primary focus:outline-none"
+            >
+              <option value="all">all actors</option>
+              {auditActors.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+            {auditFiltersActive && (
+              <button
+                onClick={() => {
+                  setAuditQuery("");
+                  setAuditAction("all");
+                  setAuditActor("all");
+                }}
+                className="mono rounded-sm border border-border px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-orange hover:text-orange"
+              >
+                clear
+              </button>
+            )}
+          </div>
+
+          {filteredAudit.length === 0 ? (
+            <div className="mono text-[11px] text-muted-foreground">
+              // no entries match the current filters
+            </div>
+          ) : (
           <ol className="relative space-y-3 border-l border-border/70 pl-4">
-            {audit.map((row) => {
+            {filteredAudit.map((row) => {
               const p = parsePayload(row);
               const received = row.status === "deposit_received";
               const actor = p.actor_email || p.actor_user_id || "unknown";
