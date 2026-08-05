@@ -650,16 +650,16 @@ export function QuoteDepositPanel({ quote }: Props) {
                     )}
                   </div>
                   <div className="mono mt-1 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest">
-                    <Link
-                      to="/dashboard/quotes/$quoteId/print"
-                      params={{ quoteId: p.quote_id ?? quote.id }}
+                    <a
+                      href={`/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`}
                       target="_blank"
+                      rel="noreferrer"
                       className="text-violet underline decoration-dotted underline-offset-2 hover:text-violet/80"
                     >
                       open quote {(p.quote_id ?? quote.id).slice(0, 8)} ↗
-                    </Link>
+                    </a>
                     <a
-                      href={`/quote/${p.quote_id ?? quote.id}`}
+                      href={`/quote/${p.quote_id ?? quote.id}${eventLinkSuffix(row.id)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-steel underline decoration-dotted underline-offset-2 hover:text-steel/80"
@@ -667,6 +667,7 @@ export function QuoteDepositPanel({ quote }: Props) {
                       customer view ↗
                     </a>
                   </div>
+
 
                 </li>
               );
