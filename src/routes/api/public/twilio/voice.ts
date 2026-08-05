@@ -19,6 +19,8 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
       POST: async ({ request }) => {
         const { verifyTwilioRequest } = await import("@/lib/twilio-verify.server");
         const { ok, form } = await verifyTwilioRequest(request);
+        const { recordWebhookEvent } = await import("@/lib/webhook-log.server");
+        await recordWebhookEvent({ request, form, signatureValid: ok, eventKind: "missed_call" });
         if (!ok) return new Response("Forbidden", { status: 403 });
         const from = String(form.get("From") ?? "").trim();
         const to = String(form.get("To") ?? "").trim();
