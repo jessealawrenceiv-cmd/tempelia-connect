@@ -74,6 +74,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [auditQuery, setAuditQuery] = useState("");
   const [openPreviewId, setOpenPreviewId] = useState<string | null>(null);
+  const openModeRef = useRef<"hover" | "keyboard" | null>(null);
   const currentBalanceRemaining =
     Number(quote.total_amount ?? 0) - (quote.deposit_paid ? Number(quote.deposit_amount ?? 0) : 0);
   const [auditAction, setAuditAction] = useState<"all" | "deposit_received" | "deposit_undone">(
