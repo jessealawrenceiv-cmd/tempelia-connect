@@ -1506,8 +1506,19 @@ export function QuoteDepositPanel({ quote }: Props) {
                 onClick={() => {
                   setDebugLog([]);
                   void clearDepositJumpDebugEvents({ data: { quoteId: quote.id } })
-                    .then(() => toast.success("Debug log cleared (saved entries removed)."))
-                    .catch(() => toast.error("Cleared on screen, but saved entries remain."));
+                    .then(() => {
+                      setPersistStatus({ kind: "loaded", count: 0, at: Date.now() });
+                      toast.success("Debug log cleared (saved entries removed).");
+                    })
+                    .catch((e) => {
+                      setPersistStatus({
+                        kind: "error",
+                        op: "clear",
+                        message: errText(e),
+                        at: Date.now(),
+                      });
+                      toast.error("Cleared on screen, but saved entries remain.");
+                    });
                 }}
                 disabled={debugLog.length === 0}
                 className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
@@ -1522,6 +1533,44 @@ export function QuoteDepositPanel({ quote }: Props) {
               </button>
             </div>
           </div>
+
+          {/* Persistence status: shows whether saving/loading saved rows works. */}
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mono flex flex-wrap items-center gap-2 rounded-sm border px-2 py-1 text-[10px] ${
+              persistStatus.kind === "error"
+                ? "border-orange/60 bg-orange/10 text-orange"
+                : "border-steel/40 bg-charcoal/40 text-muted-foreground"
+            }`}
+          >
+            <span className="uppercase tracking-widest">persistence</span>
+            <span className="text-paper">
+              {persistStatus.kind === "idle" && "not checked yet"}
+              {persistStatus.kind === "loading" && "loading saved entries…"}
+              {persistStatus.kind === "loaded" &&
+                `loaded ${persistStatus.count} saved entr${
+                  persistStatus.count === 1 ? "y" : "ies"
+                } at ${new Date(persistStatus.at).toLocaleTimeString()}`}
+              {persistStatus.kind === "saving" && "saving entry…"}
+              {persistStatus.kind === "saved" &&
+                `saved at ${new Date(persistStatus.at).toLocaleTimeString()}`}
+              {persistStatus.kind === "error" &&
+                `${persistStatus.op} failed at ${new Date(
+                  persistStatus.at,
+                ).toLocaleTimeString()} — ${persistStatus.message}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => void reloadSavedDebugLog()}
+              disabled={persistStatus.kind === "loading"}
+              title="Re-read saved entries from the backend to confirm persistence"
+              className="ml-auto rounded-sm border border-violet/40 px-2 py-0.5 uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
+            >
+              {persistStatus.kind === "error" && persistStatus.op === "load" ? "retry load" : "recheck"}
+            </button>
+          </div>
+
 
           {/* Filters: event type, success vs miss, and time range. */}
           <div
