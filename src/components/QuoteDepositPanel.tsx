@@ -682,6 +682,26 @@ export function QuoteDepositPanel({ quote }: Props) {
                     clear filters &amp; jump
                   </button>
                 )}
+                {filteredAudit.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const latest = filteredAudit[0];
+                      setJumpMiss(null);
+                      setAuditCursor(0);
+                      if (latest) {
+                        setJumpedId(latest.id);
+                        requestAnimationFrame(() => {
+                          const el = entryRefs.current[latest.id];
+                          el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          el?.focus({ preventScroll: true });
+                        });
+                      }
+                    }}
+                    className="rounded-sm border border-orange/60 px-2 py-1 text-[10px] uppercase tracking-wider hover:bg-orange/20"
+                  >
+                    show latest deposit
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setJumpMiss(null);
