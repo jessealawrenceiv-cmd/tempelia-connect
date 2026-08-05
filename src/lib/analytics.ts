@@ -86,8 +86,31 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
     }
   }
 
-  return { capture, identify, reset, trackDepositJump };
+  /**
+   * Recovery action taken from the deep-link "not found" empty state — lets us
+   * measure how often a miss ends in the reader bailing to the timeline top.
+   */
+  function trackDepositJumpRecovery(input: {
+    action: "return_to_top" | "show_latest" | "clear_filters" | "dismiss";
+    quoteId: string;
+    eventId: string | null;
+    reason: string | null;
+    msSinceMiss?: number | null;
+  }) {
+    capture("deposit_jump_recovery", {
+      action: input.action,
+      quote_id: input.quoteId,
+      event_id: input.eventId,
+      reason: input.reason,
+      ...(typeof input.msSinceMiss === "number" && Number.isFinite(input.msSinceMiss)
+        ? { ms_since_miss: Math.round(input.msSinceMiss) }
+        : {}),
+    });
+  }
+
+  return { capture, identify, reset, trackDepositJump, trackDepositJumpRecovery };
 }
 
 const defaultAnalytics = createAnalytics();
-export const { capture, identify, reset, trackDepositJump } = defaultAnalytics;
+export const { capture, identify, reset, trackDepositJump, trackDepositJumpRecovery } =
+  defaultAnalytics;
