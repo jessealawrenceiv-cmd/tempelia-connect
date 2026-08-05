@@ -222,6 +222,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   };
   const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
   const debugLogRef = useRef<HTMLDivElement | null>(null);
+  const [debugHydrated, setDebugHydrated] = useState(false);
 
   const logDepositJumpDebug = useCallback(
     (
@@ -234,15 +235,46 @@ export function QuoteDepositPanel({ quote }: Props) {
       console.log(`[deposit-jump-debug] ${event}`, payload);
       if (debugMode) {
         setDebugLog((prev) => [entry, ...prev].slice(0, 50));
+        // Persist so the test run is still reviewable after a refresh.
+        void saveDepositJumpDebugEvent({
+          data: { quoteId: quote.id, event, payload },
+        }).catch(() => {});
       }
     },
-    [debugMode],
+    [debugMode, quote.id],
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(DEBUG_STORAGE_KEY, debugMode ? "true" : "false");
   }, [debugMode]);
+
+  // Rehydrate the saved debug log once, when debug mode is on.
+  useEffect(() => {
+    if (!debugMode || debugHydrated) return;
+    let cancelled = false;
+    setDebugHydrated(true);
+    void listDepositJumpDebugEvents({ data: { quoteId: quote.id, limit: 50 } })
+      .then((rows) => {
+        if (cancelled || !rows?.length) return;
+        setDebugLog((prev) => {
+          const saved: DebugEntry[] = rows.map((r) => ({
+            id: r.id,
+            ts: new Date(r.occurredAt).getTime(),
+            event: r.event,
+            payload: r.payload as Record<string, unknown>,
+          }));
+          const seen = new Set(prev.map((e) => e.id));
+          return [...prev, ...saved.filter((e) => !seen.has(e.id))]
+            .sort((a, b) => b.ts - a.ts)
+            .slice(0, 50);
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [debugMode, debugHydrated, quote.id]);
 
   // Pull keyboard focus onto the not-found heading so the message is read at once.
   useEffect(() => {
