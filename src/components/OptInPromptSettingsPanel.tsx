@@ -341,6 +341,28 @@ export function OptInPromptSettingsPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /**
+   * Re-sends a previous test to the same number using the saved template
+   * (identical to what a fresh test would send today).
+   */
+  const retryTest = useMutation({
+    mutationFn: async (vars: { logId: string; phone: string }) => {
+      return await sendTest({ data: { phone: vars.phone } });
+    },
+    onSuccess: (res) => {
+      setLastTest({
+        to: res.to,
+        sid: res.sid,
+        at: new Date().toLocaleTimeString(),
+        status: res.status,
+      });
+      void pollStatus(res.sid);
+      void qc.invalidateQueries({ queryKey: ["opt-in-prompt-test-history"] });
+      toast.success(`Retry sent to ${res.to}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const issues = validateOptInPromptTemplate(draft);
   const hasError = issues.some((i) => i.level === "error");
   const missingBusiness = issues.some(
