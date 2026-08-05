@@ -70,7 +70,7 @@ export function OptInPromptSettingsPanel({
       const { data, error } = await supabase
         .from("logs")
         .select(
-          "id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash, message_sent",
+          "id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash, message_sent, recipient_phone",
         )
         .eq("user_id", u.user.id)
         .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
