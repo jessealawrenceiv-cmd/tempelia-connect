@@ -24,6 +24,8 @@ export type DepositJumpResult =
       source: string | null;
       durationMs?: number | null;
       correlationId?: string | null;
+      attemptIndex?: number | null;
+      msSinceFirstMiss?: number | null;
     }
   | {
       kind: "miss";
@@ -33,6 +35,8 @@ export type DepositJumpResult =
       source: string | null;
       durationMs?: number | null;
       correlationId?: string | null;
+      attemptIndex?: number | null;
+      msSinceFirstMiss?: number | null;
     };
 
 /** Stable id for one deep-link/empty-state session, shared by every deposit_jump_* event. */
@@ -86,12 +90,22 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
         ? { duration_ms: Math.round(result.durationMs) }
         : {};
     const correlation = result.correlationId ? { correlation_id: result.correlationId } : {};
+    // Retry metadata: only present when this jump followed an earlier miss.
+    const retry = {
+      ...(typeof result.attemptIndex === "number" && Number.isFinite(result.attemptIndex)
+        ? { attempt_index: Math.max(0, Math.round(result.attemptIndex)) }
+        : {}),
+      ...(typeof result.msSinceFirstMiss === "number" && Number.isFinite(result.msSinceFirstMiss)
+        ? { ms_since_first_miss: Math.round(result.msSinceFirstMiss) }
+        : {}),
+    };
     if (result.kind === "success") {
       capture("deposit_jump_success", {
         quote_id: result.quoteId,
         event_id: result.eventId,
         source: result.source,
         ...correlation,
+        ...retry,
         ...timing,
       });
     } else {
@@ -101,6 +115,7 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
         reason: result.reason,
         source: result.source,
         ...correlation,
+        ...retry,
         ...timing,
       });
     }
@@ -111,12 +126,14 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
    * measure how often a miss ends in the reader bailing to the timeline top.
    */
   function trackDepositJumpRecovery(input: {
-    action: "return_to_top" | "show_latest" | "clear_filters" | "dismiss";
+    action: "return_to_top" | "show_latest" | "clear_filters" | "dismiss" | "retry_jump";
     quoteId: string;
     eventId: string | null;
     reason: string | null;
     msSinceMiss?: number | null;
     correlationId?: string | null;
+    attemptIndex?: number | null;
+    msSinceFirstMiss?: number | null;
   }) {
     capture("deposit_jump_recovery", {
       action: input.action,
@@ -124,6 +141,12 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
       event_id: input.eventId,
       reason: input.reason,
       ...(input.correlationId ? { correlation_id: input.correlationId } : {}),
+      ...(typeof input.attemptIndex === "number" && Number.isFinite(input.attemptIndex)
+        ? { attempt_index: Math.max(0, Math.round(input.attemptIndex)) }
+        : {}),
+      ...(typeof input.msSinceFirstMiss === "number" && Number.isFinite(input.msSinceFirstMiss)
+        ? { ms_since_first_miss: Math.round(input.msSinceFirstMiss) }
+        : {}),
       ...(typeof input.msSinceMiss === "number" && Number.isFinite(input.msSinceMiss)
         ? { ms_since_miss: Math.round(input.msSinceMiss) }
         : {}),
