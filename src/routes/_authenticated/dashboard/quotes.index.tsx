@@ -218,6 +218,31 @@ function QuotesListPage() {
                         </td>
                         <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
                         <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
+                        <td className="px-4 py-3 mono text-right whitespace-nowrap">
+                          {!q.deposit_required ? (
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">none</span>
+                          ) : (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span>{fmtMoney(Number(q.deposit_amount))}</span>
+                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                {depositSelectionLabel(
+                                  q.deposit_selection as DepositSelection,
+                                  q.deposit_custom_type as "percentage" | "fixed" | null,
+                                  q.deposit_custom_value,
+                                )}
+                              </span>
+                              {q.deposit_paid ? (
+                                <span className="rounded-sm bg-moss/30 px-2 py-0.5 text-[10px] uppercase tracking-wider text-paper">
+                                  received {q.deposit_paid_at ? fmtDate(q.deposit_paid_at) : ""}
+                                </span>
+                              ) : (
+                                <span className="rounded-sm bg-orange/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-orange">
+                                  unpaid
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider mono ${STATUS_STYLES[q.status]}`}>
                             {q.status}
