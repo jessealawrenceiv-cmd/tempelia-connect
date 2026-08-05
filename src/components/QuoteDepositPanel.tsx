@@ -1631,7 +1631,12 @@ export function QuoteDepositPanel({ quote }: Props) {
               ))}
             </ol>
           )}
+
+          <div className="mono mt-2 text-[10px] text-muted-foreground">
+            // retention: saved entries are auto-purged nightly — kept 30 days, max 1,000 newest per account.
+          </div>
         </div>
+
       )}
 
       <DepositInlinePreviewDialog target={inlinePreview} onClose={() => setInlinePreview(null)} />
