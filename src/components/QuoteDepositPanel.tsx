@@ -263,6 +263,13 @@ export function QuoteDepositPanel({ quote }: Props) {
   // re-renders / lingering params can never re-scroll the timeline.
   const jumpDisabledRef = useRef(false);
 
+  // Mount timestamp — the clock for "how long did the deep-link jump take?".
+  const mountedAtRef = useRef<number>(
+    typeof performance !== "undefined" ? performance.now() : Date.now()
+  );
+  const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const sinceMount = () => Math.round(nowMs() - mountedAtRef.current);
+
   useEffect(() => {
     if (!incomingEventId || jumpDisabledRef.current) return;
     if (focusedIncomingRef.current === incomingEventId) return;
@@ -283,6 +290,8 @@ export function QuoteDepositPanel({ quote }: Props) {
       return;
     }
 
+    // Time from mount to the point the resolution is known (data loaded + matched).
+    const resolvedAtMs = sinceMount();
 
     const resolution = resolveDepositJump(
       incomingEventId,
@@ -293,23 +302,6 @@ export function QuoteDepositPanel({ quote }: Props) {
     if (resolution.kind === "miss") {
       // Graceful fallback: the linked event isn't in view. Explain why and land
       // the reader at the closest available spot (first entry / timeline top).
-      const missPayload = {
-        quote_id: quote.id,
-        event_id: incomingEventId,
-        reason: resolution.reason,
-        source: incomingSource,
-        fallback_index: resolution.fallbackIndex,
-        filtered_count: filteredAudit.length,
-        total_audit_count: audit?.length ?? 0,
-      };
-      trackDepositJump({
-        kind: "miss",
-        quoteId: quote.id,
-        eventId: incomingEventId,
-        reason: resolution.reason,
-        source: incomingSource,
-      });
-      logDepositJumpDebug("deposit_jump_miss", missPayload);
       setJumpMiss({ id: incomingEventId, reason: resolution.reason });
       setAuditCursor(resolution.fallbackIndex);
       // Strip the deep-link params immediately (not in a rAF) so a refresh or
@@ -320,24 +312,32 @@ export function QuoteDepositPanel({ quote }: Props) {
         const target = fallbackId ? entryRefs.current[fallbackId] : timelineRef.current;
         (target ?? timelineRef.current)?.scrollIntoView({ behavior: "smooth", block: "center" });
         if (fallbackId) entryRefs.current[fallbackId]?.focus({ preventScroll: true });
+        // Measured once the fallback row/timeline is actually on screen.
+        const durationMs = sinceMount();
+        const missPayload = {
+          quote_id: quote.id,
+          event_id: incomingEventId,
+          reason: resolution.reason,
+          source: incomingSource,
+          fallback_index: resolution.fallbackIndex,
+          filtered_count: filteredAudit.length,
+          total_audit_count: audit?.length ?? 0,
+          duration_ms: durationMs,
+          resolved_ms: resolvedAtMs,
+        };
+        trackDepositJump({
+          kind: "miss",
+          quoteId: quote.id,
+          eventId: incomingEventId,
+          reason: resolution.reason,
+          source: incomingSource,
+          durationMs,
+        });
+        logDepositJumpDebug("deposit_jump_miss", missPayload);
       });
       return;
     }
 
-    const successPayload = {
-      quote_id: quote.id,
-      event_id: incomingEventId,
-      source: incomingSource,
-      resolved_index: resolution.index,
-      filtered_count: filteredAudit.length,
-    };
-    trackDepositJump({
-      kind: "success",
-      quoteId: quote.id,
-      eventId: incomingEventId,
-      source: incomingSource,
-    });
-    logDepositJumpDebug("deposit_jump_success", successPayload);
     setJumpMiss(null);
     setAuditCursor(resolution.index);
     setJumpedId(incomingEventId);
@@ -348,6 +348,26 @@ export function QuoteDepositPanel({ quote }: Props) {
       el?.focus({ preventScroll: true });
       // Clear the jump params (and hash) so refresh / back doesn't re-scroll.
       clearJumpParams();
+      // Measured at the moment the target row is rendered, scrolled to and focused.
+      const durationMs = sinceMount();
+      const successPayload = {
+        quote_id: quote.id,
+        event_id: incomingEventId,
+        source: incomingSource,
+        resolved_index: resolution.index,
+        filtered_count: filteredAudit.length,
+        duration_ms: durationMs,
+        resolved_ms: resolvedAtMs,
+        row_found: Boolean(el),
+      };
+      trackDepositJump({
+        kind: "success",
+        quoteId: quote.id,
+        eventId: incomingEventId,
+        source: incomingSource,
+        durationMs,
+      });
+      logDepositJumpDebug("deposit_jump_success", successPayload);
     });
   }, [incomingEventId, filteredAudit, audit, auditLoading]);
 
