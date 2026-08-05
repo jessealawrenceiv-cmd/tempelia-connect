@@ -171,6 +171,30 @@ export type Database = {
         }
         Relationships: []
       }
+      debug_log_cleanup_runs: {
+        Row: {
+          created_at: string
+          debug_deleted_count: number
+          id: string
+          ran_at: string
+          recovery_deleted_count: number
+        }
+        Insert: {
+          created_at?: string
+          debug_deleted_count?: number
+          id?: string
+          ran_at?: string
+          recovery_deleted_count?: number
+        }
+        Update: {
+          created_at?: string
+          debug_deleted_count?: number
+          id?: string
+          ran_at?: string
+          recovery_deleted_count?: number
+        }
+        Relationships: []
+      }
       deposit_jump_debug_events: {
         Row: {
           correlation_id: string | null
@@ -1017,6 +1041,10 @@ export type Database = {
       admin_access_log_prune: { Args: never; Returns: undefined }
       claim_team_invite: { Args: { _invite_id: string }; Returns: boolean }
       claim_team_invites: { Args: never; Returns: number }
+      cleanup_deposit_jump_debug_events: {
+        Args: { _max_age?: string; _max_per_user?: number }
+        Returns: number
+      }
       cleanup_expired_team_invites: { Args: never; Returns: number }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
