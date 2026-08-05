@@ -199,7 +199,11 @@ export function QuoteDepositPanel({ quote }: Props) {
         };
       });
     if (rows.length === 0) {
-      toast.error("No deposit audit entries to export yet.");
+      toast.error(
+        auditFiltersActive
+          ? "No entries match the current filters."
+          : "No deposit audit entries to export yet.",
+      );
       return;
     }
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
