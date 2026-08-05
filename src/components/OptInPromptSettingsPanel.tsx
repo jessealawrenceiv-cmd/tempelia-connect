@@ -992,9 +992,8 @@ export function OptInPromptSettingsPanel({
                   const left = Math.ceil((endsAt.getTime() - Date.now()) / 60_000);
                   const blocking = left > 0;
                   const failedSend = ["failed", "undelivered"].includes(row.status ?? "");
-                  const retryTo = row.recipient_phone
-                    ? normalizeToE164(row.recipient_phone).e164
-                    : null;
+                  const retryParsed = normalizeToE164(row.recipient_phone);
+                  const retryTo = retryParsed.ok ? retryParsed.e164 : null;
                   const retrying =
                     retryTest.isPending && retryTest.variables?.logId === row.id;
                   return (
