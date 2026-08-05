@@ -14,7 +14,7 @@ import { markQuoteDeposit, DEPOSIT_AUDIT_ACTION } from "@/lib/deposit.functions"
 import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DepositRowPopover } from "@/components/DepositRowPopover";
 
 type Props = {
   quote: {
@@ -790,156 +790,22 @@ export function QuoteDepositPanel({ quote }: Props) {
                     }`}
                   />
                   <div className="mono text-[11px]">
-                    <Popover
+                    <DepositRowPopover
+                      rowId={row.id}
+                      quoteId={p.quote_id ?? quote.id}
+                      received={received}
                       open={openPreviewId === row.id}
-                      onOpenChange={(o) => {
-                        if (!o) {
-                          const id = openPreviewId;
-                          if (id && (openModeRef.current === "keyboard" || popoverFocusedRef.current)) {
-                            requestAnimationFrame(() => triggerRefs.current[id]?.focus());
-                          }
-                          openModeRef.current = null;
-                          popoverFocusedRef.current = false;
-                        }
-                        setOpenPreviewId(o ? row.id : null);
-                      }}
-                    >
+                      onOpenChange={(o) => setOpenPreviewId(o ? row.id : null)}
+                      depositAtEvent={money(p.deposit_amount ?? 0)}
+                      balanceAtEvent={money(p.balance_remaining ?? 0)}
+                      quoteTotal={money(p.total_amount ?? quote.total_amount)}
+                      currentBalance={money(currentBalanceRemaining)}
+                      quoteHref={`/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`}
+                      customerHref={`/quote/${p.quote_id ?? quote.id}${eventLinkSuffix(row.id)}`}
+                      onCopyShortId={() => copyShortId(p.quote_id ?? quote.id)}
+                      onCopyShareLink={() => copyShareLink(row.id)}
+                    />
 
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          ref={(el) => {
-                            triggerRefs.current[row.id] = el;
-                          }}
-                          aria-label={`Preview quote ${(p.quote_id ?? quote.id).slice(0, 8)} deposit details`}
-
-                          onPointerDown={() => {
-                            openModeRef.current = "keyboard";
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              openModeRef.current = "keyboard";
-                              setOpenPreviewId(row.id);
-                            }
-                            if (e.key === "Escape") setOpenPreviewId(null);
-                          }}
-
-                          onMouseEnter={() => {
-                            if (openPreviewId === row.id) return;
-                            openModeRef.current = "hover";
-                            setOpenPreviewId(row.id);
-                          }}
-                          onMouseLeave={() => {
-                            if (openModeRef.current !== "hover") return;
-                            setOpenPreviewId((c) => (c === row.id ? null : c));
-                          }}
-                          className={`rounded-sm underline decoration-dotted underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                            received ? "text-moss" : "text-orange"
-                          }`}
-                        >
-                          {received ? "deposit received" : "deposit undone"}
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align="start"
-                        role="dialog"
-                        aria-labelledby={`deposit-preview-title-${row.id}`}
-                        aria-describedby={`deposit-preview-summary-${row.id}`}
-                        className="w-64 space-y-1 border-border bg-card p-3"
-
-                        onOpenAutoFocus={(e) => {
-                          // Hover-opened popovers must not steal focus; keyboard/click opens trap focus.
-                          if (openModeRef.current === "hover") e.preventDefault();
-                        }}
-                        onFocusCapture={() => {
-                          // Once focus moves inside the popover, treat it as a keyboard interaction
-                          // so Escape/click-outside returns focus to the trigger.
-                          popoverFocusedRef.current = true;
-                          openModeRef.current = "keyboard";
-                        }}
-                        onEscapeKeyDown={() => setOpenPreviewId(null)}
-
-                        onMouseEnter={() => {
-                          if (openModeRef.current === "hover") setOpenPreviewId(row.id);
-                        }}
-                        onMouseLeave={() => {
-                          if (openModeRef.current !== "hover") return;
-                          setOpenPreviewId((c) => (c === row.id ? null : c));
-                        }}
-                      >
-
-                        <h3
-                          id={`deposit-preview-title-${row.id}`}
-                          className="mono text-[10px] uppercase tracking-widest text-muted-foreground"
-                        >
-                          quote preview
-                        </h3>
-
-                        <div className="flex items-center gap-2">
-                          <div className="mono text-[11px] text-foreground">
-                            short id {(p.quote_id ?? quote.id).slice(0, 8)}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => copyShortId(p.quote_id ?? quote.id)}
-                            aria-label={`Copy quote short ID ${(p.quote_id ?? quote.id).slice(0, 8)}`}
-                            className="mono rounded-sm border border-border px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            copy
-                          </button>
-                        </div>
-                        <dl
-                          id={`deposit-preview-summary-${row.id}`}
-                          className="mono space-y-1 text-[11px] text-muted-foreground"
-                        >
-                          <div className="flex justify-between gap-2">
-                            <dt className="text-muted-foreground">deposit at event</dt>
-                            <dd className="text-paper">{money(p.deposit_amount ?? 0)}</dd>
-                          </div>
-                          <div className="flex justify-between gap-2">
-                            <dt className="text-muted-foreground">balance at event</dt>
-                            <dd className="text-paper">{money(p.balance_remaining ?? 0)}</dd>
-                          </div>
-                          <div className="flex justify-between gap-2">
-                            <dt className="text-muted-foreground">quote total</dt>
-                            <dd className="text-paper">{money(p.total_amount ?? quote.total_amount)}</dd>
-                          </div>
-                          <div className="flex justify-between gap-2 border-t border-border/60 pt-1 text-violet">
-                            <dt>current balance</dt>
-                            <dd className="text-paper">{money(currentBalanceRemaining)}</dd>
-                          </div>
-                        </dl>
-
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          <a
-                            href={`/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mono inline-flex items-center rounded-sm border border-violet/60 bg-violet/10 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            open quote ↗
-                          </a>
-                          <a
-                            href={`/quote/${p.quote_id ?? quote.id}${eventLinkSuffix(row.id)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mono inline-flex items-center rounded-sm border border-steel/60 bg-steel/10 px-2 py-1 text-[10px] uppercase tracking-wider text-steel hover:bg-steel/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            customer view ↗
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => copyShareLink(row.id)}
-                            aria-label={`Copy share link for deposit event ${row.id.slice(0, 8)}`}
-                            className="mono inline-flex items-center rounded-sm border border-border bg-background/60 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            copy share link
-                          </button>
-                        </div>
-                      </PopoverContent>
-
-                    </Popover>
                     <span className="text-muted-foreground">
                       {" "}
                       · {new Date(row.created_at).toLocaleString("en-US")}
