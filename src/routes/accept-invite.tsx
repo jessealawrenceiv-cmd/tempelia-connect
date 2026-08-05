@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logTeamInviteEvent } from "@/lib/team-invite-audit";
 
 export const Route = createFileRoute("/accept-invite")({
   ssr: false,
@@ -89,6 +90,14 @@ function AcceptInvitePage() {
       });
       if (rpcError) return setState({ kind: "error", message: rpcError.message });
       justClaimed = ok === true;
+      if (justClaimed)
+        await logTeamInviteEvent({
+          businessOwnerId: invites[0].business_owner_id,
+          teamMemberId: invites[0].invite_id,
+          invitedEmail: email,
+          eventType: "accepted",
+          detail: `${email} accepted the invite`,
+        });
     }
 
     await finish(email, user.id, justClaimed);
@@ -102,6 +111,14 @@ function AcceptInvitePage() {
       });
       setClaiming(null);
       if (error) return setState({ kind: "error", message: error.message });
+      if (ok === true)
+        await logTeamInviteEvent({
+          businessOwnerId: invite.business_owner_id,
+          teamMemberId: invite.invite_id,
+          invitedEmail: email,
+          eventType: "accepted",
+          detail: `${email} accepted the invite`,
+        });
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return setState({ kind: "signed_out" });
       await finish(email, u.user.id, ok === true);

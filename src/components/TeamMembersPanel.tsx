@@ -2,6 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchTeamInviteEvents,
+  logTeamInviteEvent,
+  type TeamInviteEvent,
+} from "@/lib/team-invite-audit";
 
 type Member = {
   id: string;
@@ -24,6 +29,24 @@ const STATUS_STYLE: Record<Status, string> = {
   pending: "border-moss/50 text-moss",
   accepted: "border-violet/50 text-violet",
   expired: "border-destructive/50 text-destructive",
+};
+
+const fmtStamp = (iso: string) =>
+  new Date(iso).toLocaleString([], {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+/** Dispatch-log color coding for audit rows. */
+const EVENT_STYLE: Record<string, string> = {
+  created: "text-moss",
+  resent: "text-violet",
+  accepted: "text-violet",
+  revoked: "text-destructive",
+  expired: "text-destructive",
 };
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—");
@@ -61,15 +84,24 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
       if (!u.user) throw new Error("Not signed in");
       const addr = email.trim().toLowerCase();
       if (!addr) throw new Error("Enter an email address.");
-      const { error } = await supabase
+      const { data: row, error } = await supabase
         .from("team_members")
-        .insert({ business_owner_id: u.user.id, invited_email: addr, role: "staff" });
+        .insert({ business_owner_id: u.user.id, invited_email: addr, role: "staff" })
+        .select("id")
+        .single();
       if (error) throw error;
+      await logTeamInviteEvent({
+        businessOwnerId: u.user.id,
+        teamMemberId: row?.id ?? null,
+        invitedEmail: addr,
+        eventType: "created",
+      });
     },
     onSuccess: () => {
       toast.success("Invite created. Tell them to sign in with that exact email address.");
       setEmail("");
       qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_invite_events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -82,17 +114,35 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
         .update({ invited_at: new Date().toISOString() })
         .eq("id", m.id);
       if (error) throw error;
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user)
+        await logTeamInviteEvent({
+          businessOwnerId: u.user.id,
+          teamMemberId: m.id,
+          invitedEmail: m.invited_email,
+          eventType: "resent",
+        });
       return m;
     },
     onSuccess: (m) => {
       toast.success(`Invite for ${m.invited_email} extended 7 more days.`);
       qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_invite_events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const revoke = useMutation({
     mutationFn: async (m: Member) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user)
+        await logTeamInviteEvent({
+          businessOwnerId: u.user.id,
+          teamMemberId: m.id,
+          invitedEmail: m.invited_email,
+          eventType: "revoked",
+          detail: `${u.user.email ?? "owner"} · ${m.accepted_at ? "access removed" : "pending invite revoked"}`,
+        });
       const { error } = await supabase.from("team_members").delete().eq("id", m.id);
       if (error) throw error;
       return m;
@@ -104,6 +154,7 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
           : `Invite for ${m.invited_email} revoked.`,
       );
       qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_invite_events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -120,6 +171,41 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
   };
 
   const rows = members ?? [];
+
+  const { data: auditRows } = useQuery({
+    queryKey: ["team_invite_events"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return [] as TeamInviteEvent[];
+      return await fetchTeamInviteEvents(u.user.id);
+    },
+    enabled: isStandard,
+  });
+
+  /**
+   * Expiry has no actor — nobody clicks it — so it is derived from the invite
+   * row rather than written to the table, and merged into the same timeline.
+   */
+  const expiryEntries = rows
+    .filter((m) => statusOf(m) === "expired" && m.expires_at)
+    .map((m) => ({
+      id: `exp-${m.id}`,
+      invited_email: m.invited_email,
+      event_type: "expired",
+      detail: "system · 7-day window elapsed",
+      occurred_at: m.expires_at as string,
+    }));
+
+  const timeline = [
+    ...(auditRows ?? []).map((e) => ({
+      id: e.id,
+      invited_email: e.invited_email,
+      event_type: e.event_type,
+      detail: e.detail,
+      occurred_at: e.occurred_at,
+    })),
+    ...expiryEntries,
+  ].sort((a, b) => (a.occurred_at < b.occurred_at ? 1 : -1));
 
   return (
     <div className="panel p-6">
@@ -237,6 +323,39 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
           </div>
         )}
       </div>
+
+      {isStandard && (
+        <div className="mt-6 border-t border-border pt-4">
+          <div className="mono text-[10px] uppercase tracking-widest text-moss">
+            Invite audit log ({timeline.length})
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Append-only record of every invite action — created, resent, accepted, revoked, plus
+            expiries derived from the 7-day window.
+          </p>
+          {timeline.length === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">No invite activity recorded yet.</p>
+          ) : (
+            <div className="mono mt-3 space-y-1 text-[11px]">
+              {timeline.map((e) => (
+                <div
+                  key={e.id}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border/50 pb-1"
+                >
+                  <span className="text-muted-foreground">{fmtStamp(e.occurred_at)}</span>
+                  <span
+                    className={`uppercase tracking-widest ${EVENT_STYLE[e.event_type] ?? "text-muted-foreground"}`}
+                  >
+                    {e.event_type}
+                  </span>
+                  <span className="truncate text-paper">{e.invited_email}</span>
+                  <span className="text-muted-foreground">{e.detail ?? "—"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
