@@ -256,6 +256,7 @@ function SettingsPage() {
           businessName={profile?.business_name}
           template={profile?.opt_in_prompt_template}
           cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
+          ownerPhone={profile?.owner_phone}
         />
 
         <ExcludedNumbersPanel />

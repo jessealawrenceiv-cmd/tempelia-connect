@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { sendTestOptInPrompt } from "@/lib/opt-in-prompt.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -16,14 +18,22 @@ type Props = {
   businessName?: string | null;
   template?: string | null;
   cooldownMinutes?: number | null;
+  ownerPhone?: string | null;
 };
 
 /**
  * Owner-configurable lead-in and cooldown for the missed-call opt-in prompt.
  * The compliant YES-to-opt-in / STOP body is fixed and always appended.
  */
-export function OptInPromptSettingsPanel({ businessName, template, cooldownMinutes }: Props) {
+export function OptInPromptSettingsPanel({
+  businessName,
+  template,
+  cooldownMinutes,
+  ownerPhone,
+}: Props) {
   const qc = useQueryClient();
+  const sendTest = useServerFn(sendTestOptInPrompt);
+  const [lastTest, setLastTest] = useState<{ to: string; sid: string; at: string } | null>(null);
   const [draft, setDraft] = useState("");
   const [cooldown, setCooldown] = useState(String(OPT_IN_PROMPT_COOLDOWN_MINUTES));
 
@@ -55,6 +65,15 @@ export function OptInPromptSettingsPanel({ businessName, template, cooldownMinut
     onSuccess: () => {
       toast.success("Opt-in prompt settings saved.");
       qc.invalidateQueries({ queryKey: ["profile"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const test = useMutation({
+    mutationFn: async () => await sendTest({}),
+    onSuccess: (res) => {
+      setLastTest({ to: res.to, sid: res.sid, at: new Date().toLocaleTimeString() });
+      toast.success(`Test prompt sent to ${res.to}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -131,7 +150,27 @@ export function OptInPromptSettingsPanel({ businessName, template, cooldownMinut
         >
           Reset to default
         </button>
+        <button
+          type="button"
+          onClick={() => test.mutate()}
+          disabled={test.isPending || !ownerPhone}
+          title={ownerPhone ? `Sends to ${ownerPhone}` : "Add your owner mobile number first"}
+          className="rounded-sm border border-primary px-4 py-2 text-xs uppercase tracking-widest text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+        >
+          {test.isPending ? "Sending…" : "Send test SMS"}
+        </button>
       </div>
+
+      <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+        {ownerPhone
+          ? `Test goes to your owner mobile ${ownerPhone} · save first to test edits · same cooldown applies`
+          : "Add an owner mobile number above to enable test sends"}
+      </p>
+      {lastTest && (
+        <p className="mono mt-1 text-[10px] uppercase tracking-widest text-moss">
+          Sent {lastTest.at} → {lastTest.to} · SID {lastTest.sid}
+        </p>
+      )}
     </div>
   );
 }
