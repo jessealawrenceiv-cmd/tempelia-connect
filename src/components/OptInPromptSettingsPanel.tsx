@@ -681,7 +681,7 @@ export function OptInPromptSettingsPanel({
         >
           Reset to default
         </button>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-start gap-2">
           <div>
             <input
               value={testPhone}
@@ -690,16 +690,29 @@ export function OptInPromptSettingsPanel({
               inputMode="tel"
               maxLength={24}
               aria-label="Test phone number"
-              aria-invalid={testPhoneError ? true : undefined}
+              aria-invalid={testPhoneError || testBlockedReason ? true : undefined}
               className={`mono w-48 rounded-sm border bg-background px-3 py-2 text-sm ${
-                testPhoneError ? "border-destructive" : "border-border"
+                testPhoneError || testBlockedReason ? "border-destructive" : "border-border"
               }`}
             />
-            <div className="mono mt-1 w-48 text-[10px] uppercase tracking-widest">
+            <div className="mono mt-1 w-56 space-y-0.5 text-[10px] uppercase tracking-widest">
               {testPhoneError ? (
                 <span className="text-destructive">{testPhoneError}</span>
               ) : testTarget ? (
-                <span className="text-moss">Sends to {testTarget}</span>
+                <>
+                  <div className={testBlockedReason ? "text-muted-foreground" : "text-moss"}>
+                    Normalized (E.164): {testTarget}
+                  </div>
+                  {testCheck.isLoading ? (
+                    <div className="text-muted-foreground">Checking eligibility…</div>
+                  ) : testBlockedReason ? (
+                    <div className="normal-case tracking-normal text-destructive">
+                      [XX] {testBlockedReason}
+                    </div>
+                  ) : (
+                    <div className="text-moss">[OK] Clear to send</div>
+                  )}
+                </>
               ) : (
                 <span className="text-muted-foreground">10-digit US or E.164</span>
               )}
@@ -708,18 +721,21 @@ export function OptInPromptSettingsPanel({
           <button
             type="button"
             onClick={() => test.mutate()}
-            disabled={test.isPending || !testTarget}
+            disabled={test.isPending || !testTarget || !!testBlockedReason}
             title={
               testPhoneError
                 ? testPhoneError
-                : testTarget
-                  ? `Sends to ${testTarget}`
-                  : "Enter a test number or add your owner mobile first"
+                : testBlockedReason
+                  ? testBlockedReason
+                  : testTarget
+                    ? `Sends to ${testTarget}`
+                    : "Enter a test number or add your owner mobile first"
             }
             className="rounded-sm border border-primary px-4 py-2 text-xs uppercase tracking-widest text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
           >
             {test.isPending ? "Sending…" : "Send test SMS"}
           </button>
+
           {ownerPhone && testPhone.trim() !== ownerPhone && (
             <button
               type="button"
