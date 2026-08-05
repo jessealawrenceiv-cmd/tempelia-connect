@@ -69,10 +69,11 @@ export function OptInPromptSettingsPanel({
   } | null>(null);
   const [polling, setPolling] = useState(false);
   /** Attempt count + last check time for the in-progress status poll. */
-  const [pollInfo, setPollInfo] = useState<{ attempts: number; lastCheckedAt: string | null }>({
-    attempts: 0,
-    lastCheckedAt: null,
-  });
+  const [pollInfo, setPollInfo] = useState<{
+    sid: string | null;
+    attempts: number;
+    lastCheckedAt: string | null;
+  }>({ sid: null, attempts: 0, lastCheckedAt: null });
   /** Flipped by the Stop polling control so the loop bails out early. */
   const stopPollingRef = useRef(false);
   const [showRaw, setShowRaw] = useState(false);
@@ -146,17 +147,21 @@ export function OptInPromptSettingsPanel({
   async function pollStatus(sid: string) {
     stopPollingRef.current = false;
     setPolling(true);
-    setPollInfo({ attempts: 0, lastCheckedAt: null });
+    // Resuming the same message keeps its running attempt count.
+    setPollInfo((prev) =>
+      prev.sid === sid ? prev : { sid, attempts: 0, lastCheckedAt: null },
+    );
     try {
       for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         await new Promise((r) => setTimeout(r, i === 0 ? 1500 : 3000));
         if (stopPollingRef.current) break;
         try {
           const m = await checkStatus({ data: { sid } });
-          setPollInfo({
-            attempts: i + 1,
+          setPollInfo((prev) => ({
+            sid,
+            attempts: (prev.sid === sid ? prev.attempts : 0) + 1,
             lastCheckedAt: new Date().toLocaleTimeString(),
-          });
+          }));
           setLastTest((prev) =>
             prev && prev.sid === sid
               ? {
