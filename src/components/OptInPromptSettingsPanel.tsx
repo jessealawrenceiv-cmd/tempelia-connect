@@ -42,6 +42,7 @@ export function OptInPromptSettingsPanel({
   const qc = useQueryClient();
   const sendTest = useServerFn(sendTestOptInPrompt);
   const checkStatus = useServerFn(getTestSmsStatus);
+  const persistSettings = useServerFn(saveOptInPromptSettings);
   const [lastTest, setLastTest] = useState<{
     to: string;
     sid: string;
