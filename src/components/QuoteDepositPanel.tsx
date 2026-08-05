@@ -148,6 +148,27 @@ export function QuoteDepositPanel({ quote }: Props) {
     auditFrom !== "" ||
     auditTo !== "";
 
+  const [auditCursor, setAuditCursor] = useState(0);
+  const entryRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const filterKey = `${term}|${auditAction}|${auditActor}|${auditFrom}|${auditTo}|${filteredAudit.length}`;
+  useEffect(() => {
+    setAuditCursor(0);
+  }, [filterKey]);
+
+  const activeEntry = filteredAudit[auditCursor];
+
+  function goToEntry(next: number) {
+    if (filteredAudit.length === 0) return;
+    const clamped = Math.min(Math.max(next, 0), filteredAudit.length - 1);
+    setAuditCursor(clamped);
+    const id = filteredAudit[clamped]?.id;
+    if (id) {
+      entryRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+
+
 
 
 
