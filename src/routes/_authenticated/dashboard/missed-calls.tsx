@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { getVoicemailProxyUrl } from "@/lib/voicemail.functions";
-import { sendOptInPrompt } from "@/lib/opt-in-prompt.functions";
+import { sendOptInPrompt, sendOptInPromptBatch } from "@/lib/opt-in-prompt.functions";
 import { OPT_IN_PROMPT_ACTION } from "@/lib/opt-in-prompt";
 import { MissedCallDetailSheet, type MissedCallDetail } from "@/components/MissedCallDetailSheet";
 import { useState } from "react";
@@ -95,8 +95,42 @@ function MissedCallsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // --- Bulk mode ---------------------------------------------------------
+  const [bulkMode, setBulkMode] = useState(false);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [summary, setSummary] = useState<BatchSummary | null>(null);
+  const sendBatch = useServerFn(sendOptInPromptBatch);
+  const batch = useMutation({
+    mutationFn: (customerIds: string[]) => sendBatch({ data: { customerIds } }),
+    onSuccess: (res) => {
+      setSummary(res as BatchSummary);
+      setChecked(new Set());
+      if (res.sent > 0) toast.success(`${res.sent} prompt${res.sent === 1 ? "" : "s"} sent`);
+      if (res.failed > 0) toast.error(`${res.failed} skipped or failed`);
+      queryClient.invalidateQueries({ queryKey: ["opt-in-prompts"] });
+      queryClient.invalidateQueries({ queryKey: ["missed-calls"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const rows = data ?? [];
   const needsConsent = rows.filter((r) => r.customers && !r.customers.opt_in_consent).length;
+
+  // One row per contact: bulk selection is per customer, not per call event.
+  const eligibleIds = Array.from(
+    new Set(
+      rows
+        .filter((r) => r.customer_id && r.customers?.opt_in_consent === false)
+        .map((r) => r.customer_id!),
+    ),
+  );
+  const allSelected = eligibleIds.length > 0 && eligibleIds.every((id) => checked.has(id));
+  const toggle = (id: string) =>
+    setChecked((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   return (
     <div>
@@ -107,10 +141,73 @@ function MissedCallsPage() {
           <Stat label="Awaiting consent" value={needsConsent} />
         </div>
 
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setBulkMode((v) => !v);
+              setChecked(new Set());
+              setSummary(null);
+            }}
+            className="rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-paper transition-colors hover:bg-muted"
+          >
+            {bulkMode ? "Exit bulk mode" : "Bulk opt-in prompts"}
+          </button>
+          {bulkMode && (
+            <>
+              <button
+                type="button"
+                disabled={eligibleIds.length === 0}
+                onClick={() => setChecked(allSelected ? new Set() : new Set(eligibleIds))}
+                className="rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper disabled:opacity-40"
+              >
+                {allSelected ? "Clear all" : `Select all (${eligibleIds.length})`}
+              </button>
+              <button
+                type="button"
+                disabled={checked.size === 0 || batch.isPending}
+                onClick={() => batch.mutate(Array.from(checked))}
+                className="rounded-sm border border-violet/60 bg-violet/10 px-3 py-1.5 text-[10px] uppercase tracking-widest text-violet transition-colors hover:bg-violet/20 disabled:opacity-40"
+              >
+                {batch.isPending
+                  ? "Sending…"
+                  : `Send to ${checked.size} selected`}
+              </button>
+            </>
+          )}
+        </div>
+
+        {summary && (
+          <div className="panel p-4">
+            <div className="label-eyebrow mb-2">Batch summary</div>
+            <div className="mono mb-3 text-xs">
+              <span className="text-moss">{summary.sent} sent</span>
+              {" · "}
+              <span className={summary.failed ? "text-destructive" : "text-muted-foreground"}>
+                {summary.failed} skipped/failed
+              </span>
+            </div>
+            <ul className="mono space-y-1 text-[11px]">
+              {summary.results.map((r) => (
+                <li key={r.customerId} className="flex flex-wrap gap-2">
+                  <span className={r.ok ? "text-moss" : "text-destructive"}>
+                    {r.ok ? "OK" : "ERR"}
+                  </span>
+                  <span className="text-muted-foreground">{r.phone ?? r.customerId}</span>
+                  <span className="text-paper">
+                    {r.ok ? `sid ${r.sid ?? "unconfirmed"}` : r.error}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="panel overflow-x-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="border-b border-border bg-muted/40">
               <tr className="text-left">
+                {bulkMode && <Th>Sel</Th>}
                 <Th>Time</Th>
                 <Th>Caller</Th>
                 <Th>Auto-reply</Th>
@@ -123,14 +220,14 @@ function MissedCallsPage() {
             <tbody className="mono divide-y divide-border">
               {isLoading && (
                 <tr>
-                  <td colSpan={7} className="p-5 text-muted-foreground">
+                  <td colSpan={bulkMode ? 8 : 7} className="p-5 text-muted-foreground">
                     Loading…
                   </td>
                 </tr>
               )}
               {!isLoading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-5 text-muted-foreground">
+                  <td colSpan={bulkMode ? 8 : 7} className="p-5 text-muted-foreground">
                     No missed calls yet.
                   </td>
                 </tr>
@@ -140,6 +237,21 @@ function MissedCallsPage() {
                 const canPrompt = !!row.customer_id && row.customers?.opt_in_consent === false;
                 return (
                   <tr key={row.id}>
+                    {bulkMode && (
+                      <Td>
+                        {canPrompt ? (
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${row.customers?.phone_number ?? "contact"}`}
+                            checked={checked.has(row.customer_id!)}
+                            onChange={() => toggle(row.customer_id!)}
+                            className="h-4 w-4 accent-violet"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </Td>
+                    )}
                     <Td>{new Date(row.created_at).toLocaleString()}</Td>
                     <Td>
                       <div>{row.customers?.first_name || "Unknown"}</div>
@@ -210,6 +322,18 @@ function MissedCallsPage() {
     </div>
   );
 }
+
+type BatchSummary = {
+  sent: number;
+  failed: number;
+  results: Array<{
+    customerId: string;
+    ok: boolean;
+    sid?: string | null;
+    error?: string;
+    phone: string | null;
+  }>;
+};
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
