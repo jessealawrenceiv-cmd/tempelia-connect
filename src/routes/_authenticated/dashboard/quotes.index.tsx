@@ -58,6 +58,7 @@ function QuotesListPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [askingId, setAskingId] = useState<string | null>(null);
+  const [depositId, setDepositId] = useState<string | null>(null);
   const sendSmsFn = useServerFn(sendQuoteSms);
   const askWhyFn = useServerFn(sendDeclineFollowup);
   const qc = useQueryClient();
