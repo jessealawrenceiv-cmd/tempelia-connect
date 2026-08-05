@@ -8,6 +8,8 @@ import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel"
 import { WebhookCheckPanel } from "@/components/WebhookCheckPanel";
 import { WebhookEventLogPanel } from "@/components/WebhookEventLogPanel";
 import { DepositDefaultsPanel } from "@/components/DepositDefaultsPanel";
+import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
+
 import { useTeamRole } from "@/hooks/useTeamRole";
 
 import { useEffect, useState } from "react";
@@ -269,6 +271,14 @@ function SettingsPage() {
           defaultFixedAmount={profile?.default_deposit_fixed_amount}
           allowOverride={profile?.allow_deposit_override_per_quote}
         />
+
+        <OnlinePaymentsPanel
+          stripe_connect_account_id={profile?.stripe_connect_account_id}
+          stripe_connect_status={profile?.stripe_connect_status}
+          platform_fee_percent={profile?.platform_fee_percent}
+          stripe_connect_connected_at={profile?.stripe_connect_connected_at}
+        />
+
 
         {!isStaff && <WebhookCheckPanel />}
         {!isStaff && <WebhookEventLogPanel />}
