@@ -813,6 +813,16 @@ export type Database = {
         }[]
       }
       mcp_rate_limits_prune: { Args: never; Returns: undefined }
+      team_seat_usage: {
+        Args: never
+        Returns: {
+          seat_limit: number
+          seats_remaining: number
+          seats_used: number
+          tier: string
+        }[]
+      }
+      tier_seat_limit: { Args: { _tier: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "user"

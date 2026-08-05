@@ -82,6 +82,26 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
     },
   });
 
+  /** Backend-authoritative seat allowance (plan tier + seats already in use). */
+  const { data: seats } = useQuery({
+    queryKey: ["team_seat_usage"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("team_seat_usage");
+      if (error) throw error;
+      const row = (data ?? [])[0];
+      return row
+        ? {
+            tier: row.tier as string,
+            limit: row.seat_limit as number,
+            used: row.seats_used as number,
+            remaining: row.seats_remaining as number,
+          }
+        : null;
+    },
+  });
+
+  const atCapacity = !!seats && seats.remaining <= 0;
+
   const { data: members } = useQuery({
     queryKey: ["team_members"],
     queryFn: async () => {
@@ -122,6 +142,7 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
       setPreview(null);
       qc.invalidateQueries({ queryKey: ["team_members"] });
       qc.invalidateQueries({ queryKey: ["team_invite_events"] });
+      qc.invalidateQueries({ queryKey: ["team_seat_usage"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -175,6 +196,7 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
       );
       qc.invalidateQueries({ queryKey: ["team_members"] });
       qc.invalidateQueries({ queryKey: ["team_invite_events"] });
+      qc.invalidateQueries({ queryKey: ["team_seat_usage"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -266,13 +288,45 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
             Upgrade required
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Starter is limited to a single login. Upgrade to{" "}
-            <span className="uppercase">Standard</span> to invite staff members with their own
-            credentials.
+            Starter is limited to a single login — <span className="mono">0</span> staff seats.
+            Upgrade to <span className="uppercase">Standard</span> for{" "}
+            <span className="mono">5</span> staff seats with their own credentials.
+          </p>
+          <p className="mono mt-2 text-[10px] uppercase tracking-widest text-violet">
+            Seats: {seats?.used ?? 0}/{seats?.limit ?? 0} used · 0 remaining
           </p>
         </div>
       ) : (
         <>
+          <div className="mono mt-3 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest">
+            <span className="text-muted-foreground">Staff seats</span>
+            <span className={atCapacity ? "text-destructive" : "text-moss"}>
+              {seats?.used ?? 0}/{seats?.limit ?? 0} used
+            </span>
+            <span className="text-muted-foreground">
+              · {seats?.remaining ?? 0} remaining (pending invites count)
+            </span>
+          </div>
+
+          {atCapacity && (
+            <div className="mt-3 rounded-sm border border-violet/40 bg-violet/10 p-4">
+              <div className="mono text-[10px] uppercase tracking-widest text-violet">
+                Seat limit reached
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                All {seats?.limit ?? 0} staff seats on your plan are in use. Revoke a pending invite
+                or remove a member to free a seat — or upgrade for more seats. The backend blocks
+                invites past the limit, so this is enforced either way.
+              </p>
+              <a
+                href="/dashboard/settings#billing"
+                className="mono mt-3 inline-block rounded-sm bg-violet px-3 py-1.5 text-[10px] uppercase tracking-widest text-paper"
+              >
+                View plan options
+              </a>
+            </div>
+          )}
+
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
               type="email"
@@ -290,13 +344,22 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
                 }
                 setPreview({ email: addr, expiresAt: null, isNew: true });
               }}
-              className="rounded-sm border border-violet/50 px-4 py-2 text-xs uppercase tracking-wider text-violet"
+              disabled={atCapacity}
+              className="rounded-sm border border-violet/50 px-4 py-2 text-xs uppercase tracking-wider text-violet disabled:opacity-40"
             >
               Preview email
             </button>
             <button
-              onClick={() => invite.mutate()}
-              disabled={invite.isPending}
+              onClick={() => {
+                if (atCapacity) {
+                  toast.error(
+                    `All ${seats?.limit ?? 0} staff seats are in use. Free a seat or upgrade your plan.`,
+                  );
+                  return;
+                }
+                invite.mutate();
+              }}
+              disabled={invite.isPending || atCapacity}
               className="rounded-sm bg-violet px-4 py-2 text-xs uppercase tracking-wider text-paper disabled:opacity-50"
             >
               {invite.isPending ? "Inviting…" : "Invite"}
