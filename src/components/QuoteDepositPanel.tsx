@@ -1472,13 +1472,102 @@ export function QuoteDepositPanel({ quote }: Props) {
               </button>
             </div>
           </div>
+
+          {/* Filters: event type, success vs miss, and time range. */}
+          <div
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-sm border border-violet/20 bg-charcoal/30 p-2"
+            role="group"
+            aria-label="Debug log filters"
+          >
+            {(
+              [
+                {
+                  label: "event",
+                  value: debugEventFilter,
+                  set: (v: string) => setDebugEventFilter(v as DebugEventFilter),
+                  options: [
+                    ["all", "all"],
+                    ["deposit_jump_success", "success"],
+                    ["deposit_jump_miss", "miss"],
+                    ["deposit_jump_recovery", "recovery"],
+                  ],
+                },
+                {
+                  label: "outcome",
+                  value: debugOutcomeFilter,
+                  set: (v: string) => setDebugOutcomeFilter(v as DebugOutcomeFilter),
+                  options: [
+                    ["all", "all"],
+                    ["success", "success"],
+                    ["miss", "miss"],
+                  ],
+                },
+                {
+                  label: "range",
+                  value: debugRangeFilter,
+                  set: (v: string) => setDebugRangeFilter(v as DebugRangeFilter),
+                  options: [
+                    ["all", "all time"],
+                    ["5m", "last 5m"],
+                    ["1h", "last 1h"],
+                    ["24h", "last 24h"],
+                  ],
+                },
+              ] as const
+            ).map((group) => (
+              <div key={group.label} className="flex items-center gap-1">
+                <span className="mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                  {group.label}
+                </span>
+                {group.options.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={group.value === value}
+                    onClick={() => group.set(value)}
+                    className={`mono rounded-sm border px-2 py-0.5 text-[10px] lowercase tracking-wider ${
+                      group.value === value
+                        ? "border-violet/60 bg-violet/20 text-violet"
+                        : "border-border text-muted-foreground hover:text-paper"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ))}
+            {debugFiltersActive && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDebugEventFilter("all");
+                  setDebugOutcomeFilter("all");
+                  setDebugRangeFilter("all");
+                }}
+                className="mono rounded-sm border border-violet/40 px-2 py-0.5 text-[10px] lowercase tracking-wider text-violet hover:bg-violet/20"
+              >
+                reset filters
+              </button>
+            )}
+          </div>
+
           {debugLog.length === 0 ? (
             <div className="mono text-[11px] text-muted-foreground">
               // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log. entries are saved and reloaded after refresh.
             </div>
+          ) : filteredDebugLog.length === 0 ? (
+            <div className="mono text-[11px] text-muted-foreground">
+              // {debugLog.length} saved entr{debugLog.length === 1 ? "y" : "ies"}, none match{" "}
+              {describeDebugFilters({
+                event: debugEventFilter,
+                outcome: debugOutcomeFilter,
+                range: debugRangeFilter,
+              })}
+              .
+            </div>
           ) : (
             <ol className="max-h-64 space-y-2 overflow-auto rounded-sm border border-violet/20 bg-charcoal/40 p-2">
-              {debugLog.map((entry) => (
+              {filteredDebugLog.map((entry) => (
                 <li key={entry.id} className="mono text-[11px]">
                   <div className="flex items-center gap-2">
                     <span
