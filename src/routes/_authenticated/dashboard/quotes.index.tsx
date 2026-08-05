@@ -177,6 +177,7 @@ function QuotesListPage() {
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Job site</th>
                   <th className="px-4 py-3 text-right">Total</th>
+                  <th className="px-4 py-3 text-right">Deposit</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left hidden lg:table-cell">Valid until</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Created</th>
