@@ -475,6 +475,36 @@ export function OptInPromptSettingsPanel({
           </div>
         </dl>
 
+        <div
+          className={`mt-3 rounded-sm border p-3 ${
+            verdict.state === "eligible"
+              ? "border-moss/50 bg-moss/5"
+              : verdict.state === "blocked"
+                ? "border-primary/50 bg-primary/5"
+                : "border-border bg-background/60"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="label-eyebrow">Opt-in eligibility</span>
+            <span
+              className={`mono text-[11px] uppercase tracking-widest ${
+                verdict.state === "eligible"
+                  ? "text-moss"
+                  : verdict.state === "blocked"
+                    ? "text-primary"
+                    : "text-muted-foreground"
+              }`}
+            >
+              {verdict.state === "eligible" ? "[OK] " : verdict.state === "blocked" ? "[XX] " : "[??] "}
+              {verdict.label}
+            </span>
+          </div>
+          {verdict.detail && (
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{verdict.detail}</p>
+          )}
+        </div>
+
+
         <div className="mt-3 rounded-sm border border-border bg-card p-3">
           <p className="mono text-xs leading-relaxed text-paper">
             {preview.slice(0, preview.length - OPT_IN_PROMPT_COMPLIANCE_TEXT.length)}
