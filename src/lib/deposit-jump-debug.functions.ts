@@ -18,6 +18,7 @@ export interface PersistedDebugEntry {
   id: string;
   event: DebugEventName;
   payload: Record<string, Json>;
+  correlationId: string | null;
   occurredAt: string;
 }
 
@@ -25,7 +26,12 @@ export interface PersistedDebugEntry {
 export const saveDepositJumpDebugEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (input: { quoteId: string | null; event: DebugEventName; payload: Record<string, unknown> }) => {
+    (input: {
+      quoteId: string | null;
+      event: DebugEventName;
+      payload: Record<string, unknown>;
+      correlationId?: string | null;
+    }) => {
       if (!EVENT_NAMES.includes(input.event)) throw new Error("Invalid debug event name");
       // Cap payload size so a stray object can't bloat the table.
       const json = JSON.stringify(input.payload ?? {});
@@ -35,6 +41,10 @@ export const saveDepositJumpDebugEvent = createServerFn({ method: "POST" })
         quoteId: typeof input.quoteId === "string" && input.quoteId.trim() ? input.quoteId.trim() : null,
         event: input.event,
         payload,
+        correlationId:
+          typeof input.correlationId === "string" && input.correlationId.trim()
+            ? input.correlationId.trim().slice(0, 64)
+            : null,
       };
     },
   )
@@ -44,6 +54,7 @@ export const saveDepositJumpDebugEvent = createServerFn({ method: "POST" })
       quote_id: data.quoteId,
       event_name: data.event,
       payload: data.payload,
+      correlation_id: data.correlationId,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -60,7 +71,7 @@ export const listDepositJumpDebugEvents = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<PersistedDebugEntry[]> => {
     let query = context.supabase
       .from("deposit_jump_debug_events")
-      .select("id, event_name, payload, occurred_at")
+      .select("id, event_name, payload, correlation_id, occurred_at")
       .eq("user_id", context.userId)
       .order("occurred_at", { ascending: false })
       .limit(data.limit);
@@ -73,6 +84,7 @@ export const listDepositJumpDebugEvents = createServerFn({ method: "GET" })
       id: r.id,
       event: r.event_name as DebugEventName,
       payload: (r.payload ?? {}) as Record<string, Json>,
+      correlationId: r.correlation_id ?? null,
       occurredAt: r.occurred_at,
     }));
   });

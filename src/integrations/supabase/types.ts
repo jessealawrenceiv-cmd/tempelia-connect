@@ -173,6 +173,7 @@ export type Database = {
       }
       deposit_jump_debug_events: {
         Row: {
+          correlation_id: string | null
           created_at: string
           event_name: string
           id: string
@@ -182,6 +183,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          correlation_id?: string | null
           created_at?: string
           event_name: string
           id?: string
@@ -191,6 +193,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          correlation_id?: string | null
           created_at?: string
           event_name?: string
           id?: string
@@ -204,6 +207,7 @@ export type Database = {
       deposit_jump_recovery_events: {
         Row: {
           action: string
+          correlation_id: string | null
           created_at: string
           event_id: string | null
           id: string
@@ -215,6 +219,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          correlation_id?: string | null
           created_at?: string
           event_id?: string | null
           id?: string
@@ -226,6 +231,7 @@ export type Database = {
         }
         Update: {
           action?: string
+          correlation_id?: string | null
           created_at?: string
           event_id?: string | null
           id?: string

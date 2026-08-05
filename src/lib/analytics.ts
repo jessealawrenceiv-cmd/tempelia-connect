@@ -17,7 +17,14 @@ function readEnv() {
 }
 
 export type DepositJumpResult =
-  | { kind: "success"; quoteId: string; eventId: string; source: string | null; durationMs?: number | null }
+  | {
+      kind: "success";
+      quoteId: string;
+      eventId: string;
+      source: string | null;
+      durationMs?: number | null;
+      correlationId?: string | null;
+    }
   | {
       kind: "miss";
       quoteId: string;
@@ -25,7 +32,17 @@ export type DepositJumpResult =
       reason: string;
       source: string | null;
       durationMs?: number | null;
+      correlationId?: string | null;
     };
+
+/** Stable id for one deep-link/empty-state session, shared by every deposit_jump_* event. */
+export function createDepositJumpCorrelationId(): string {
+  const rand =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `djp-${Date.now().toString(36)}-${rand}`;
+}
 
 export function createAnalytics(posthogClient: typeof posthog = posthog) {
   let initialized = false;
@@ -68,11 +85,13 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
       typeof result.durationMs === "number" && Number.isFinite(result.durationMs)
         ? { duration_ms: Math.round(result.durationMs) }
         : {};
+    const correlation = result.correlationId ? { correlation_id: result.correlationId } : {};
     if (result.kind === "success") {
       capture("deposit_jump_success", {
         quote_id: result.quoteId,
         event_id: result.eventId,
         source: result.source,
+        ...correlation,
         ...timing,
       });
     } else {
@@ -81,6 +100,7 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
         event_id: result.eventId,
         reason: result.reason,
         source: result.source,
+        ...correlation,
         ...timing,
       });
     }
@@ -96,12 +116,14 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
     eventId: string | null;
     reason: string | null;
     msSinceMiss?: number | null;
+    correlationId?: string | null;
   }) {
     capture("deposit_jump_recovery", {
       action: input.action,
       quote_id: input.quoteId,
       event_id: input.eventId,
       reason: input.reason,
+      ...(input.correlationId ? { correlation_id: input.correlationId } : {}),
       ...(typeof input.msSinceMiss === "number" && Number.isFinite(input.msSinceMiss)
         ? { ms_since_miss: Math.round(input.msSinceMiss) }
         : {}),
