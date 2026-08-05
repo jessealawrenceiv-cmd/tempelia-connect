@@ -268,7 +268,24 @@ export function OptInPromptSettingsPanel({
         <p className="mono mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
           {preview.length} chars
         </p>
+        <div className="mono mt-2 space-y-1 border-t border-border pt-2 text-[10px] uppercase tracking-widest">
+          <p className="text-muted-foreground">
+            {"{business}"} →{" "}
+            <span className="text-paper">{resolvedBusiness}</span>
+            {!savedBusinessName && " (fallback — set your business name below/above)"}
+          </p>
+          {templateDirty ? (
+            <p className="text-primary">
+              ⚠ Unsaved lead-in — test SMS sends the saved template until you save
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              Matches the saved template used by test SMS and live missed-call prompts
+            </p>
+          )}
+        </div>
       </div>
+
 
       <div className="mt-4 rounded-sm border border-primary/40 bg-background/60 p-3">
         <div className="label-eyebrow text-primary">Preview for this customer</div>
