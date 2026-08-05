@@ -428,7 +428,35 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
             })}
           </div>
         )}
+
+        {filtered.length > PAGE_SIZE && (
+          <div className="mono mt-3 flex items-center justify-between border-t border-border pt-2 text-[10px] uppercase tracking-widest">
+            <span className="text-muted-foreground">
+              {safePage * PAGE_SIZE + 1}–{safePage * PAGE_SIZE + paged.length} of {filtered.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(Math.max(0, safePage - 1))}
+                disabled={safePage === 0}
+                className="rounded-sm border border-border px-3 py-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <span className="text-moss">
+                {safePage + 1}/{pageCount}
+              </span>
+              <button
+                onClick={() => setPage(Math.min(pageCount - 1, safePage + 1))}
+                disabled={safePage >= pageCount - 1}
+                className="rounded-sm border border-border px-3 py-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
 
       {preview && (
         <InviteEmailPreviewDialog
