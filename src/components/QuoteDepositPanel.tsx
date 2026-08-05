@@ -808,7 +808,11 @@ export function QuoteDepositPanel({ quote }: Props) {
                       <PopoverTrigger asChild>
                         <button
                           type="button"
+                          ref={(el) => {
+                            triggerRefs.current[row.id] = el;
+                          }}
                           aria-label={`Preview quote ${(p.quote_id ?? quote.id).slice(0, 8)} deposit details`}
+
                           onPointerDown={() => {
                             openModeRef.current = "keyboard";
                           }}
