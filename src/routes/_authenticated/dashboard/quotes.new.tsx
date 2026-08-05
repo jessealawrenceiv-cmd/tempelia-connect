@@ -333,6 +333,7 @@ function NewQuotePage() {
     [depositSelection, depositCustomType, depositCustomValue, total, companyDefaultType, companyDefaultFixed],
   );
   const depositTooLarge = depositRequired && depositAmount > total + 0.01;
+  const depositBlocked = depositCustomError !== null || depositTooLarge;
 
 
 
