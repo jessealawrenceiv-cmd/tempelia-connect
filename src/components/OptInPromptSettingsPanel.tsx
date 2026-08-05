@@ -270,6 +270,54 @@ export function OptInPromptSettingsPanel({
 
   const preview = buildOptInPrompt(savedBusinessName, draft);
 
+  const segments = preview.length <= 160 ? 1 : Math.ceil(preview.length / 153);
+
+  /** Downloads the rendered preview + metadata as a small record file. */
+  function exportPreview(kind: "txt" | "csv") {
+    const stamp = new Date();
+    const rows: [string, string][] = [
+      ["exported_at", stamp.toISOString()],
+      ["business_name", resolvedBusiness],
+      ["lead_in_template", (draft.trim() || DEFAULT_OPT_IN_PROMPT_TEMPLATE)],
+      ["template_version", promptVersionHash(preview)],
+      ["cooldown_minutes", String(effectiveCooldown)],
+      ["from_number", fromNumber || "not provisioned"],
+      ["to_number", sampleE164 ?? "not set"],
+      ["sample_contact", sampleName.trim() || "—"],
+      ["eligibility", verdict.label],
+      ["eligibility_detail", verdict.detail ?? ""],
+      ["length_chars", String(preview.length)],
+      ["sms_segments", String(segments)],
+      ["unsaved_lead_in_edits", templateDirty ? "yes" : "no"],
+      ["message_body", preview],
+    ];
+
+    const name = `opt-in-prompt-preview-${stamp.toISOString().slice(0, 19).replace(/[:T]/g, "-")}`;
+    let content: string;
+    let mime: string;
+    if (kind === "csv") {
+      const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+      content = ["field,value", ...rows.map(([k, v]) => `${esc(k)},${esc(v)}`)].join("\r\n");
+      mime = "text/csv;charset=utf-8";
+    } else {
+      content = [
+        "TEMARO — OPT-IN PROMPT PREVIEW",
+        "".padEnd(34, "="),
+        ...rows.map(([k, v]) => `${k.replace(/_/g, " ").toUpperCase().padEnd(22)}: ${v}`),
+      ].join("\n");
+      mime = "text/plain;charset=utf-8";
+    }
+
+    const url = URL.createObjectURL(new Blob([content], { type: mime }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}.${kind}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported preview as ${kind.toUpperCase()}`);
+  }
+
+
 
   /** Lead-ins that pass validation, shown as one-tap fixes. */
   const exampleTemplates = [
