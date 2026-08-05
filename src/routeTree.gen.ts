@@ -39,6 +39,7 @@ import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/publi
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_authenticated/dashboard/quotes.new'
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
+import { Route as AuthenticatedDashboardAdminDepositRecoveryRouteImport } from './routes/_authenticated/dashboard/admin/deposit-recovery'
 import { Route as AuthenticatedDashboardQuotesQuoteIdPrintRouteImport } from './routes/_authenticated/dashboard/quotes.$quoteId.print'
 
 const TermsRoute = TermsRouteImport.update({
@@ -206,6 +207,12 @@ const AuthenticatedDashboardAdminNumbersRoute =
     path: '/dashboard/admin/numbers',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardAdminDepositRecoveryRoute =
+  AuthenticatedDashboardAdminDepositRecoveryRouteImport.update({
+    id: '/dashboard/admin/deposit-recovery',
+    path: '/dashboard/admin/deposit-recovery',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardQuotesQuoteIdPrintRoute =
   AuthenticatedDashboardQuotesQuoteIdPrintRouteImport.update({
     id: '/dashboard/quotes/$quoteId/print',
@@ -235,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -267,6 +275,7 @@ export interface FileRoutesByTo {
   '/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
+  '/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -301,6 +310,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/_authenticated/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/_authenticated/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/dashboard/schedule'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/dashboard/admin/deposit-recovery'
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
     | '/api/public/payments/webhook'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/dashboard/schedule'
     | '/dashboard/settings'
     | '/dashboard'
+    | '/dashboard/admin/deposit-recovery'
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
     | '/api/public/payments/webhook'
@@ -400,6 +412,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/schedule'
     | '/_authenticated/dashboard/settings'
     | '/_authenticated/dashboard/'
+    | '/_authenticated/dashboard/admin/deposit-recovery'
     | '/_authenticated/dashboard/admin/numbers'
     | '/_authenticated/dashboard/quotes/new'
     | '/api/public/payments/webhook'
@@ -644,6 +657,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardAdminNumbersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/admin/deposit-recovery': {
+      id: '/_authenticated/dashboard/admin/deposit-recovery'
+      path: '/dashboard/admin/deposit-recovery'
+      fullPath: '/dashboard/admin/deposit-recovery'
+      preLoaderRoute: typeof AuthenticatedDashboardAdminDepositRecoveryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard/quotes/$quoteId/print': {
       id: '/_authenticated/dashboard/quotes/$quoteId/print'
       path: '/dashboard/quotes/$quoteId/print'
@@ -664,6 +684,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardScheduleRoute: typeof AuthenticatedDashboardScheduleRoute
   AuthenticatedDashboardSettingsRoute: typeof AuthenticatedDashboardSettingsRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
+  AuthenticatedDashboardAdminDepositRecoveryRoute: typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   AuthenticatedDashboardAdminNumbersRoute: typeof AuthenticatedDashboardAdminNumbersRoute
   AuthenticatedDashboardQuotesNewRoute: typeof AuthenticatedDashboardQuotesNewRoute
   AuthenticatedDashboardQuotesIndexRoute: typeof AuthenticatedDashboardQuotesIndexRoute
@@ -681,6 +702,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardScheduleRoute: AuthenticatedDashboardScheduleRoute,
   AuthenticatedDashboardSettingsRoute: AuthenticatedDashboardSettingsRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
+  AuthenticatedDashboardAdminDepositRecoveryRoute:
+    AuthenticatedDashboardAdminDepositRecoveryRoute,
   AuthenticatedDashboardAdminNumbersRoute:
     AuthenticatedDashboardAdminNumbersRoute,
   AuthenticatedDashboardQuotesNewRoute: AuthenticatedDashboardQuotesNewRoute,

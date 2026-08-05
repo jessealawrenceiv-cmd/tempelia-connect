@@ -106,12 +106,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <div className="border-t border-paper/10 p-3">
               {isAdmin && (
-                <Link
-                  to="/dashboard/admin/numbers"
-                  className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-orange hover:bg-paper/10"
-                >
-                  <Shield size={14} /> Admin · Numbers
-                </Link>
+                <>
+                  <Link
+                    to="/dashboard/admin/numbers"
+                    className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-orange hover:bg-paper/10"
+                  >
+                    <Shield size={14} /> Admin · Numbers
+                  </Link>
+                  <Link
+                    to="/dashboard/admin/deposit-recovery"
+                    className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-orange hover:bg-paper/10"
+                  >
+                    <Shield size={14} /> Admin · Recovery
+                  </Link>
+                </>
               )}
               {!isStaff && (
                 <Link

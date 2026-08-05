@@ -171,6 +171,42 @@ export type Database = {
         }
         Relationships: []
       }
+      deposit_jump_recovery_events: {
+        Row: {
+          action: string
+          created_at: string
+          event_id: string | null
+          id: string
+          ms_since_miss: number | null
+          occurred_at: string
+          quote_id: string | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          ms_since_miss?: number | null
+          occurred_at?: string
+          quote_id?: string | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          ms_since_miss?: number | null
+          occurred_at?: string
+          quote_id?: string | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       excluded_numbers: {
         Row: {
           created_at: string
