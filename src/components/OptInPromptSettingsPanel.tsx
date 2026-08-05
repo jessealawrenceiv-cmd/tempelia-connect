@@ -318,8 +318,22 @@ export function OptInPromptSettingsPanel({
               onChange={(e) => setSamplePhone(e.target.value)}
               placeholder="+15015550123"
               inputMode="tel"
-              className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+              aria-invalid={samplePhone.trim() && !sampleParsed.ok ? true : undefined}
+              className={`mono mt-1 block w-full rounded-sm border bg-background px-3 py-2 text-sm ${
+                samplePhone.trim() && !sampleParsed.ok ? "border-destructive" : "border-border"
+              }`}
             />
+            <span className="mono mt-1 block text-[10px] uppercase tracking-widest">
+              {samplePhone.trim() ? (
+                sampleParsed.ok ? (
+                  <span className="text-moss">To {sampleParsed.e164}</span>
+                ) : (
+                  <span className="text-destructive">{sampleParsed.error}</span>
+                )
+              ) : (
+                <span className="text-muted-foreground">10-digit US or E.164</span>
+              )}
+            </span>
           </label>
         </div>
 
