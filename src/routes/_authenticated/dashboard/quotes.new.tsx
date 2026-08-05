@@ -490,6 +490,11 @@ function NewQuotePage() {
         job_type: jobType,
         tax_exempt: taxExempt,
         valid_until: validUntil || null,
+        deposit_required: depositRequired,
+        deposit_selection: depositSelection,
+        deposit_custom_type: depositSelection === "custom" ? depositCustomType : null,
+        deposit_custom_value: depositSelection === "custom" ? round2(toNum(depositCustomValue)) : null,
+        deposit_amount: depositRequired ? depositAmount : 0,
         status,
       };
 
