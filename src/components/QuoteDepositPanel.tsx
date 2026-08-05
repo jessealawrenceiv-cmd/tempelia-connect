@@ -817,9 +817,14 @@ export function QuoteDepositPanel({ quote }: Props) {
                             openModeRef.current = "keyboard";
                           }}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") openModeRef.current = "keyboard";
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openModeRef.current = "keyboard";
+                              setOpenPreviewId(row.id);
+                            }
                             if (e.key === "Escape") setOpenPreviewId(null);
                           }}
+
                           onMouseEnter={() => {
                             if (openPreviewId === row.id) return;
                             openModeRef.current = "hover";
