@@ -164,7 +164,8 @@ export function QuoteDepositPanel({ quote }: Props) {
   const location = useLocation();
   function eventLinkSuffix(eventId: string) {
     const returnTo = `${location.pathname}`;
-    return `?depositEvent=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(returnTo)}`;
+    const id = encodeURIComponent(eventId);
+    return `?eventId=${id}&depositEvent=${id}&returnTo=${encodeURIComponent(returnTo)}#deposit-event-${id}`;
   }
 
   function goToEntry(next: number) {
@@ -177,9 +178,11 @@ export function QuoteDepositPanel({ quote }: Props) {
     }
   }
 
-  // Focus the event referenced by ?depositEvent= / #deposit-event-<id> on arrival.
+  // Focus the event referenced by ?eventId= / ?depositEvent= / #deposit-event-<id> on arrival.
+  const incomingSearch = new URLSearchParams(location.searchStr ?? "");
   const incomingEventId =
-    new URLSearchParams(location.searchStr ?? "").get("depositEvent") ??
+    incomingSearch.get("eventId") ??
+    incomingSearch.get("depositEvent") ??
     (location.hash?.startsWith("deposit-event-")
       ? location.hash.replace("deposit-event-", "")
       : null);
