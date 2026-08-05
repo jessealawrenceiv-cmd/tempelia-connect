@@ -82,7 +82,9 @@ function PrintQuotePage() {
           >
             Close
           </button>
+          </div>
         </div>
+
 
         <div className="print-sheet mx-auto max-w-3xl bg-white p-10 shadow-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
           {/* Header */}
