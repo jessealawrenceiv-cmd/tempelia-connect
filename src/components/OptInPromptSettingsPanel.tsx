@@ -27,6 +27,8 @@ type Props = {
   cooldownMinutes?: number | null;
   ownerPhone?: string | null;
   fromNumber?: string | null;
+  /** Last number used for a test send, remembered per business. */
+  lastTestPhone?: string | null;
 };
 
 /**
