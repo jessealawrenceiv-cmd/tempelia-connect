@@ -156,7 +156,7 @@ export function OptInPromptSettingsPanel({
       </div>
 
       <div className="mt-4 rounded-sm border border-primary/40 bg-background/60 p-3">
-        <div className="label-eyebrow text-violet">Preview for this customer</div>
+        <div className="label-eyebrow text-primary">Preview for this customer</div>
         <p className="mt-1 text-xs text-muted-foreground">
           Enter a sample contact to see the exact message that leaves your Temaro number. The
           message body is identical for every contact — the lead-in supports only {"{business}"},
