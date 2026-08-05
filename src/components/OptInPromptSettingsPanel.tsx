@@ -10,8 +10,10 @@ import {
   OPT_IN_PROMPT_COOLDOWN_MIN,
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH,
+  OPT_IN_PROMPT_COMPLIANCE_TEXT,
   buildOptInPrompt,
   clampCooldownMinutes,
+  promptVersionHash,
   validateOptInPromptTemplate,
 } from "@/lib/opt-in-prompt";
 
@@ -20,6 +22,7 @@ type Props = {
   template?: string | null;
   cooldownMinutes?: number | null;
   ownerPhone?: string | null;
+  fromNumber?: string | null;
 };
 
 /**
@@ -31,10 +34,13 @@ export function OptInPromptSettingsPanel({
   template,
   cooldownMinutes,
   ownerPhone,
+  fromNumber,
 }: Props) {
   const qc = useQueryClient();
   const sendTest = useServerFn(sendTestOptInPrompt);
   const [lastTest, setLastTest] = useState<{ to: string; sid: string; at: string } | null>(null);
+  const [sampleName, setSampleName] = useState("Dana Reyes");
+  const [samplePhone, setSamplePhone] = useState("+15015550123");
   const [draft, setDraft] = useState("");
   const [cooldown, setCooldown] = useState(String(OPT_IN_PROMPT_COOLDOWN_MINUTES));
 
@@ -146,6 +152,76 @@ export function OptInPromptSettingsPanel({
         <p className="mono mt-2 text-xs leading-relaxed text-paper">{preview}</p>
         <p className="mono mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
           {preview.length} chars
+        </p>
+      </div>
+
+      <div className="mt-4 rounded-sm border border-primary/40 bg-background/60 p-3">
+        <div className="label-eyebrow text-violet">Preview for this customer</div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Enter a sample contact to see the exact message that leaves your Temaro number. The
+          message body is identical for every contact — the lead-in supports only {"{business}"},
+          so a customer name is never inserted into the text.
+        </p>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <label className="block">
+            <span className="label-eyebrow">Sample customer name</span>
+            <input
+              value={sampleName}
+              onChange={(e) => setSampleName(e.target.value)}
+              placeholder="Dana Reyes"
+              className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="label-eyebrow">Sample phone number</span>
+            <input
+              value={samplePhone}
+              onChange={(e) => setSamplePhone(e.target.value)}
+              placeholder="+15015550123"
+              inputMode="tel"
+              className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+
+        <dl className="mono mt-3 space-y-1 text-[11px] uppercase tracking-widest text-muted-foreground">
+          <div className="flex justify-between gap-3">
+            <dt>To</dt>
+            <dd className="text-paper">
+              {samplePhone.trim() || "—"}
+              {sampleName.trim() ? ` (${sampleName.trim()})` : ""}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>From</dt>
+            <dd className="text-paper">{fromNumber || "no Temaro number provisioned"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>Template version</dt>
+            <dd className="text-paper">{promptVersionHash(preview)}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>Cooldown</dt>
+            <dd className="text-paper">{clampCooldownMinutes(cooldown)} min per contact</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>Length / segments</dt>
+            <dd className="text-paper">
+              {preview.length} chars ·{" "}
+              {preview.length <= 160 ? 1 : Math.ceil(preview.length / 153)} SMS
+            </dd>
+          </div>
+        </dl>
+
+        <div className="mt-3 rounded-sm border border-border bg-card p-3">
+          <p className="mono text-xs leading-relaxed text-paper">
+            {preview.slice(0, preview.length - OPT_IN_PROMPT_COMPLIANCE_TEXT.length)}
+            <span className="text-moss">{OPT_IN_PROMPT_COMPLIANCE_TEXT}</span>
+          </p>
+        </div>
+        <p className="mono mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+          Green text is the fixed YES-to-opt-in / STOP wording and cannot be edited
         </p>
       </div>
 

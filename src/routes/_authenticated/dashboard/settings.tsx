@@ -257,6 +257,7 @@ function SettingsPage() {
           template={profile?.opt_in_prompt_template}
           cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
           ownerPhone={profile?.owner_phone}
+          fromNumber={profile?.twilio_phone_number}
         />
 
         <ExcludedNumbersPanel />
