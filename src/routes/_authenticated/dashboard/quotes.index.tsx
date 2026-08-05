@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/AppShell";
 import { CustomerHistory } from "@/components/CustomerHistory";
 import { sendQuoteSms } from "@/lib/quote-sms.functions";
 import { sendDeclineFollowup } from "@/lib/decline-followup.functions";
+import { depositSelectionLabel, type DepositSelection } from "@/lib/deposit";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
   component: QuotesListPage,
@@ -28,6 +29,13 @@ type QuoteRow = {
   superseded_by_id: string | null;
   decline_reason: string | null;
   decline_followup_sent_at: string | null;
+  deposit_required: boolean;
+  deposit_selection: string;
+  deposit_custom_type: string | null;
+  deposit_custom_value: number | null;
+  deposit_amount: number;
+  deposit_paid: boolean;
+  deposit_paid_at: string | null;
 };
 
 const STATUS_STYLES: Record<QuoteRow["status"], string> = {
@@ -51,6 +59,7 @@ function QuotesListPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [askingId, setAskingId] = useState<string | null>(null);
+  const [depositId, setDepositId] = useState<string | null>(null);
   const sendSmsFn = useServerFn(sendQuoteSms);
   const askWhyFn = useServerFn(sendDeclineFollowup);
   const qc = useQueryClient();
@@ -92,6 +101,25 @@ function QuotesListPage() {
     }
   }
 
+  async function handleMarkDeposit(quoteId: string, paid: boolean) {
+    setDepositId(quoteId);
+    try {
+      const { error } = await supabase
+        .from("quotes")
+        .update({ deposit_paid: paid, deposit_paid_at: paid ? new Date().toISOString() : null })
+        .eq("id", quoteId);
+      if (error) throw error;
+      toast.success(paid ? "Deposit marked received." : "Deposit marked unpaid.");
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setDepositId(null);
+    }
+  }
+
+
+
 
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["quotes"],
@@ -99,7 +127,7 @@ function QuotesListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, customer_phone, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id, decline_reason, decline_followup_sent_at")
+        .select("id, customer_id, customer_first_name, customer_last_name, customer_business_name, customer_phone, job_site_address, total_amount, status, created_at, valid_until, superseded_by_id, decline_reason, decline_followup_sent_at, deposit_required, deposit_selection, deposit_custom_type, deposit_custom_value, deposit_amount, deposit_paid, deposit_paid_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as QuoteRow[];
@@ -150,6 +178,7 @@ function QuotesListPage() {
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Job site</th>
                   <th className="px-4 py-3 text-right">Total</th>
+                  <th className="px-4 py-3 text-right">Deposit</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left hidden lg:table-cell">Valid until</th>
                   <th className="px-4 py-3 text-left hidden md:table-cell">Created</th>
@@ -190,6 +219,31 @@ function QuotesListPage() {
                         </td>
                         <td className="px-4 py-3 mono text-xs hidden md:table-cell">{q.job_site_address}</td>
                         <td className="px-4 py-3 mono text-right">{fmtMoney(Number(q.total_amount))}</td>
+                        <td className="px-4 py-3 mono text-right whitespace-nowrap">
+                          {!q.deposit_required ? (
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">none</span>
+                          ) : (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span>{fmtMoney(Number(q.deposit_amount))}</span>
+                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                {depositSelectionLabel(
+                                  q.deposit_selection as DepositSelection,
+                                  q.deposit_custom_type as "percentage" | "fixed" | null,
+                                  q.deposit_custom_value,
+                                )}
+                              </span>
+                              {q.deposit_paid ? (
+                                <span className="rounded-sm bg-moss/30 px-2 py-0.5 text-[10px] uppercase tracking-wider text-paper">
+                                  received {q.deposit_paid_at ? fmtDate(q.deposit_paid_at) : ""}
+                                </span>
+                              ) : (
+                                <span className="rounded-sm bg-orange/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-orange">
+                                  unpaid
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span className={`rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider mono ${STATUS_STYLES[q.status]}`}>
                             {q.status}
@@ -251,13 +305,32 @@ function QuotesListPage() {
                                 schedule job
                               </Link>
                             )}
+                            {q.deposit_required && q.status !== "archived" && (
+                              q.deposit_paid ? (
+                                <button
+                                  disabled={depositId === q.id}
+                                  onClick={() => handleMarkDeposit(q.id, false)}
+                                  className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-orange hover:text-orange disabled:opacity-50"
+                                >
+                                  {depositId === q.id ? "…" : "undo deposit"}
+                                </button>
+                              ) : (
+                                <button
+                                  disabled={depositId === q.id}
+                                  onClick={() => handleMarkDeposit(q.id, true)}
+                                  className="mono rounded-sm border border-moss/60 px-2 py-1 text-[10px] uppercase tracking-wider text-moss hover:bg-moss hover:text-charcoal disabled:opacity-50"
+                                >
+                                  {depositId === q.id ? "…" : "mark deposit received"}
+                                </button>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>
                       {isOpen && (
                         <tr className="border-b border-border/50 bg-background/40">
                           <td></td>
-                          <td colSpan={7} className="px-4 py-4">
+                          <td colSpan={8} className="px-4 py-4">
                             <div className="label-eyebrow mb-3">
                               Quote detail + customer history {name ? `· ${name}` : ""}
                             </div>

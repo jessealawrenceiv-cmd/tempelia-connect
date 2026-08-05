@@ -7,6 +7,7 @@ import { TeamMembersPanel } from "@/components/TeamMembersPanel";
 import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel";
 import { WebhookCheckPanel } from "@/components/WebhookCheckPanel";
 import { WebhookEventLogPanel } from "@/components/WebhookEventLogPanel";
+import { DepositDefaultsPanel } from "@/components/DepositDefaultsPanel";
 import { useTeamRole } from "@/hooks/useTeamRole";
 
 import { useEffect, useState } from "react";
@@ -261,6 +262,12 @@ function SettingsPage() {
           ownerPhone={profile?.owner_phone}
           fromNumber={profile?.twilio_phone_number}
           lastTestPhone={profile?.last_test_phone}
+        />
+
+        <DepositDefaultsPanel
+          defaultType={profile?.default_deposit_type}
+          defaultFixedAmount={profile?.default_deposit_fixed_amount}
+          allowOverride={profile?.allow_deposit_override_per_quote}
         />
 
         {!isStaff && <WebhookCheckPanel />}

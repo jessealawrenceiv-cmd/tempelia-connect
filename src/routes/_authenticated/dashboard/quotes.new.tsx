@@ -4,6 +4,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
+import {
+  DEPOSIT_SELECTIONS,
+  describeCompanyDefault,
+  resolveDepositAmount,
+  type CompanyDefaultDepositType,
+  type DepositCustomType,
+  type DepositSelection,
+} from "@/lib/deposit";
 
 type QuoteSearch = { edit?: string };
 
@@ -179,6 +187,38 @@ function NewQuotePage() {
   const [taxRateInput, setTaxRateInput] = useState("9.5");
   const [validUntil, setValidUntil] = useState<string>("");
 
+  // Deposit (tracking only — no payment collection)
+  const { data: depositProfile } = useQuery({
+    queryKey: ["profile-deposit-defaults"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("default_deposit_type, default_deposit_fixed_amount, allow_deposit_override_per_quote")
+        .eq("id", u.user.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const companyDefaultType = (depositProfile?.default_deposit_type ?? "none") as CompanyDefaultDepositType;
+  const companyDefaultFixed = depositProfile?.default_deposit_fixed_amount ?? null;
+  const allowOverride = depositProfile?.allow_deposit_override_per_quote ?? true;
+
+  const [depositSelection, setDepositSelection] = useState<DepositSelection>("none");
+  const [depositCustomType, setDepositCustomType] = useState<DepositCustomType>("percentage");
+  const [depositCustomValue, setDepositCustomValue] = useState("");
+
+  // When overrides are disabled company-wide, the quote is locked to the default.
+  useEffect(() => {
+    if (!depositProfile) return;
+    if (!allowOverride) {
+      setDepositSelection(companyDefaultType === "none" ? "none" : "company_default");
+    }
+  }, [depositProfile, allowOverride, companyDefaultType]);
+
+
+
   // Seed all state from existingQuote once loaded
   useEffect(() => {
     if (!existingQuote || seeded) return;
@@ -195,6 +235,11 @@ function NewQuotePage() {
     setTaxExempt(!!q.tax_exempt);
     setTaxRateInput(q.tax_rate != null ? String(q.tax_rate) : "9.5");
     setValidUntil(q.valid_until ?? "");
+    setDepositSelection((q.deposit_selection ?? "none") as DepositSelection);
+    if (q.deposit_custom_type) setDepositCustomType(q.deposit_custom_type as DepositCustomType);
+    setDepositCustomValue(q.deposit_custom_value != null ? String(q.deposit_custom_value) : "");
+
+
 
     const items: Array<any> = Array.isArray(q.line_items) ? q.line_items : [];
     setCategories((prev) =>
@@ -271,6 +316,27 @@ function NewQuotePage() {
   const taxAmount = round2(subtotal * (taxRate / 100));
   const total = round2(subtotal + taxAmount);
 
+  // ─── DEPOSIT (live, mirrors the DB consistency trigger) ────────
+  const depositRequired = depositSelection !== "none";
+  const depositCustomError =
+    depositSelection === "custom" ? amountErr(depositCustomValue, true) : null;
+  const depositAmount = useMemo(
+    () =>
+      resolveDepositAmount({
+        selection: depositSelection,
+        customType: depositCustomType,
+        customValue: toNum(depositCustomValue),
+        total,
+        defaultType: companyDefaultType,
+        defaultFixed: companyDefaultFixed != null ? Number(companyDefaultFixed) : null,
+      }),
+    [depositSelection, depositCustomType, depositCustomValue, total, companyDefaultType, companyDefaultFixed],
+  );
+  const depositTooLarge = depositRequired && depositAmount > total + 0.01;
+  const depositBlocked = depositCustomError !== null || depositTooLarge;
+
+
+
   // "Send" requires at least one checked line item with a positive amount
   // (Labor alone counts). Draft can be saved without this.
   const hasAnyValidLine =
@@ -289,7 +355,7 @@ function NewQuotePage() {
       if (!phone.trim()) throw new Error("Phone required");
       if (!jobSite.trim()) throw new Error("Job site address required");
       // Never persist garbage — blocks BOTH draft and sent.
-      if (hasInvalidInput) {
+      if (hasInvalidInput || depositBlocked) {
         throw new Error("Fix the highlighted amount fields before saving");
       }
       // Completeness — only blocks "sent"; drafts may be incomplete.
@@ -424,6 +490,11 @@ function NewQuotePage() {
         job_type: jobType,
         tax_exempt: taxExempt,
         valid_until: validUntil || null,
+        deposit_required: depositRequired,
+        deposit_selection: depositSelection,
+        deposit_custom_type: depositSelection === "custom" ? depositCustomType : null,
+        deposit_custom_value: depositSelection === "custom" ? round2(toNum(depositCustomValue)) : null,
+        deposit_amount: depositRequired ? depositAmount : 0,
         status,
       };
 
@@ -697,9 +768,104 @@ function NewQuotePage() {
               <div className="flex justify-between border-t border-border pt-1.5 text-base font-display uppercase tracking-wider">
                 <span>Total</span><span>{money(total)}</span>
               </div>
+              {depositRequired && (
+                <>
+                  <div className="flex justify-between text-moss">
+                    <span>Deposit due</span><span>{money(depositAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Balance after deposit</span><span>{money(round2(total - depositAmount))}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>
+
+        {/* Deposit */}
+        <section className="panel p-5 space-y-3">
+          <div className="label-eyebrow">Deposit</div>
+          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            // tracking only — no payment is collected here
+          </div>
+
+          {!allowOverride ? (
+            <div className="rounded-sm border border-border bg-background/50 p-3 space-y-1">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                // locked to company default by settings
+              </div>
+              <div className="text-sm">
+                Company default: <span className="mono">{describeCompanyDefault(companyDefaultType, companyDefaultFixed != null ? Number(companyDefaultFixed) : null)}</span>
+              </div>
+              <div className="mono text-sm text-moss">= {money(depositAmount)}</div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {DEPOSIT_SELECTIONS.map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="deposit_selection"
+                    className="h-4 w-4 accent-primary"
+                    checked={depositSelection === opt.value}
+                    onChange={() => setDepositSelection(opt.value)}
+                  />
+                  <span>{opt.label}</span>
+                  {opt.value === "company_default" && (
+                    <span className="mono text-[10px] text-muted-foreground">
+                      ({describeCompanyDefault(companyDefaultType, companyDefaultFixed != null ? Number(companyDefaultFixed) : null)})
+                    </span>
+                  )}
+                </label>
+              ))}
+
+              {depositSelection === "custom" && (
+                <div className="ml-6 flex flex-col gap-1 pt-1">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={depositCustomType}
+                      onChange={(e) => setDepositCustomType(e.target.value as DepositCustomType)}
+                      className="mono rounded-sm border border-border bg-background px-2 py-1.5 text-xs"
+                    >
+                      <option value="percentage">% of total</option>
+                      <option value="fixed">Fixed $</option>
+                    </select>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={depositCustomValue}
+                      onChange={(e) => setDepositCustomValue(e.target.value)}
+                      placeholder={depositCustomType === "percentage" ? "25" : "500.00"}
+                      aria-invalid={depositCustomError !== null}
+                      className={`mono w-28 rounded-sm border bg-background px-2 py-1.5 text-sm text-right ${
+                        depositCustomError ? "border-destructive" : "border-border"
+                      }`}
+                    />
+                    <span className="mono text-xs text-muted-foreground">
+                      {depositCustomType === "percentage" ? "%" : ""}
+                    </span>
+                  </div>
+                  {depositCustomError && (
+                    <span className="mono text-[10px] text-destructive">{depositCustomError}</span>
+                  )}
+                </div>
+              )}
+
+              <div className="border-t border-border pt-3 mono text-sm">
+                Deposit due: <span className="text-moss">{money(depositAmount)}</span>
+                {depositRequired && (
+                  <span className="text-muted-foreground"> · balance {money(round2(total - depositAmount))}</span>
+                )}
+              </div>
+              {depositTooLarge && (
+                <div className="mono text-[10px] text-destructive">
+                  Deposit can't exceed the quote total ({money(total)}).
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
 
         <div className="flex flex-col items-end gap-2">
           {hasInvalidInput && (
@@ -718,12 +884,12 @@ function NewQuotePage() {
               className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider"
             >Cancel</button>
             <button
-              disabled={save.isPending || hasInvalidInput}
+              disabled={save.isPending || hasInvalidInput || depositBlocked}
               onClick={() => save.mutate("draft")}
               className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider disabled:opacity-50"
             >Save as draft</button>
             <button
-              disabled={save.isPending || hasInvalidInput || !hasAnyValidLine}
+              disabled={save.isPending || hasInvalidInput || depositBlocked || !hasAnyValidLine}
               onClick={() => save.mutate("sent")}
               className="rounded-sm bg-primary px-4 py-2 text-xs uppercase tracking-wider text-primary-foreground disabled:opacity-50"
             >Save & mark sent</button>
