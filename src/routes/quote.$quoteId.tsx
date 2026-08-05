@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { getPublicQuote, respondToQuote } from "@/lib/quote-public.functions";
 import { depositBalanceAfterDeposit, depositCustomerLine } from "@/lib/deposit";
+import { BackToTimelineEventLink } from "@/components/BackToTimelineEventLink";
 
 export const Route = createFileRoute("/quote/$quoteId")({
   head: () => ({
@@ -76,6 +77,7 @@ function PublicQuotePage() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-2xl mx-auto space-y-5">
+        <BackToTimelineEventLink />
         <header className="panel p-6">
           <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Quote from

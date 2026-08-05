@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -157,6 +157,12 @@ export function QuoteDepositPanel({ quote }: Props) {
 
   const activeEntry = filteredAudit[auditCursor];
 
+  const location = useLocation();
+  function eventLinkSuffix(eventId: string) {
+    const returnTo = `${location.pathname}`;
+    return `?depositEvent=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(returnTo)}`;
+  }
+
   function goToEntry(next: number) {
     if (filteredAudit.length === 0) return;
     const clamped = Math.min(Math.max(next, 0), filteredAudit.length - 1);
@@ -166,6 +172,25 @@ export function QuoteDepositPanel({ quote }: Props) {
       entryRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }
+
+  // Focus the event referenced by ?depositEvent= / #deposit-event-<id> on arrival.
+  const incomingEventId =
+    new URLSearchParams(location.searchStr ?? "").get("depositEvent") ??
+    (location.hash?.startsWith("deposit-event-")
+      ? location.hash.replace("deposit-event-", "")
+      : null);
+  const focusedIncomingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!incomingEventId || focusedIncomingRef.current === incomingEventId) return;
+    const idx = filteredAudit.findIndex((r) => r.id === incomingEventId);
+    if (idx < 0) return;
+    focusedIncomingRef.current = incomingEventId;
+    setAuditCursor(idx);
+    requestAnimationFrame(() => {
+      entryRefs.current[incomingEventId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [incomingEventId, filteredAudit]);
+
 
 
 
@@ -617,6 +642,7 @@ export function QuoteDepositPanel({ quote }: Props) {
               return (
                 <li
                   key={row.id}
+                  id={`deposit-event-${row.id}`}
                   ref={(el) => {
                     entryRefs.current[row.id] = el;
                   }}
@@ -650,16 +676,16 @@ export function QuoteDepositPanel({ quote }: Props) {
                     )}
                   </div>
                   <div className="mono mt-1 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest">
-                    <Link
-                      to="/dashboard/quotes/$quoteId/print"
-                      params={{ quoteId: p.quote_id ?? quote.id }}
+                    <a
+                      href={`/dashboard/quotes/${p.quote_id ?? quote.id}/print${eventLinkSuffix(row.id)}`}
                       target="_blank"
+                      rel="noreferrer"
                       className="text-violet underline decoration-dotted underline-offset-2 hover:text-violet/80"
                     >
                       open quote {(p.quote_id ?? quote.id).slice(0, 8)} ↗
-                    </Link>
+                    </a>
                     <a
-                      href={`/quote/${p.quote_id ?? quote.id}`}
+                      href={`/quote/${p.quote_id ?? quote.id}${eventLinkSuffix(row.id)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-steel underline decoration-dotted underline-offset-2 hover:text-steel/80"
@@ -667,6 +693,7 @@ export function QuoteDepositPanel({ quote }: Props) {
                       customer view ↗
                     </a>
                   </div>
+
 
                 </li>
               );

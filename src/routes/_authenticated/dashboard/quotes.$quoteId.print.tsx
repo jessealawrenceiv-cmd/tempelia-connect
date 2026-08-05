@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { depositBalanceAfterDeposit } from "@/lib/deposit";
+import { BackToTimelineEventLink } from "@/components/BackToTimelineEventLink";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/$quoteId/print")({
   component: PrintQuotePage,
@@ -67,7 +68,9 @@ function PrintQuotePage() {
         .print-sheet h1, .print-sheet h2 { color: #1a1a1a; }
       `}</style>
       <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="no-print mb-4 flex justify-end gap-2 max-w-3xl mx-auto">
+        <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-2 max-w-3xl mx-auto">
+          <BackToTimelineEventLink />
+          <div className="flex gap-2">
           <button
             onClick={() => window.print()}
             className="rounded-sm bg-primary px-4 py-2 text-xs font-display uppercase tracking-wider text-primary-foreground"
@@ -80,7 +83,9 @@ function PrintQuotePage() {
           >
             Close
           </button>
+          </div>
         </div>
+
 
         <div className="print-sheet mx-auto max-w-3xl bg-white p-10 shadow-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
           {/* Header */}
