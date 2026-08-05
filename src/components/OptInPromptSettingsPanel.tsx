@@ -967,7 +967,10 @@ export function OptInPromptSettingsPanel({
                       </td>
                       <td
                         className={`py-1.5 pr-3 uppercase ${
-                          row.status === "failed" ? "text-destructive" : "text-moss"
+                          ["failed", "undelivered", "canceled"].includes(row.status ?? "")
+                            ? "text-destructive"
+                            : "text-moss"
+
                         }`}
                       >
                         {row.status}
