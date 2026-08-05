@@ -131,8 +131,19 @@ export function OptInPromptSettingsPanel({
     }
   }
 
+  const testParsed = normalizeToE164(testPhone.trim() || ownerPhone || "");
+  const testTarget = testParsed.ok ? testParsed.e164 : null;
+  const testPhoneError = testPhone.trim() === "" && !ownerPhone
+    ? "Enter a number or add your owner mobile"
+    : testParsed.ok
+      ? null
+      : testParsed.error;
+
   const test = useMutation({
-    mutationFn: async () => await sendTest({ data: { phone: testPhone.trim() } }),
+    mutationFn: async () => {
+      if (!testTarget) throw new Error(testPhoneError ?? "Enter a valid phone number.");
+      return await sendTest({ data: { phone: testTarget } });
+    },
     onSuccess: (res) => {
       setLastTest({ to: res.to, sid: res.sid, at: new Date().toLocaleTimeString(), status: res.status });
       void pollStatus(res.sid);
