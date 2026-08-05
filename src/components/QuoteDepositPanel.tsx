@@ -1384,6 +1384,12 @@ export function QuoteDepositPanel({ quote }: Props) {
               >
                 correlation_id: {correlationId}
               </button>
+              {retryInfo && (
+                <div className="mt-1 normal-case tracking-normal text-[10px] text-orange">
+                  retry attempt {retryInfo.attemptIndex} · {(retryInfo.msSinceFirstMiss / 1000).toFixed(1)}s
+                  since first miss
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <button
