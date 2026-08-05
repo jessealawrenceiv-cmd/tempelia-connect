@@ -70,6 +70,11 @@ export function QuoteDepositPanel({ quote }: Props) {
   const previewFn = useServerFn(previewQuoteSms);
   const [busy, setBusy] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [auditQuery, setAuditQuery] = useState("");
+  const [auditAction, setAuditAction] = useState<"all" | "deposit_received" | "deposit_undone">(
+    "all",
+  );
+  const [auditActor, setAuditActor] = useState("all");
 
   const total = Number(quote.total_amount ?? 0);
   const deposit = Number(quote.deposit_amount ?? 0);
@@ -93,6 +98,42 @@ export function QuoteDepositPanel({ quote }: Props) {
     },
     enabled: quote.deposit_required,
   });
+
+  const auditActors = Array.from(
+    new Set(
+      (audit ?? [])
+        .map((r) => parsePayload(r).actor_email || parsePayload(r).actor_user_id || "")
+        .filter(Boolean),
+    ),
+  ).sort();
+
+  const term = auditQuery.trim().toLowerCase();
+  const filteredAudit = (audit ?? []).filter((row) => {
+    const p = parsePayload(row);
+    const actor = p.actor_email || p.actor_user_id || "";
+    if (auditAction !== "all" && row.status !== auditAction) return false;
+    if (auditActor !== "all" && actor !== auditActor) return false;
+    if (!term) return true;
+    const haystack = [
+      row.status,
+      actor,
+      p.actor_is_owner === false ? "staff" : "owner",
+      quote.id,
+      quote.id.slice(0, 8),
+      quote.customer_first_name ?? "",
+      quote.customer_last_name ?? "",
+      p.deposit_amount != null ? String(p.deposit_amount) : "",
+      p.balance_remaining != null ? String(p.balance_remaining) : "",
+      new Date(row.created_at).toLocaleString("en-US"),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(term);
+  });
+
+  const auditFiltersActive = term !== "" || auditAction !== "all" || auditActor !== "all";
+
+
 
   const {
     data: preview,
@@ -131,7 +172,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   }
 
   function exportAudit() {
-    const rows: DepositAuditCsvRow[] = (audit ?? [])
+    const rows: DepositAuditCsvRow[] = filteredAudit
       .slice()
       .reverse()
       .map((row) => {
@@ -158,7 +199,11 @@ export function QuoteDepositPanel({ quote }: Props) {
         };
       });
     if (rows.length === 0) {
-      toast.error("No deposit audit entries to export yet.");
+      toast.error(
+        auditFiltersActive
+          ? "No entries match the current filters."
+          : "No deposit audit entries to export yet.",
+      );
       return;
     }
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
@@ -333,7 +378,7 @@ export function QuoteDepositPanel({ quote }: Props) {
           onClick={exportAudit}
           className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
         >
-          export deposit audit (csv)
+          export deposit audit (csv){auditFiltersActive ? " · filtered" : ""}
         </button>
       </div>
 
@@ -342,10 +387,61 @@ export function QuoteDepositPanel({ quote }: Props) {
       {audit && audit.length > 0 && (
         <div className="border-t border-border pt-3">
           <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-            // deposit status timeline · {audit.length} entr{audit.length === 1 ? "y" : "ies"}
+            // deposit status timeline · {filteredAudit.length} of {audit.length} entr
+            {audit.length === 1 ? "y" : "ies"}
           </div>
+
+          <div className="mb-3 flex flex-wrap gap-2">
+            <input
+              value={auditQuery}
+              onChange={(e) => setAuditQuery(e.target.value)}
+              placeholder="search actor, quote id, amount, date…"
+              className="mono min-w-[200px] flex-1 rounded-sm border border-border bg-background/60 px-2 py-1.5 text-[11px] text-paper placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            />
+            <select
+              value={auditAction}
+              onChange={(e) =>
+                setAuditAction(e.target.value as "all" | "deposit_received" | "deposit_undone")
+              }
+              className="mono rounded-sm border border-border bg-background/60 px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground focus:border-primary focus:outline-none"
+            >
+              <option value="all">all actions</option>
+              <option value="deposit_received">received</option>
+              <option value="deposit_undone">undone</option>
+            </select>
+            <select
+              value={auditActor}
+              onChange={(e) => setAuditActor(e.target.value)}
+              className="mono max-w-[220px] rounded-sm border border-border bg-background/60 px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground focus:border-primary focus:outline-none"
+            >
+              <option value="all">all actors</option>
+              {auditActors.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+            {auditFiltersActive && (
+              <button
+                onClick={() => {
+                  setAuditQuery("");
+                  setAuditAction("all");
+                  setAuditActor("all");
+                }}
+                className="mono rounded-sm border border-border px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-orange hover:text-orange"
+              >
+                clear
+              </button>
+            )}
+          </div>
+
+          {filteredAudit.length === 0 ? (
+            <div className="mono text-[11px] text-muted-foreground">
+              // no entries match the current filters
+            </div>
+          ) : (
           <ol className="relative space-y-3 border-l border-border/70 pl-4">
-            {audit.map((row) => {
+            {filteredAudit.map((row) => {
               const p = parsePayload(row);
               const received = row.status === "deposit_received";
               const actor = p.actor_email || p.actor_user_id || "unknown";
@@ -379,6 +475,7 @@ export function QuoteDepositPanel({ quote }: Props) {
               );
             })}
           </ol>
+          )}
         </div>
       )}
     </div>
