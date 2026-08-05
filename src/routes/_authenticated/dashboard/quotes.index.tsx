@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/AppShell";
 import { CustomerHistory } from "@/components/CustomerHistory";
 import { sendQuoteSms } from "@/lib/quote-sms.functions";
 import { sendDeclineFollowup } from "@/lib/decline-followup.functions";
+import { depositSelectionLabel, type DepositSelection } from "@/lib/deposit";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
   component: QuotesListPage,
