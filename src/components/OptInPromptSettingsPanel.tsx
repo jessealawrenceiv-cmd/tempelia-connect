@@ -358,9 +358,25 @@ export function OptInPromptSettingsPanel({
             <span className="text-moss">{OPT_IN_PROMPT_COMPLIANCE_TEXT}</span>
           </p>
         </div>
-        <p className="mono mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-          Green text is the fixed YES-to-opt-in / STOP wording and cannot be edited
-        </p>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <p className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Green text is the fixed YES-to-opt-in / STOP wording and cannot be edited
+          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(preview);
+                toast.success("Copied rendered SMS text to clipboard");
+              } catch {
+                toast.error("Could not copy — copy manually from the preview box");
+              }
+            }}
+            className="mono shrink-0 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper"
+          >
+            Copy SMS text
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
