@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { sendTestOptInPrompt, getTestSmsStatus } from "@/lib/opt-in-prompt.functions";
+import { saveOptInPromptSettings } from "@/lib/opt-in-prompt-settings.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeToE164 } from "@/lib/phone";
@@ -41,6 +42,7 @@ export function OptInPromptSettingsPanel({
   const qc = useQueryClient();
   const sendTest = useServerFn(sendTestOptInPrompt);
   const checkStatus = useServerFn(getTestSmsStatus);
+  const persistSettings = useServerFn(saveOptInPromptSettings);
   const [lastTest, setLastTest] = useState<{
     to: string;
     sid: string;
@@ -87,19 +89,14 @@ export function OptInPromptSettingsPanel({
 
   const save = useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
       const trimmed = draft.trim();
       const blocking = validateOptInPromptTemplate(trimmed).filter((i) => i.level === "error");
       if (blocking.length > 0) throw new Error(blocking[0]!.message);
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          opt_in_prompt_template: trimmed || null,
-          opt_in_prompt_cooldown_minutes: clampCooldownMinutes(cooldown),
-        })
-        .eq("id", u.user.id);
-      if (error) throw error;
+      // Saved through a server function so the same placeholder rules are
+      // enforced server-side, not just in this form.
+      await persistSettings({
+        data: { template: trimmed || null, cooldownMinutes: clampCooldownMinutes(cooldown) },
+      });
     },
     onSuccess: () => {
       toast.success("Opt-in prompt settings saved.");
