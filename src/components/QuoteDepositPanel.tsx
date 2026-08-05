@@ -21,6 +21,7 @@ import {
   type DepositJumpMissReason,
 } from "@/lib/deposit-deep-link";
 import { trackDepositJump, trackDepositJumpRecovery } from "@/lib/analytics";
+import { recordDepositJumpRecovery } from "@/lib/deposit-jump-analytics.functions";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
