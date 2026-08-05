@@ -235,6 +235,11 @@ function NewQuotePage() {
     setTaxExempt(!!q.tax_exempt);
     setTaxRateInput(q.tax_rate != null ? String(q.tax_rate) : "9.5");
     setValidUntil(q.valid_until ?? "");
+    setDepositSelection((q.deposit_selection ?? "none") as DepositSelection);
+    if (q.deposit_custom_type) setDepositCustomType(q.deposit_custom_type as DepositCustomType);
+    setDepositCustomValue(q.deposit_custom_value != null ? String(q.deposit_custom_value) : "");
+
+
 
     const items: Array<any> = Array.isArray(q.line_items) ? q.line_items : [];
     setCategories((prev) =>
