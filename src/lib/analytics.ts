@@ -9,18 +9,23 @@
 
 import posthog from "posthog-js";
 
-const PROJECT_TOKEN = import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_API_KEY;
-const REGION = import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_REGION || "us";
-const API_HOST = REGION === "us" ? "https://us.i.posthog.com" : "https://eu.i.posthog.com";
-
 let initialized = false;
+
+function readEnv() {
+  return {
+    token: import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_API_KEY as string | undefined,
+    region: (import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_REGION as string | undefined) || "us",
+  };
+}
 
 function init() {
   if (initialized) return;
-  if (!PROJECT_TOKEN) return;
+  const { token, region } = readEnv();
+  if (!token) return;
   if (typeof window === "undefined") return;
-  posthog.init(PROJECT_TOKEN, {
-    api_host: API_HOST,
+  const apiHost = region === "us" ? "https://us.i.posthog.com" : "https://eu.i.posthog.com";
+  posthog.init(token, {
+    api_host: apiHost,
     capture_pageview: false,
     autocapture: false,
   });
