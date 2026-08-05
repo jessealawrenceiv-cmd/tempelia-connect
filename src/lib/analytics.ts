@@ -17,8 +17,15 @@ function readEnv() {
 }
 
 export type DepositJumpResult =
-  | { kind: "success"; quoteId: string; eventId: string; source: string | null }
-  | { kind: "miss"; quoteId: string; eventId: string; reason: string; source: string | null };
+  | { kind: "success"; quoteId: string; eventId: string; source: string | null; durationMs?: number | null }
+  | {
+      kind: "miss";
+      quoteId: string;
+      eventId: string;
+      reason: string;
+      source: string | null;
+      durationMs?: number | null;
+    };
 
 export function createAnalytics(posthogClient: typeof posthog = posthog) {
   let initialized = false;
@@ -56,11 +63,17 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
   }
 
   function trackDepositJump(result: DepositJumpResult) {
+    // Only send duration when measured, so events without timing stay clean.
+    const timing =
+      typeof result.durationMs === "number" && Number.isFinite(result.durationMs)
+        ? { duration_ms: Math.round(result.durationMs) }
+        : {};
     if (result.kind === "success") {
       capture("deposit_jump_success", {
         quote_id: result.quoteId,
         event_id: result.eventId,
         source: result.source,
+        ...timing,
       });
     } else {
       capture("deposit_jump_miss", {
@@ -68,6 +81,7 @@ export function createAnalytics(posthogClient: typeof posthog = posthog) {
         event_id: result.eventId,
         reason: result.reason,
         source: result.source,
+        ...timing,
       });
     }
   }
