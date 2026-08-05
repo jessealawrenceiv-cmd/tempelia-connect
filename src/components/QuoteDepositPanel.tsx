@@ -239,12 +239,24 @@ export function QuoteDepositPanel({ quote }: Props) {
 
     setJumpMiss(null);
     setAuditCursor(idx);
+    setJumpedId(incomingEventId);
     requestAnimationFrame(() => {
-      entryRefs.current[incomingEventId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const el = entryRefs.current[incomingEventId];
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Move keyboard focus onto the row so screen readers announce it on arrival.
+      el?.focus({ preventScroll: true });
       // Clear the jump params (and hash) so refresh / back doesn't re-scroll.
       clearJumpParams();
     });
   }, [incomingEventId, filteredAudit, audit, auditLoading]);
+
+  // Fade the arrival highlight after a moment, keeping focus where it is.
+  useEffect(() => {
+    if (!jumpedId) return;
+    const t = setTimeout(() => setJumpedId(null), 6000);
+    return () => clearTimeout(t);
+  }, [jumpedId]);
+
 
 
 
