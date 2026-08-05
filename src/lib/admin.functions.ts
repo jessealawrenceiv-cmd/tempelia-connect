@@ -110,6 +110,15 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
     const churnedCount = rows.filter((r) => r.isChurned).length;
     const activeCount = rows.length - churnedCount;
 
+    await recordAdminAccess({
+      actorUserId: context.userId,
+      functionName: "listProvisionedNumbers",
+      rowCount: rows.length,
+      outcome: "allowed",
+    });
+
+
+
     return {
       numberCount: rows.length,
       activeCount,
