@@ -324,12 +324,20 @@ export function QuoteDepositPanel({ quote }: Props) {
       return;
     }
 
+    const successPayload = {
+      quote_id: quote.id,
+      event_id: incomingEventId,
+      source: incomingSource,
+      resolved_index: resolution.index,
+      filtered_count: filteredAudit.length,
+    };
     trackDepositJump({
       kind: "success",
       quoteId: quote.id,
       eventId: incomingEventId,
       source: incomingSource,
     });
+    logDepositJumpDebug("deposit_jump_success", successPayload);
     setJumpMiss(null);
     setAuditCursor(resolution.index);
     setJumpedId(incomingEventId);
