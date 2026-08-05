@@ -73,7 +73,12 @@ function MissedCallsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { q, status, from, to } = Route.useSearch();
   const setFilter = (patch: Partial<{ q: string; status: string; from: string; to: string }>) =>
-    navigate({ search: (prev) => ({ ...prev, ...patch }) });
+    navigate({
+      search: (prev: { q: string; status: string; from: string; to: string }) => ({
+        ...prev,
+        ...patch,
+      }),
+    });
   const [selected, setSelected] = useState<MissedCallDetail | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["missed-calls", from, to],
