@@ -232,6 +232,36 @@ export function OptInPromptSettingsPanel({
         </ul>
       )}
 
+      {missingBusiness && (
+        <div className="mt-3 rounded-sm border border-primary/40 bg-primary/5 p-3">
+          <div className="label-eyebrow text-primary">⚠ Warning only — you can still save</div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your lead-in has no {"{business}"} placeholder, so the message won&apos;t name your
+            business up front. Twilio reviewers prefer sender identification in the first line. Add
+            {" "}{"{business}"} or pick an example below.
+          </p>
+          <div className="mt-3 space-y-2">
+            {exampleTemplates.map((tpl) => (
+              <div
+                key={tpl}
+                className="flex flex-col gap-2 rounded-sm border border-border bg-background/60 p-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span className="mono text-[11px] leading-relaxed text-paper">{tpl}</span>
+                <button
+                  type="button"
+                  onClick={() => setDraft(tpl)}
+                  className="mono shrink-0 rounded-sm border border-primary/50 px-2 py-1 text-[10px] uppercase tracking-widest text-primary hover:bg-primary/10"
+                >
+                  Use this
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+
+
       <div className="mt-4 rounded-sm border border-border bg-background/60 p-3">
         <div className="label-eyebrow">Message preview</div>
         <p className="mono mt-2 text-xs leading-relaxed text-paper">{preview}</p>
