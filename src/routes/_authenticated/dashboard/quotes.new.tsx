@@ -355,7 +355,7 @@ function NewQuotePage() {
       if (!phone.trim()) throw new Error("Phone required");
       if (!jobSite.trim()) throw new Error("Job site address required");
       // Never persist garbage — blocks BOTH draft and sent.
-      if (hasInvalidInput) {
+      if (hasInvalidInput || depositBlocked) {
         throw new Error("Fix the highlighted amount fields before saving");
       }
       // Completeness — only blocks "sent"; drafts may be incomplete.
