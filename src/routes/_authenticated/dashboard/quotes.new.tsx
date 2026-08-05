@@ -4,6 +4,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
+import {
+  DEPOSIT_SELECTIONS,
+  describeCompanyDefault,
+  resolveDepositAmount,
+  type CompanyDefaultDepositType,
+  type DepositCustomType,
+  type DepositSelection,
+} from "@/lib/deposit";
 
 type QuoteSearch = { edit?: string };
 
