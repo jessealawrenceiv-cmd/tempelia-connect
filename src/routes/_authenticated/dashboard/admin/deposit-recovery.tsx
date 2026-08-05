@@ -42,6 +42,7 @@ const ACTION_LABEL: Record<RecoveryAction, string> = {
   show_latest: "Show latest",
   clear_filters: "Clear filters",
   dismiss: "Dismiss",
+  retry_jump: "Retry jump",
 };
 
 const ACTION_COLOR: Record<RecoveryAction, string> = {
@@ -49,7 +50,9 @@ const ACTION_COLOR: Record<RecoveryAction, string> = {
   show_latest: "hsl(var(--primary))",
   clear_filters: "hsl(var(--steel))",
   dismiss: "hsl(var(--moss))",
+  retry_jump: "hsl(var(--violet))",
 };
+
 
 const fmtMs = (ms: number | null) =>
   ms == null ? "—" : ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
