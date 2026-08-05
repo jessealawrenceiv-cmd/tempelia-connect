@@ -565,8 +565,53 @@ export function QuoteDepositPanel({ quote }: Props) {
 
       {previewBlock}
 
+      {jumpMiss && (
+        <div className="mono rounded-sm border border-orange/60 bg-orange/10 px-3 py-2 text-[11px] text-orange">
+          <div className="uppercase tracking-widest text-[10px]">
+            // linked deposit event not found
+          </div>
+          <div className="mt-1 normal-case text-muted-foreground">
+            {jumpMiss.reason === "empty"
+              ? "This quote has no deposit audit entries yet, so the shared link has nothing to jump to."
+              : jumpMiss.reason === "filtered"
+                ? "That event exists but is hidden by the current search/filters. Clear the filters to reveal it."
+                : "That event ID isn't part of this quote's deposit timeline — it may have been pruned, or the link points at another quote."}
+            {jumpMiss.reason !== "empty" && " Showing the most recent entry instead."}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {jumpMiss.reason === "filtered" && (
+              <button
+                onClick={() => {
+                  setAuditQuery("");
+                  setAuditAction("all");
+                  setAuditActor("all");
+                  setAuditFrom("");
+                  setAuditTo("");
+                  focusedIncomingRef.current = null;
+                  setJumpMiss(null);
+                  const id = jumpMiss.id;
+                  requestAnimationFrame(() => {
+                    entryRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  });
+                }}
+                className="rounded-sm border border-orange/60 px-2 py-1 text-[10px] uppercase tracking-wider hover:bg-orange/20"
+              >
+                clear filters &amp; jump
+              </button>
+            )}
+            <button
+              onClick={() => setJumpMiss(null)}
+              className="rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
+            >
+              dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {audit && audit.length > 0 && (
-        <div className="border-t border-border pt-3">
+        <div ref={timelineRef} className="border-t border-border pt-3">
+
           <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
             // deposit status timeline · {filteredAudit.length} of {audit.length} entr
             {audit.length === 1 ? "y" : "ies"}
