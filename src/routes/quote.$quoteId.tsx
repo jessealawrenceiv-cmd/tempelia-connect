@@ -76,6 +76,7 @@ function PublicQuotePage() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-2xl mx-auto space-y-5">
+        <BackToTimelineEventLink />
         <header className="panel p-6">
           <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Quote from
