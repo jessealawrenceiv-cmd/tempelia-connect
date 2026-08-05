@@ -1437,11 +1437,17 @@ export function QuoteDepositPanel({ quote }: Props) {
               <button
                 onClick={() => {
                   navigator.clipboard
-                    .writeText(JSON.stringify(debugLog, null, 2))
-                    .then(() => toast.success("Debug log copied as JSON."))
+                    .writeText(JSON.stringify(filteredDebugLog, null, 2))
+                    .then(() =>
+                      toast.success(
+                        debugFiltersActive
+                          ? "Filtered debug log copied as JSON."
+                          : "Debug log copied as JSON.",
+                      ),
+                    )
                     .catch(() => toast.error("Copy failed."));
                 }}
-                disabled={debugLog.length === 0}
+                disabled={filteredDebugLog.length === 0}
                 className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
               >
                 copy json
