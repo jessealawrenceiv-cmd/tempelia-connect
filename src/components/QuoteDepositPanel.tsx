@@ -748,20 +748,41 @@ export function QuoteDepositPanel({ quote }: Props) {
                 next event →
               </button>
               {activeEntry && (
-                <span aria-hidden="true" className="ml-auto flex items-center gap-2 text-muted-foreground">
-                  <span className="text-paper">
-                    deposit {money(parsePayload(activeEntry).deposit_amount ?? 0)}
+                <span className="ml-auto flex flex-wrap items-center gap-2 text-muted-foreground">
+                  <span aria-hidden="true" className="flex items-center gap-2">
+                    <span className="text-paper">
+                      deposit {money(parsePayload(activeEntry).deposit_amount ?? 0)}
+                    </span>
+                    <span>·</span>
+                    <span className="text-moss">
+                      balance {money(parsePayload(activeEntry).balance_remaining ?? 0)}
+                    </span>
+                    <span>·</span>
+                    <span>
+                      total {money(parsePayload(activeEntry).total_amount ?? quote.total_amount)}
+                    </span>
                   </span>
-                  <span>·</span>
-                  <span className="text-moss">
-                    balance {money(parsePayload(activeEntry).balance_remaining ?? 0)}
-                  </span>
-                  <span>·</span>
-                  <span>
-                    total {money(parsePayload(activeEntry).total_amount ?? quote.total_amount)}
-                  </span>
+                  <a
+                    href={`/dashboard/quotes/${parsePayload(activeEntry).quote_id ?? quote.id}/print${eventLinkSuffix(activeEntry.id)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open quote details for the highlighted deposit event in a new tab"
+                    className="rounded-sm border border-border px-2 py-1 text-muted-foreground hover:border-primary hover:text-paper"
+                  >
+                    quote ↗
+                  </a>
+                  <a
+                    href={`/quote/${parsePayload(activeEntry).quote_id ?? quote.id}${eventLinkSuffix(activeEntry.id)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open the customer view for the highlighted deposit event in a new tab"
+                    className="rounded-sm border border-border px-2 py-1 text-muted-foreground hover:border-primary hover:text-paper"
+                  >
+                    customer view ↗
+                  </a>
                 </span>
               )}
+
             </div>
           )}
 
