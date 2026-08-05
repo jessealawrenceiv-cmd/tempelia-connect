@@ -1,5 +1,13 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => !el.hasAttribute("disabled") && !el.hasAttribute("hidden") && el.offsetParent !== null);
+}
 
 export type DepositRowPopoverProps = {
   rowId: string;
