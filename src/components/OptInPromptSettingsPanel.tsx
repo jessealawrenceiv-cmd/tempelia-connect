@@ -41,8 +41,13 @@ export function OptInPromptSettingsPanel({
   const [lastTest, setLastTest] = useState<{ to: string; sid: string; at: string } | null>(null);
   const [sampleName, setSampleName] = useState("Dana Reyes");
   const [samplePhone, setSamplePhone] = useState("+15015550123");
+  const [testPhone, setTestPhone] = useState("");
   const [draft, setDraft] = useState("");
   const [cooldown, setCooldown] = useState(String(OPT_IN_PROMPT_COOLDOWN_MINUTES));
+
+  useEffect(() => {
+    setTestPhone(ownerPhone ?? "");
+  }, [ownerPhone]);
 
   useEffect(() => {
     setDraft(template ?? DEFAULT_OPT_IN_PROMPT_TEMPLATE);
@@ -76,7 +81,7 @@ export function OptInPromptSettingsPanel({
   });
 
   const test = useMutation({
-    mutationFn: async () => await sendTest({}),
+    mutationFn: async () => await sendTest({ data: { phone: testPhone.trim() } }),
     onSuccess: (res) => {
       setLastTest({ to: res.to, sid: res.sid, at: new Date().toLocaleTimeString() });
       toast.success(`Test prompt sent to ${res.to}`);
@@ -244,21 +249,48 @@ export function OptInPromptSettingsPanel({
         >
           Reset to default
         </button>
-        <button
-          type="button"
-          onClick={() => test.mutate()}
-          disabled={test.isPending || !ownerPhone}
-          title={ownerPhone ? `Sends to ${ownerPhone}` : "Add your owner mobile number first"}
-          className="rounded-sm border border-primary px-4 py-2 text-xs uppercase tracking-widest text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
-        >
-          {test.isPending ? "Sending…" : "Send test SMS"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+            placeholder={ownerPhone ?? "+15015550123"}
+            inputMode="tel"
+            aria-label="Test phone number"
+            className="mono w-48 rounded-sm border border-border bg-background px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => test.mutate()}
+            disabled={test.isPending || !(testPhone.trim() || ownerPhone)}
+            title={
+              testPhone.trim()
+                ? `Sends to ${testPhone.trim()}`
+                : ownerPhone
+                  ? `Sends to ${ownerPhone}`
+                  : "Enter a test number or add your owner mobile first"
+            }
+            className="rounded-sm border border-primary px-4 py-2 text-xs uppercase tracking-widest text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+          >
+            {test.isPending ? "Sending…" : "Send test SMS"}
+          </button>
+          {ownerPhone && testPhone.trim() !== ownerPhone && (
+            <button
+              type="button"
+              onClick={() => setTestPhone(ownerPhone)}
+              className="mono text-[10px] uppercase tracking-widest text-muted-foreground underline"
+            >
+              Use owner mobile
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-        {ownerPhone
-          ? `Test goes to your owner mobile ${ownerPhone} · save first to test edits · same cooldown applies`
-          : "Add an owner mobile number above to enable test sends"}
+        {testPhone.trim()
+          ? `Test goes to ${testPhone.trim()} · 10-digit US or E.164 · save first to test edits · same cooldown applies`
+          : ownerPhone
+            ? `Empty = owner mobile ${ownerPhone} · same cooldown applies`
+            : "Enter a test number (or add an owner mobile above) to enable test sends"}
       </p>
       {lastTest && (
         <p className="mono mt-1 text-[10px] uppercase tracking-widest text-moss">
