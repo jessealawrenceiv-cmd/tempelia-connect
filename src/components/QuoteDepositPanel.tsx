@@ -20,7 +20,11 @@ import {
   resolveDepositJump,
   type DepositJumpMissReason,
 } from "@/lib/deposit-deep-link";
-import { trackDepositJump, trackDepositJumpRecovery } from "@/lib/analytics";
+import {
+  trackDepositJump,
+  trackDepositJumpRecovery,
+  createDepositJumpCorrelationId,
+} from "@/lib/analytics";
 import { recordDepositJumpRecovery } from "@/lib/deposit-jump-analytics.functions";
 import {
   saveDepositJumpDebugEvent,
@@ -224,7 +228,13 @@ export function QuoteDepositPanel({ quote }: Props) {
     ts: number;
     event: "deposit_jump_success" | "deposit_jump_miss" | "deposit_jump_recovery";
     payload: Record<string, unknown>;
+    correlationId: string | null;
   };
+
+  // One correlation id per panel session — stamped on every deposit_jump_* event
+  // so analytics rows can be matched back to a single empty-state session.
+  const correlationIdRef = useRef<string>(createDepositJumpCorrelationId());
+  const correlationId = correlationIdRef.current;
   const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
   const debugLogRef = useRef<HTMLDivElement | null>(null);
   const [debugHydrated, setDebugHydrated] = useState(false);
@@ -234,19 +244,26 @@ export function QuoteDepositPanel({ quote }: Props) {
       event: "deposit_jump_success" | "deposit_jump_miss" | "deposit_jump_recovery",
       payload: Record<string, unknown>,
     ) => {
-      const entry: DebugEntry = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ts: Date.now(), event, payload };
+      const stamped = { correlation_id: correlationId, ...payload };
+      const entry: DebugEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        ts: Date.now(),
+        event,
+        payload: stamped,
+        correlationId,
+      };
       // Always mirror to the console so testers can inspect in DevTools even before toggling on-screen mode.
       // eslint-disable-next-line no-console
-      console.log(`[deposit-jump-debug] ${event}`, payload);
+      console.log(`[deposit-jump-debug] ${event}`, stamped);
       if (debugMode) {
         setDebugLog((prev) => [entry, ...prev].slice(0, 50));
         // Persist so the test run is still reviewable after a refresh.
         void saveDepositJumpDebugEvent({
-          data: { quoteId: quote.id, event, payload },
+          data: { quoteId: quote.id, event, payload: stamped, correlationId },
         }).catch(() => {});
       }
     },
-    [debugMode, quote.id],
+    [debugMode, quote.id, correlationId],
   );
 
   useEffect(() => {
@@ -268,6 +285,7 @@ export function QuoteDepositPanel({ quote }: Props) {
             ts: new Date(r.occurredAt).getTime(),
             event: r.event,
             payload: r.payload as Record<string, unknown>,
+            correlationId: r.correlationId ?? null,
           }));
           const seen = new Set(prev.map((e) => e.id));
           return [...prev, ...saved.filter((e) => !seen.has(e.id))]
@@ -312,6 +330,7 @@ export function QuoteDepositPanel({ quote }: Props) {
         event_id: jumpMiss?.id ?? null,
         reason: jumpMiss?.reason ?? null,
         ms_since_miss: msSinceMiss,
+        correlation_id: correlationId,
       };
       trackDepositJumpRecovery({
         action,
@@ -319,6 +338,7 @@ export function QuoteDepositPanel({ quote }: Props) {
         eventId: jumpMiss?.id ?? null,
         reason: jumpMiss?.reason ?? null,
         msSinceMiss,
+        correlationId,
       });
       // Persist for the operator analytics page; never block the UI on it.
       void recordDepositJumpRecovery({
@@ -328,11 +348,12 @@ export function QuoteDepositPanel({ quote }: Props) {
           eventId: jumpMiss?.id ?? null,
           reason: jumpMiss?.reason ?? null,
           msSinceMiss,
+          correlationId,
         },
       }).catch(() => {});
       logDepositJumpDebug("deposit_jump_recovery", payload);
     },
-    [jumpMiss, quote.id, logDepositJumpDebug],
+    [jumpMiss, quote.id, logDepositJumpDebug, correlationId],
   );
 
 
@@ -411,6 +432,7 @@ export function QuoteDepositPanel({ quote }: Props) {
           total_audit_count: audit?.length ?? 0,
           duration_ms: durationMs,
           resolved_ms: resolvedAtMs,
+          correlation_id: correlationId,
         };
         trackDepositJump({
           kind: "miss",
@@ -419,6 +441,7 @@ export function QuoteDepositPanel({ quote }: Props) {
           reason: resolution.reason,
           source: incomingSource,
           durationMs,
+          correlationId,
         });
         logDepositJumpDebug("deposit_jump_miss", missPayload);
       });
@@ -446,6 +469,7 @@ export function QuoteDepositPanel({ quote }: Props) {
         duration_ms: durationMs,
         resolved_ms: resolvedAtMs,
         row_found: Boolean(el),
+        correlation_id: correlationId,
       };
       trackDepositJump({
         kind: "success",
@@ -453,6 +477,7 @@ export function QuoteDepositPanel({ quote }: Props) {
         eventId: incomingEventId,
         source: incomingSource,
         durationMs,
+        correlationId,
       });
       logDepositJumpDebug("deposit_jump_success", successPayload);
     });
@@ -1234,6 +1259,19 @@ export function QuoteDepositPanel({ quote }: Props) {
             <div className="mono text-[10px] uppercase tracking-widest text-violet">
               // deposit jump debug log · {debugLog.length} event
               {debugLog.length === 1 ? "" : "s"}
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard
+                    .writeText(correlationId)
+                    .then(() => toast.success("Correlation id copied."))
+                    .catch(() => toast.error("Copy failed."));
+                }}
+                title="Copy correlation id"
+                className="mt-1 block normal-case tracking-normal text-[10px] text-paper hover:text-violet"
+              >
+                correlation_id: {correlationId}
+              </button>
             </div>
             <div className="flex gap-2">
               <button
@@ -1287,6 +1325,22 @@ export function QuoteDepositPanel({ quote }: Props) {
                     <span className="text-muted-foreground">
                       {new Date(entry.ts).toLocaleTimeString("en-US", { hour12: false })}
                     </span>
+                    {(entry.correlationId ??
+                      (entry.payload as { correlation_id?: string }).correlation_id) && (
+                      <span
+                        className={`rounded-sm border px-1 text-[9px] ${
+                          (entry.correlationId ??
+                            (entry.payload as { correlation_id?: string }).correlation_id) ===
+                          correlationId
+                            ? "border-violet/60 bg-violet/15 text-violet"
+                            : "border-border text-muted-foreground"
+                        }`}
+                        title="Correlation id for this event session"
+                      >
+                        {entry.correlationId ??
+                          (entry.payload as { correlation_id?: string }).correlation_id}
+                      </span>
+                    )}
                   </div>
                   <pre className="mt-1 whitespace-pre-wrap break-all rounded-sm bg-charcoal/60 p-2 text-[10px] text-paper">
                     {JSON.stringify(entry.payload, null, 2)}
