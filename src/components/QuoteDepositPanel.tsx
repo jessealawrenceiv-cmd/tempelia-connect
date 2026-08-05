@@ -335,32 +335,37 @@ export function QuoteDepositPanel({ quote }: Props) {
   }, [debugMode]);
 
   // Rehydrate the saved debug log once, when debug mode is on.
-  useEffect(() => {
-    if (!debugMode || debugHydrated) return;
-    let cancelled = false;
-    setDebugHydrated(true);
-    void listDepositJumpDebugEvents({ data: { quoteId: quote.id, limit: 50 } })
+  const reloadSavedDebugLog = useCallback(() => {
+    setPersistStatus({ kind: "loading" });
+    return listDepositJumpDebugEvents({ data: { quoteId: quote.id, limit: 50 } })
       .then((rows) => {
-        if (cancelled || !rows?.length) return;
+        const saved: DebugEntry[] = (rows ?? []).map((r) => ({
+          id: r.id,
+          ts: new Date(r.occurredAt).getTime(),
+          event: r.event,
+          payload: r.payload as Record<string, unknown>,
+          correlationId: r.correlationId ?? null,
+        }));
         setDebugLog((prev) => {
-          const saved: DebugEntry[] = rows.map((r) => ({
-            id: r.id,
-            ts: new Date(r.occurredAt).getTime(),
-            event: r.event,
-            payload: r.payload as Record<string, unknown>,
-            correlationId: r.correlationId ?? null,
-          }));
           const seen = new Set(prev.map((e) => e.id));
           return [...prev, ...saved.filter((e) => !seen.has(e.id))]
             .sort((a, b) => b.ts - a.ts)
             .slice(0, 50);
         });
+        setPersistStatus({ kind: "loaded", count: saved.length, at: Date.now() });
       })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [debugMode, debugHydrated, quote.id]);
+      .catch((e) =>
+        setPersistStatus({ kind: "error", op: "load", message: errText(e), at: Date.now() }),
+      );
+  }, [quote.id]);
+
+  // Rehydrate the saved debug log once, when debug mode is on.
+  useEffect(() => {
+    if (!debugMode || debugHydrated) return;
+    setDebugHydrated(true);
+    void reloadSavedDebugLog();
+  }, [debugMode, debugHydrated, reloadSavedDebugLog]);
+
 
   // Pull keyboard focus onto the not-found heading so the message is read at once.
   useEffect(() => {
