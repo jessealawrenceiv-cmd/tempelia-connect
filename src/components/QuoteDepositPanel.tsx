@@ -1106,7 +1106,76 @@ export function QuoteDepositPanel({ quote }: Props) {
                 </li>
               );
             })}
-          </ol>
+           </ol>
+          )}
+        </div>
+      )}
+
+      {debugMode && (
+        <div
+          ref={debugLogRef}
+          className="rounded-sm border border-violet/40 bg-violet/5 p-3 space-y-2"
+          aria-label="Deposit jump debug log"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="mono text-[10px] uppercase tracking-widest text-violet">
+              // deposit jump debug log · {debugLog.length} event
+              {debugLog.length === 1 ? "" : "s"}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard
+                    .writeText(JSON.stringify(debugLog, null, 2))
+                    .then(() => toast.success("Debug log copied as JSON."))
+                    .catch(() => toast.error("Copy failed."));
+                }}
+                disabled={debugLog.length === 0}
+                className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
+              >
+                copy json
+              </button>
+              <button
+                onClick={() => setDebugLog([])}
+                disabled={debugLog.length === 0}
+                className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
+              >
+                clear
+              </button>
+              <button
+                onClick={() => setDebugMode(false)}
+                className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20"
+              >
+                hide
+              </button>
+            </div>
+          </div>
+          {debugLog.length === 0 ? (
+            <div className="mono text-[11px] text-muted-foreground">
+              // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log.
+            </div>
+          ) : (
+            <ol className="max-h-64 space-y-2 overflow-auto rounded-sm border border-violet/20 bg-charcoal/40 p-2">
+              {debugLog.map((entry) => (
+                <li key={entry.id} className="mono text-[11px]">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={
+                        entry.event === "deposit_jump_success" ? "text-moss" : "text-orange"
+                      }
+                    >
+                      {entry.event}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {new Date(entry.ts).toLocaleTimeString("en-US", { hour12: false })}
+                    </span>
+                  </div>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-sm bg-charcoal/60 p-2 text-[10px] text-paper">
+                    {JSON.stringify(entry.payload, null, 2)}
+                  </pre>
+                </li>
+              ))}
+            </ol>
           )}
         </div>
       )}
