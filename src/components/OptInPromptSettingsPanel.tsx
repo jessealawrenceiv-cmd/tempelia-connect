@@ -937,8 +937,8 @@ export function OptInPromptSettingsPanel({
           </button>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Last 50 test sends from this account, newest first — timestamp, template version, cooldown
-          used and final delivery result.
+          Last 50 test sends from this account, newest first — timestamp, destination number, Twilio
+          SID, template version, cooldown used and final delivery result.
         </p>
 
         {testHistory.isLoading ? (
@@ -955,6 +955,7 @@ export function OptInPromptSettingsPanel({
               <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 <tr className="text-left">
                   <th className="py-1 pr-3 font-normal">Sent</th>
+                  <th className="py-1 pr-3 font-normal">To</th>
                   <th className="py-1 pr-3 font-normal">Result</th>
                   <th className="py-1 pr-3 font-normal">Twilio SID</th>
                   <th className="py-1 pr-3 font-normal">Version</th>
