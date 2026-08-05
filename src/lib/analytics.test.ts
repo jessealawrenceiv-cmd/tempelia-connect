@@ -15,21 +15,31 @@ vi.mock("posthog-js", () => ({
   },
 }));
 
+function setEnv(token?: string, region?: string) {
+  if (token != null) {
+    import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_API_KEY = token;
+  } else {
+    delete import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_API_KEY;
+  }
+  if (region != null) {
+    import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_REGION = region;
+  } else {
+    delete import.meta.env.VITE_LOVABLE_CONNECTOR_POSTHOG_REGION;
+  }
+}
+
 describe("analytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("import", {
-      meta: {
-        env: {
-          VITE_LOVABLE_CONNECTOR_POSTHOG_API_KEY: "phc_test",
-          VITE_LOVABLE_CONNECTOR_POSTHOG_REGION: "us",
-        },
-      },
-    });
+    setEnv("phc_test", "us");
+    // Force re-initialization on the next capture by reloading the module state.
+    // We do this by mutating the internal flag via a side-effect import helper.
+    vi.resetModules();
   });
 
-  it("initializes PostHog once and captures an event", () => {
-    capture("deposit_jump_success", { quote_id: "q1" });
+  it("initializes PostHog once and captures an event", async () => {
+    const { capture: captureFresh } = await import("@/lib/analytics");
+    captureFresh("deposit_jump_success", { quote_id: "q1" });
     expect(initMock).toHaveBeenCalledTimes(1);
     expect(initMock).toHaveBeenCalledWith("phc_test", {
       api_host: "https://us.i.posthog.com",
@@ -38,39 +48,32 @@ describe("analytics", () => {
     });
     expect(captureMock).toHaveBeenCalledWith("deposit_jump_success", { quote_id: "q1" });
 
-    // Second call should not re-initialize.
-    capture("deposit_jump_success", { quote_id: "q2" });
+    captureFresh("deposit_jump_success", { quote_id: "q2" });
     expect(initMock).toHaveBeenCalledTimes(1);
     expect(captureMock).toHaveBeenCalledTimes(2);
   });
 
-  it("uses the EU host when region is eu", () => {
-    vi.stubGlobal("import", {
-      meta: {
-        env: {
-          VITE_LOVABLE_CONNECTOR_POSTHOG_API_KEY: "phc_test",
-          VITE_LOVABLE_CONNECTOR_POSTHOG_REGION: "eu",
-        },
-      },
-    });
-    capture("test");
+  it("uses the EU host when region is eu", async () => {
+    setEnv("phc_test", "eu");
+    const { capture: captureFresh } = await import("@/lib/analytics");
+    captureFresh("test");
     expect(initMock).toHaveBeenCalledWith(
       "phc_test",
       expect.objectContaining({ api_host: "https://eu.i.posthog.com" }),
     );
   });
 
-  it("no-ops when PostHog token is not configured", () => {
-    vi.stubGlobal("import", {
-      meta: { env: {} },
-    });
-    capture("test");
+  it("no-ops when PostHog token is not configured", async () => {
+    setEnv(undefined, undefined);
+    const { capture: captureFresh } = await import("@/lib/analytics");
+    captureFresh("test");
     expect(initMock).not.toHaveBeenCalled();
     expect(captureMock).not.toHaveBeenCalled();
   });
 
-  it("tracks a successful deposit jump", () => {
-    trackDepositJump({
+  it("tracks a successful deposit jump", async () => {
+    const { trackDepositJump: trackFresh } = await import("@/lib/analytics");
+    trackFresh({
       kind: "success",
       quoteId: "quote-1",
       eventId: "evt-1",
@@ -83,8 +86,9 @@ describe("analytics", () => {
     });
   });
 
-  it("tracks a missed deposit jump with reason", () => {
-    trackDepositJump({
+  it("tracks a missed deposit jump with reason", async () => {
+    const { trackDepositJump: trackFresh } = await import("@/lib/analytics");
+    trackFresh({
       kind: "miss",
       quoteId: "quote-2",
       eventId: "evt-2",
@@ -99,10 +103,11 @@ describe("analytics", () => {
     });
   });
 
-  it("identifies and resets users", () => {
-    identify("user-1", { email: "a@temaro.io" });
+  it("identifies and resets users", async () => {
+    const { identify: identifyFresh, reset: resetFresh } = await import("@/lib/analytics");
+    identifyFresh("user-1", { email: "a@temaro.io" });
     expect(identifyMock).toHaveBeenCalledWith("user-1", { email: "a@temaro.io" });
-    reset();
+    resetFresh();
     expect(resetMock).toHaveBeenCalled();
   });
 });
