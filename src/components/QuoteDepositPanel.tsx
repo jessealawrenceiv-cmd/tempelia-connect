@@ -197,9 +197,11 @@ export function QuoteDepositPanel({ quote }: Props) {
       : null);
   const focusedIncomingRef = useRef<string | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
+  const [jumpedId, setJumpedId] = useState<string | null>(null);
   const [jumpMiss, setJumpMiss] = useState<
     { id: string; reason: "filtered" | "missing" | "empty" } | null
   >(null);
+
 
   function clearJumpParams() {
     if (typeof window === "undefined") return;
