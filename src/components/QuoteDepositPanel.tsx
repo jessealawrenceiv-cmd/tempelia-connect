@@ -235,6 +235,11 @@ export function QuoteDepositPanel({ quote }: Props) {
     [debugMode],
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DEBUG_STORAGE_KEY, debugMode ? "true" : "false");
+  }, [debugMode]);
+
   // Pull keyboard focus onto the not-found heading so the message is read at once.
   useEffect(() => {
     if (!jumpMiss) return;
