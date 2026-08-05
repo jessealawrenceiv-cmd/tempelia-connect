@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_access_log: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          detail: string | null
+          function_name: string
+          id: string
+          occurred_at: string
+          outcome: string
+          row_count: number | null
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          detail?: string | null
+          function_name: string
+          id?: string
+          occurred_at?: string
+          outcome?: string
+          row_count?: number | null
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          detail?: string | null
+          function_name?: string
+          id?: string
+          occurred_at?: string
+          outcome?: string
+          row_count?: number | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           created_at: string
@@ -861,6 +894,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_access_log_prune: { Args: never; Returns: undefined }
       claim_team_invite: { Args: { _invite_id: string }; Returns: boolean }
       claim_team_invites: { Args: never; Returns: number }
       cleanup_expired_team_invites: { Args: never; Returns: number }
