@@ -252,6 +252,21 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
     enabled: isStandard,
   });
 
+  const { data: lastCleanup } = useQuery({
+    queryKey: ["invite_cleanup_runs", "last"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invite_cleanup_runs")
+        .select("ran_at, deleted_count")
+        .order("ran_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isStandard,
+  });
+
   /**
    * Expiry has no actor — nobody clicks it — so it is derived from the invite
    * row rather than written to the table, and merged into the same timeline.
