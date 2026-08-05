@@ -25,6 +25,12 @@ import {
   trackDepositJumpRecovery,
   createDepositJumpCorrelationId,
 } from "@/lib/analytics";
+import {
+  peekRetry,
+  recordMiss,
+  resolveRetry,
+  clearMissSession,
+} from "@/lib/deposit-jump-retry";
 import { recordDepositJumpRecovery } from "@/lib/deposit-jump-analytics.functions";
 import {
   saveDepositJumpDebugEvent,
@@ -234,7 +240,12 @@ export function QuoteDepositPanel({ quote }: Props) {
   // One correlation id per panel session — stamped on every deposit_jump_* event
   // so analytics rows can be matched back to a single empty-state session.
   const correlationIdRef = useRef<string>(createDepositJumpCorrelationId());
-  const correlationId = correlationIdRef.current;
+  const [correlationId, setCorrelationId] = useState<string>(correlationIdRef.current);
+  // Retry metadata for the current deep-link chain (null when this is a first attempt).
+  const retryInfoRef = useRef<{ attemptIndex: number; msSinceFirstMiss: number } | null>(null);
+  const [retryInfo, setRetryInfo] = useState<
+    { attemptIndex: number; msSinceFirstMiss: number } | null
+  >(null);
   const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
   const debugLogRef = useRef<HTMLDivElement | null>(null);
   const [debugHydrated, setDebugHydrated] = useState(false);
@@ -331,6 +342,8 @@ export function QuoteDepositPanel({ quote }: Props) {
         reason: jumpMiss?.reason ?? null,
         ms_since_miss: msSinceMiss,
         correlation_id: correlationId,
+        attempt_index: retryInfoRef.current?.attemptIndex ?? null,
+        ms_since_first_miss: retryInfoRef.current?.msSinceFirstMiss ?? null,
       };
       trackDepositJumpRecovery({
         action,
@@ -339,6 +352,8 @@ export function QuoteDepositPanel({ quote }: Props) {
         reason: jumpMiss?.reason ?? null,
         msSinceMiss,
         correlationId,
+        attemptIndex: retryInfoRef.current?.attemptIndex ?? null,
+        msSinceFirstMiss: retryInfoRef.current?.msSinceFirstMiss ?? null,
       });
       // Persist for the operator analytics page; never block the UI on it.
       void recordDepositJumpRecovery({
@@ -349,9 +364,17 @@ export function QuoteDepositPanel({ quote }: Props) {
           reason: jumpMiss?.reason ?? null,
           msSinceMiss,
           correlationId,
+          attemptIndex: retryInfoRef.current?.attemptIndex ?? null,
+          msSinceFirstMiss: retryInfoRef.current?.msSinceFirstMiss ?? null,
         },
       }).catch(() => {});
       logDepositJumpDebug("deposit_jump_recovery", payload);
+      if (action === "dismiss") {
+        // The reader closed the banner: end the retry chain.
+        clearMissSession(typeof window === "undefined" ? null : window.sessionStorage, quote.id);
+        retryInfoRef.current = null;
+        setRetryInfo(null);
+      }
     },
     [jumpMiss, quote.id, logDepositJumpDebug, correlationId],
   );
@@ -398,6 +421,16 @@ export function QuoteDepositPanel({ quote }: Props) {
       return;
     }
 
+    const jumpStorage = typeof window === "undefined" ? null : window.sessionStorage;
+
+    // Is this attempt a retry after an earlier miss on this quote? If so, adopt
+    // the original session's correlation id so the whole chain lines up.
+    const pending = peekRetry(jumpStorage, quote.id);
+    if (pending) {
+      correlationIdRef.current = pending.correlationId;
+      setCorrelationId(pending.correlationId);
+    }
+
     // Time from mount to the point the resolution is known (data loaded + matched).
     const resolvedAtMs = sinceMount();
 
@@ -410,6 +443,16 @@ export function QuoteDepositPanel({ quote }: Props) {
     if (resolution.kind === "miss") {
       // Graceful fallback: the linked event isn't in view. Explain why and land
       // the reader at the closest available spot (first entry / timeline top).
+      const missRecord = recordMiss(jumpStorage, {
+        quoteId: quote.id,
+        eventId: incomingEventId,
+        reason: resolution.reason,
+        correlationId: correlationIdRef.current,
+      });
+      retryInfoRef.current = missRecord.isRetry
+        ? { attemptIndex: missRecord.attemptIndex, msSinceFirstMiss: missRecord.msSinceFirstMiss }
+        : null;
+      setRetryInfo(retryInfoRef.current);
       setJumpMiss({ id: incomingEventId, reason: resolution.reason });
       setAuditCursor(resolution.fallbackIndex);
       // Strip the deep-link params immediately (not in a rAF) so a refresh or
@@ -432,7 +475,10 @@ export function QuoteDepositPanel({ quote }: Props) {
           total_audit_count: audit?.length ?? 0,
           duration_ms: durationMs,
           resolved_ms: resolvedAtMs,
-          correlation_id: correlationId,
+          correlation_id: correlationIdRef.current,
+          attempt_index: missRecord.attemptIndex,
+          ms_since_first_miss: missRecord.msSinceFirstMiss,
+          is_retry: missRecord.isRetry,
         };
         trackDepositJump({
           kind: "miss",
@@ -441,13 +487,46 @@ export function QuoteDepositPanel({ quote }: Props) {
           reason: resolution.reason,
           source: incomingSource,
           durationMs,
-          correlationId,
+          correlationId: correlationIdRef.current,
+          attemptIndex: missRecord.attemptIndex,
+          msSinceFirstMiss: missRecord.msSinceFirstMiss,
         });
+        if (missRecord.isRetry) {
+          // A repeat attempt that missed again — report it as a retry.
+          trackDepositJumpRecovery({
+            action: "retry_jump",
+            quoteId: quote.id,
+            eventId: incomingEventId,
+            reason: resolution.reason,
+            msSinceMiss: null,
+            correlationId: correlationIdRef.current,
+            attemptIndex: missRecord.attemptIndex,
+            msSinceFirstMiss: missRecord.msSinceFirstMiss,
+          });
+          void recordDepositJumpRecovery({
+            data: {
+              action: "retry_jump",
+              quoteId: quote.id,
+              eventId: incomingEventId,
+              reason: resolution.reason,
+              msSinceMiss: null,
+              correlationId: correlationIdRef.current,
+              attemptIndex: missRecord.attemptIndex,
+              msSinceFirstMiss: missRecord.msSinceFirstMiss,
+            },
+          }).catch(() => {});
+        }
         logDepositJumpDebug("deposit_jump_miss", missPayload);
       });
       return;
     }
 
+    // A landing jump closes any open miss session and reports the winning attempt.
+    const landedRetry = resolveRetry(jumpStorage, quote.id);
+    retryInfoRef.current = landedRetry
+      ? { attemptIndex: landedRetry.attemptIndex, msSinceFirstMiss: landedRetry.msSinceFirstMiss }
+      : null;
+    setRetryInfo(retryInfoRef.current);
     setJumpMiss(null);
     setAuditCursor(resolution.index);
     setJumpedId(incomingEventId);
@@ -469,7 +548,14 @@ export function QuoteDepositPanel({ quote }: Props) {
         duration_ms: durationMs,
         resolved_ms: resolvedAtMs,
         row_found: Boolean(el),
-        correlation_id: correlationId,
+        correlation_id: correlationIdRef.current,
+        ...(landedRetry
+          ? {
+              attempt_index: landedRetry.attemptIndex,
+              ms_since_first_miss: landedRetry.msSinceFirstMiss,
+              recovered_after_retry: true,
+            }
+          : {}),
       };
       trackDepositJump({
         kind: "success",
@@ -477,8 +563,34 @@ export function QuoteDepositPanel({ quote }: Props) {
         eventId: incomingEventId,
         source: incomingSource,
         durationMs,
-        correlationId,
+        correlationId: correlationIdRef.current,
+        attemptIndex: landedRetry?.attemptIndex ?? null,
+        msSinceFirstMiss: landedRetry?.msSinceFirstMiss ?? null,
       });
+      if (landedRetry) {
+        trackDepositJumpRecovery({
+          action: "retry_jump",
+          quoteId: quote.id,
+          eventId: incomingEventId,
+          reason: "recovered",
+          msSinceMiss: null,
+          correlationId: correlationIdRef.current,
+          attemptIndex: landedRetry.attemptIndex,
+          msSinceFirstMiss: landedRetry.msSinceFirstMiss,
+        });
+        void recordDepositJumpRecovery({
+          data: {
+            action: "retry_jump",
+            quoteId: quote.id,
+            eventId: incomingEventId,
+            reason: "recovered",
+            msSinceMiss: null,
+            correlationId: correlationIdRef.current,
+            attemptIndex: landedRetry.attemptIndex,
+            msSinceFirstMiss: landedRetry.msSinceFirstMiss,
+          },
+        }).catch(() => {});
+      }
       logDepositJumpDebug("deposit_jump_success", successPayload);
     });
   }, [incomingEventId, filteredAudit, audit, auditLoading]);
