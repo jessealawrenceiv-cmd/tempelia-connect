@@ -993,6 +993,17 @@ export function QuoteDepositPanel({ quote }: Props) {
                   {jumpMiss.id}
                 </code>
               </div>
+              {retryInfo && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    retry
+                  </span>
+                  <code className="mono rounded-sm border border-orange/40 bg-charcoal/40 px-1.5 py-0.5 text-[11px] text-paper">
+                    attempt {retryInfo.attemptIndex} ·{" "}
+                    {(retryInfo.msSinceFirstMiss / 1000).toFixed(1)}s since first miss
+                  </code>
+                </div>
+              )}
               <div className="mt-3 flex flex-wrap gap-2">
                 {jumpMiss.reason === "filtered" && (
                   <button
