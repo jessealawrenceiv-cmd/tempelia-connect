@@ -305,13 +305,32 @@ function QuotesListPage() {
                                 schedule job
                               </Link>
                             )}
+                            {q.deposit_required && q.status !== "archived" && (
+                              q.deposit_paid ? (
+                                <button
+                                  disabled={depositId === q.id}
+                                  onClick={() => handleMarkDeposit(q.id, false)}
+                                  className="mono rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-orange hover:text-orange disabled:opacity-50"
+                                >
+                                  {depositId === q.id ? "…" : "undo deposit"}
+                                </button>
+                              ) : (
+                                <button
+                                  disabled={depositId === q.id}
+                                  onClick={() => handleMarkDeposit(q.id, true)}
+                                  className="mono rounded-sm border border-moss/60 px-2 py-1 text-[10px] uppercase tracking-wider text-moss hover:bg-moss hover:text-charcoal disabled:opacity-50"
+                                >
+                                  {depositId === q.id ? "…" : "mark deposit received"}
+                                </button>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>
                       {isOpen && (
                         <tr className="border-b border-border/50 bg-background/40">
                           <td></td>
-                          <td colSpan={7} className="px-4 py-4">
+                          <td colSpan={8} className="px-4 py-4">
                             <div className="label-eyebrow mb-3">
                               Quote detail + customer history {name ? `· ${name}` : ""}
                             </div>
