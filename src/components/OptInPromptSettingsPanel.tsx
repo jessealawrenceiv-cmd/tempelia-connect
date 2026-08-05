@@ -185,12 +185,19 @@ export function OptInPromptSettingsPanel({
             rows={3}
             maxLength={OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH}
             placeholder={DEFAULT_OPT_IN_PROMPT_TEMPLATE}
-            className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+            className={`mono mt-1 block w-full rounded-sm border bg-background px-3 py-2 text-sm ${
+              hasError
+                ? "border-destructive"
+                : missingBusiness
+                  ? "border-primary/70"
+                  : "border-border"
+            }`}
           />
           <span className="mono mt-1 block text-[10px] uppercase tracking-widest text-muted-foreground">
             {"{business}"} is replaced with your business name · {draft.length}/
             {OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH}
           </span>
+
         </label>
 
         <label className="block">
