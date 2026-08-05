@@ -47,6 +47,40 @@ export async function sendTwilioSms(from: string, to: string, body: string): Pro
   return { sid: json.sid, status: json.status };
 }
 
+export interface MessageStatus {
+  sid: string;
+  status: string;
+  errorCode: number | null;
+  errorMessage: string | null;
+  to: string;
+  dateSent: string | null;
+}
+
+/** Fetch current delivery state for one message (queued/sent/delivered/failed/undelivered). */
+export async function fetchTwilioMessage(messageSid: string): Promise<MessageStatus> {
+  const { sid, auth } = twilioCreds();
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages/${messageSid}.json`;
+  const res = await fetch(url, { headers: { Authorization: auth } });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Twilio ${res.status}: ${text}`);
+  const j = JSON.parse(text) as {
+    sid: string;
+    status: string;
+    error_code: number | null;
+    error_message: string | null;
+    to: string;
+    date_sent: string | null;
+  };
+  return {
+    sid: j.sid,
+    status: j.status,
+    errorCode: j.error_code ?? null,
+    errorMessage: j.error_message ?? null,
+    to: j.to,
+    dateSent: j.date_sent ?? null,
+  };
+}
+
 export interface ProvisionedNumber {
   phoneNumber: string;
   phoneSid: string;
