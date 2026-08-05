@@ -931,7 +931,16 @@ export function QuoteDepositPanel({ quote }: Props) {
                     >
                       customer view ↗
                     </a>
+                    <button
+                      type="button"
+                      onClick={() => copyShareLink(row.id)}
+                      aria-label={`Copy share link for deposit event ${row.id.slice(0, 8)}`}
+                      className="text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      copy share link
+                    </button>
                   </div>
+
 
 
                 </li>
