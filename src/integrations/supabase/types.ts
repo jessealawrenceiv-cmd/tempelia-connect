@@ -483,7 +483,11 @@ export type Database = {
           opt_in_prompt_cooldown_minutes: number
           opt_in_prompt_template: string | null
           owner_phone: string | null
+          platform_fee_percent: number
           review_requests_enabled: boolean
+          stripe_connect_account_id: string | null
+          stripe_connect_connected_at: string | null
+          stripe_connect_status: string
           stripe_customer_id: string | null
           subscription_status: string
           subscription_tier: string
@@ -508,7 +512,11 @@ export type Database = {
           opt_in_prompt_cooldown_minutes?: number
           opt_in_prompt_template?: string | null
           owner_phone?: string | null
+          platform_fee_percent?: number
           review_requests_enabled?: boolean
+          stripe_connect_account_id?: string | null
+          stripe_connect_connected_at?: string | null
+          stripe_connect_status?: string
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: string
@@ -533,7 +541,11 @@ export type Database = {
           opt_in_prompt_cooldown_minutes?: number
           opt_in_prompt_template?: string | null
           owner_phone?: string | null
+          platform_fee_percent?: number
           review_requests_enabled?: boolean
+          stripe_connect_account_id?: string | null
+          stripe_connect_connected_at?: string | null
+          stripe_connect_status?: string
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: string
