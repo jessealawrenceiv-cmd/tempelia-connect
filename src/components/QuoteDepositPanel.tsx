@@ -678,6 +678,14 @@ export function QuoteDepositPanel({ quote }: Props) {
                     : "That event ID isn't part of this quote's deposit timeline — it may have been pruned, or the link points at another quote."}
                 {jumpMiss.reason !== "empty" && " We landed you on the most recent entry instead."}
               </p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  requested id
+                </span>
+                <code className="mono break-all rounded-sm border border-orange/40 bg-charcoal/40 px-1.5 py-0.5 text-[11px] text-paper">
+                  {jumpMiss.id}
+                </code>
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {jumpMiss.reason === "filtered" && (
                   <button
