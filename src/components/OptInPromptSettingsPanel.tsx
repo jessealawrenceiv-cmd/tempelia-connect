@@ -741,6 +741,19 @@ export function OptInPromptSettingsPanel({
                 : "—"}
             </dd>
           </div>
+          {sampleE164 && matchedCustomer && (
+            <div className="flex justify-between gap-3">
+              <dt>Stored on contact</dt>
+              <dd className={matchedCustomer.phone_number === sampleE164 ? "text-moss" : "text-primary"}>
+                {matchedCustomer.phone_number === sampleE164
+                  ? `${sampleE164} · matches`
+                  : normalizeCustomerPhone.isPending
+                    ? `${matchedCustomer.phone_number} · saving ${sampleE164}…`
+                    : `${matchedCustomer.phone_number} · normalizing`}
+              </dd>
+            </div>
+          )}
+
           <div className="flex justify-between gap-3">
             <dt>From</dt>
             <dd className="text-paper">{fromNumber || "no Temaro number provisioned"}</dd>
