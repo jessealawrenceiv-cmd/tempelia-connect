@@ -126,7 +126,7 @@ describe("DepositRowPopover keyboard accessibility", () => {
     const dialog = await screen.findByRole("dialog");
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
 
-    const order = [/copy quote short id/i, /open quote/i, /customer view/i, /copy share link/i];
+    const order = [/copy quote short id/i, /open quote/i, /customer view/i, /copy event link/i];
     const seen: string[] = [];
     for (let i = 0; i < 12 && seen.length < order.length; i++) {
       const el = document.activeElement as HTMLElement | null;
