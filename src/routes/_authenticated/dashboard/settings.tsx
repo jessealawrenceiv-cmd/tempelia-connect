@@ -259,6 +259,7 @@ function SettingsPage() {
           cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
           ownerPhone={profile?.owner_phone}
           fromNumber={profile?.twilio_phone_number}
+          lastTestPhone={profile?.last_test_phone}
         />
 
         {!isStaff && <WebhookCheckPanel />}
