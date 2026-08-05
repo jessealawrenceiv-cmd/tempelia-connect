@@ -187,11 +187,14 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
       prof?.opt_in_prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES,
     );
     const since = new Date(Date.now() - cooldown * 60_000).toISOString();
+    // Failed / undelivered attempts never reached the handset, so they must not
+    // block a retry to the same number.
     const { data: recent } = await supabase
       .from("logs")
       .select("created_at")
       .eq("user_id", userId)
       .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
+      .not("status", "in", "(failed,undelivered,canceled)")
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(1)

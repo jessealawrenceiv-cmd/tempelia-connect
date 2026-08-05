@@ -341,6 +341,28 @@ export function OptInPromptSettingsPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /**
+   * Re-sends a previous test to the same number using the saved template
+   * (identical to what a fresh test would send today).
+   */
+  const retryTest = useMutation({
+    mutationFn: async (vars: { logId: string; phone: string }) => {
+      return await sendTest({ data: { phone: vars.phone } });
+    },
+    onSuccess: (res) => {
+      setLastTest({
+        to: res.to,
+        sid: res.sid,
+        at: new Date().toLocaleTimeString(),
+        status: res.status,
+      });
+      void pollStatus(res.sid);
+      void qc.invalidateQueries({ queryKey: ["opt-in-prompt-test-history"] });
+      toast.success(`Retry sent to ${res.to}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const issues = validateOptInPromptTemplate(draft);
   const hasError = issues.some((i) => i.level === "error");
   const missingBusiness = issues.some(
@@ -959,7 +981,8 @@ export function OptInPromptSettingsPanel({
                   <th className="py-1 pr-3 font-normal">Result</th>
                   <th className="py-1 pr-3 font-normal">Twilio SID</th>
                   <th className="py-1 pr-3 font-normal">Version</th>
-                  <th className="py-1 font-normal">Cooldown</th>
+                  <th className="py-1 pr-3 font-normal">Cooldown</th>
+                  <th className="py-1 font-normal">Retry</th>
                 </tr>
               </thead>
               <tbody>
@@ -968,6 +991,11 @@ export function OptInPromptSettingsPanel({
                   const endsAt = new Date(new Date(row.created_at).getTime() + mins * 60_000);
                   const left = Math.ceil((endsAt.getTime() - Date.now()) / 60_000);
                   const blocking = left > 0;
+                  const failedSend = ["failed", "undelivered"].includes(row.status ?? "");
+                  const retryParsed = normalizeToE164(row.recipient_phone);
+                  const retryTo = retryParsed.ok ? retryParsed.e164 : null;
+                  const retrying =
+                    retryTest.isPending && retryTest.variables?.logId === row.id;
                   return (
                     <tr key={row.id} className="border-t border-border/60 align-top">
                       <td className="py-1.5 pr-3 whitespace-nowrap">
@@ -988,13 +1016,30 @@ export function OptInPromptSettingsPanel({
                       </td>
                       <td className="py-1.5 pr-3 break-all">{row.twilio_message_sid ?? "—"}</td>
                       <td className="py-1.5 pr-3">{row.prompt_template_hash ?? "—"}</td>
-                      <td className="py-1.5 whitespace-nowrap">
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
                         {blocking ? (
                           <span className="text-primary">
                             {mins}m · blocking {left}m more
                           </span>
                         ) : (
                           <span className="text-muted-foreground">{mins}m · elapsed</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 whitespace-nowrap">
+                        {failedSend && retryTo ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              retryTest.mutate({ logId: row.id, phone: retryTo })
+                            }
+                            disabled={retryTest.isPending}
+                            title={`Re-send the saved template to ${retryTo}`}
+                            className="rounded-sm border border-primary/60 px-2 py-1 text-[10px] uppercase tracking-widest text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                          >
+                            {retrying ? "Sending…" : "Retry"}
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </td>
                     </tr>
