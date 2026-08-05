@@ -3,6 +3,7 @@ import {
   OPT_IN_PROMPT_ACTION,
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   buildOptInPrompt,
+  clampCooldownMinutes,
 } from "./opt-in-prompt";
 
 type Client = { from: (t: string) => any };
@@ -24,7 +25,12 @@ export async function sendPromptToCustomer(
   supabase: Client,
   userId: string,
   customerId: string,
-  profile: { business_name: string | null; twilio_phone_number: string | null },
+  profile: {
+    business_name: string | null;
+    twilio_phone_number: string | null;
+    opt_in_prompt_template?: string | null;
+    opt_in_prompt_cooldown_minutes?: number | null;
+  },
   excludedDigits: Set<string>,
 ): Promise<PromptResult> {
   const fail = (error: string, phone: string | null = null): PromptResult => ({
@@ -47,7 +53,10 @@ export async function sendPromptToCustomer(
     return fail("On your exclusion list", cust.phone_number);
   }
 
-  const since = new Date(Date.now() - OPT_IN_PROMPT_COOLDOWN_MINUTES * 60_000).toISOString();
+  const cooldown = clampCooldownMinutes(
+    profile.opt_in_prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES,
+  );
+  const since = new Date(Date.now() - cooldown * 60_000).toISOString();
   const { data: recent } = await supabase
     .from("logs")
     .select("id")
@@ -57,13 +66,13 @@ export async function sendPromptToCustomer(
     .limit(1)
     .maybeSingle();
   if (recent) {
-    return fail(`Cooldown — prompted in the last ${OPT_IN_PROMPT_COOLDOWN_MINUTES} min`, cust.phone_number);
+    return fail(`Cooldown — prompted in the last ${cooldown} min`, cust.phone_number);
   }
 
   const from = profile.twilio_phone_number;
   if (!from) return fail("No Temaro number provisioned", cust.phone_number);
 
-  const body = buildOptInPrompt(profile.business_name ?? "");
+  const body = buildOptInPrompt(profile.business_name ?? "", profile.opt_in_prompt_template ?? null);
   const { sendTwilioSms } = await import("./twilio.server");
   try {
     const res = await sendTwilioSms(from, cust.phone_number, body);
@@ -93,7 +102,7 @@ export async function sendPromptToCustomer(
 export async function loadPromptContext(supabase: Client, userId: string) {
   const { data: prof } = await supabase
     .from("profiles")
-    .select("business_name, twilio_phone_number")
+    .select("business_name, twilio_phone_number, opt_in_prompt_template, opt_in_prompt_cooldown_minutes")
     .eq("id", userId)
     .maybeSingle();
   const { data: excluded } = await supabase
@@ -107,6 +116,8 @@ export async function loadPromptContext(supabase: Client, userId: string) {
     profile: {
       business_name: prof?.business_name ?? null,
       twilio_phone_number: prof?.twilio_phone_number ?? null,
+      opt_in_prompt_template: prof?.opt_in_prompt_template ?? null,
+      opt_in_prompt_cooldown_minutes: prof?.opt_in_prompt_cooldown_minutes ?? null,
     },
     excludedDigits: digits,
   };
