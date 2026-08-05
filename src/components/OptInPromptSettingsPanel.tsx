@@ -303,23 +303,38 @@ export function OptInPromptSettingsPanel({
           Reset to default
         </button>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={testPhone}
-            onChange={(e) => setTestPhone(e.target.value)}
-            placeholder={ownerPhone ?? "+15015550123"}
-            inputMode="tel"
-            aria-label="Test phone number"
-            className="mono w-48 rounded-sm border border-border bg-background px-3 py-2 text-sm"
-          />
+          <div>
+            <input
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              placeholder={ownerPhone ?? "+15015550123"}
+              inputMode="tel"
+              maxLength={24}
+              aria-label="Test phone number"
+              aria-invalid={testPhoneError ? true : undefined}
+              className={`mono w-48 rounded-sm border bg-background px-3 py-2 text-sm ${
+                testPhoneError ? "border-destructive" : "border-border"
+              }`}
+            />
+            <div className="mono mt-1 w-48 text-[10px] uppercase tracking-widest">
+              {testPhoneError ? (
+                <span className="text-destructive">{testPhoneError}</span>
+              ) : testTarget ? (
+                <span className="text-moss">Sends to {testTarget}</span>
+              ) : (
+                <span className="text-muted-foreground">10-digit US or E.164</span>
+              )}
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => test.mutate()}
-            disabled={test.isPending || !(testPhone.trim() || ownerPhone)}
+            disabled={test.isPending || !testTarget}
             title={
-              testPhone.trim()
-                ? `Sends to ${testPhone.trim()}`
-                : ownerPhone
-                  ? `Sends to ${ownerPhone}`
+              testPhoneError
+                ? testPhoneError
+                : testTarget
+                  ? `Sends to ${testTarget}`
                   : "Enter a test number or add your owner mobile first"
             }
             className="rounded-sm border border-primary px-4 py-2 text-xs uppercase tracking-widest text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
