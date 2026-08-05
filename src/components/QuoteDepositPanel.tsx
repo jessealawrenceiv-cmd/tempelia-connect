@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -37,6 +37,13 @@ import {
   listDepositJumpDebugEvents,
   clearDepositJumpDebugEvents,
 } from "@/lib/deposit-jump-debug.functions";
+import {
+  filterDebugEntries,
+  describeDebugFilters,
+  type DebugEventFilter,
+  type DebugOutcomeFilter,
+  type DebugRangeFilter,
+} from "@/lib/deposit-jump-debug-filter";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
