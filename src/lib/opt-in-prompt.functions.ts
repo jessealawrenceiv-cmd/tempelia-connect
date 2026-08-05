@@ -160,15 +160,17 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
       .maybeSingle();
 
     // Custom test recipient wins; fall back to the owner mobile on file.
-    let to = (data.phone || prof?.owner_phone || "").trim();
-    if (!to) {
+    const rawTo = (data.phone || prof?.owner_phone || "").trim();
+    if (!rawTo) {
       throw new Error("Enter a test phone number, or add your owner mobile in Settings first.");
     }
-    const digits = normalizePhone(to);
-    if (digits.length < 10 || digits.length > 15) {
-      throw new Error(`"${to}" is not a valid phone number. Use a 10-digit US number or E.164.`);
+    const { normalizeToE164 } = await import("./phone");
+    const parsed = normalizeToE164(rawTo);
+    if (!parsed.ok) {
+      throw new Error(`"${rawTo}" is not a valid phone number. ${parsed.error}`);
     }
-    to = digits.length === 10 ? `+1${digits}` : `+${digits}`;
+    const to = parsed.e164;
+    const digits = normalizePhone(to);
 
     const { data: excluded } = await supabase
       .from("excluded_numbers")
