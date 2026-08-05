@@ -875,6 +875,9 @@ export function QuoteDepositPanel({ quote }: Props) {
           )}
         </div>
       )}
+
+      <DepositInlinePreviewDialog target={inlinePreview} onClose={() => setInlinePreview(null)} />
     </div>
+
   );
 }
