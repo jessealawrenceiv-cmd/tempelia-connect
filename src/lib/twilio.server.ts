@@ -136,3 +136,38 @@ export async function purchaseLocalNumber(areaCode?: string): Promise<Provisione
   const buyJson = JSON.parse(buyText) as { sid: string; phone_number: string };
   return { phoneNumber: buyJson.phone_number, phoneSid: buyJson.sid };
 }
+
+export interface NumberWebhookConfig {
+  found: boolean;
+  phoneSid: string | null;
+  smsUrl: string | null;
+  smsMethod: string | null;
+  voiceUrl: string | null;
+  voiceMethod: string | null;
+}
+
+/** Read the live webhook configuration Twilio has stored for one of our numbers. */
+export async function fetchNumberWebhookConfig(phoneNumber: string): Promise<NumberWebhookConfig> {
+  const { sid, auth } = twilioCreds();
+  const url = new URL(`https://api.twilio.com/2010-04-01/Accounts/${sid}/IncomingPhoneNumbers.json`);
+  url.searchParams.set("PhoneNumber", phoneNumber);
+  const res = await fetch(url, { headers: { Authorization: auth } });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Twilio ${res.status}: ${text}`);
+  const json = JSON.parse(text) as {
+    incoming_phone_numbers: Array<{
+      sid: string; sms_url: string | null; sms_method: string | null;
+      voice_url: string | null; voice_method: string | null;
+    }>;
+  };
+  const n = json.incoming_phone_numbers?.[0];
+  if (!n) return { found: false, phoneSid: null, smsUrl: null, smsMethod: null, voiceUrl: null, voiceMethod: null };
+  return {
+    found: true,
+    phoneSid: n.sid,
+    smsUrl: n.sms_url || null,
+    smsMethod: n.sms_method || null,
+    voiceUrl: n.voice_url || null,
+    voiceMethod: n.voice_method || null,
+  };
+}
