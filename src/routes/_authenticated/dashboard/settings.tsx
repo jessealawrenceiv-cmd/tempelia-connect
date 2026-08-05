@@ -6,6 +6,7 @@ import { ExcludedNumbersPanel } from "@/components/ExcludedNumbersPanel";
 import { TeamMembersPanel } from "@/components/TeamMembersPanel";
 import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel";
 import { WebhookCheckPanel } from "@/components/WebhookCheckPanel";
+import { WebhookEventLogPanel } from "@/components/WebhookEventLogPanel";
 import { useTeamRole } from "@/hooks/useTeamRole";
 
 import { useEffect, useState } from "react";
@@ -263,6 +264,7 @@ function SettingsPage() {
         />
 
         {!isStaff && <WebhookCheckPanel />}
+        {!isStaff && <WebhookEventLogPanel />}
 
         <ExcludedNumbersPanel />
 
