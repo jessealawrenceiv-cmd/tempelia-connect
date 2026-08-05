@@ -143,7 +143,10 @@ export const sendOptInPromptBatch = createServerFn({ method: "POST" })
  */
 export const sendTestOptInPrompt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: { phone?: string } | undefined) => ({
+    phone: typeof input?.phone === "string" ? input.phone.trim() : "",
+  }))
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { sendTwilioSms } = await import("./twilio.server");
     const { OPT_IN_PROMPT_TEST_ACTION } = await import("./opt-in-prompt");
@@ -156,8 +159,25 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
       .eq("id", userId)
       .maybeSingle();
 
-    const to = (prof?.owner_phone ?? "").trim();
-    if (!to) throw new Error("Add your owner mobile number in Settings first.");
+    // Custom test recipient wins; fall back to the owner mobile on file.
+    let to = (data.phone || prof?.owner_phone || "").trim();
+    if (!to) {
+      throw new Error("Enter a test phone number, or add your owner mobile in Settings first.");
+    }
+    const digits = normalizePhone(to);
+    if (digits.length < 10 || digits.length > 15) {
+      throw new Error(`"${to}" is not a valid phone number. Use a 10-digit US number or E.164.`);
+    }
+    to = digits.length === 10 ? `+1${digits}` : `+${digits}`;
+
+    const { data: excluded } = await supabase
+      .from("excluded_numbers")
+      .select("phone_number")
+      .eq("user_id", userId);
+    if ((excluded ?? []).some((r) => normalizePhone(r.phone_number) === digits)) {
+      throw new Error("That number is on your excluded list — remove it first to test against it.");
+    }
+
     const from = prof?.twilio_phone_number;
     if (!from) throw new Error("Provision your Temaro number before sending a test.");
 
