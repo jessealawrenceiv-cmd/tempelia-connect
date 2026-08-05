@@ -1,5 +1,13 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => !el.hasAttribute("disabled") && !el.hasAttribute("hidden") && el.offsetParent !== null);
+}
 
 export type DepositRowPopoverProps = {
   rowId: string;
@@ -45,8 +53,35 @@ export function DepositRowPopover({
 }: DepositRowPopoverProps) {
   const openModeRef = useRef<"hover" | "keyboard" | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const popoverFocusedRef = useRef(false);
   const shortId = quoteId.slice(0, 8);
+
+  // Trap focus inside the popover when it was opened via keyboard/click.
+  useEffect(() => {
+    if (!open || openModeRef.current !== "keyboard") return;
+    const container = contentRef.current;
+    if (!container) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = getFocusableElements(container);
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   return (
     <Popover
@@ -95,6 +130,7 @@ export function DepositRowPopover({
         </button>
       </PopoverTrigger>
       <PopoverContent
+        ref={contentRef}
         align="start"
         role="dialog"
         aria-labelledby={`deposit-preview-title-${rowId}`}
