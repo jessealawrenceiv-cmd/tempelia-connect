@@ -54,6 +54,8 @@ export interface MessageStatus {
   errorMessage: string | null;
   to: string;
   dateSent: string | null;
+  /** Unmodified Twilio Message resource, for the raw-payload inspector. */
+  raw: Record<string, unknown>;
 }
 
 /** Fetch current delivery state for one message (queued/sent/delivered/failed/undelivered). */
@@ -72,6 +74,7 @@ export async function fetchTwilioMessage(messageSid: string): Promise<MessageSta
     date_sent: string | null;
   };
   return {
+    raw: JSON.parse(text) as Record<string, unknown>,
     sid: j.sid,
     status: j.status,
     errorCode: j.error_code ?? null,

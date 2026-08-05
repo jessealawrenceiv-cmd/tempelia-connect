@@ -281,6 +281,7 @@ export const getTestSmsStatus = createServerFn({ method: "POST" })
       errorMessage: m.errorMessage,
       to: m.to,
       dateSent: m.dateSent,
+      raw: m.raw,
     };
   });
 
