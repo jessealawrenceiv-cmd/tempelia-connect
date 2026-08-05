@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -207,6 +207,39 @@ export function QuoteDepositPanel({ quote }: Props) {
   >(null);
   const jumpMissHeadingRef = useRef<HTMLHeadingElement | null>(null);
 
+  // Debug mode for deposit-jump event payloads.
+  const DEBUG_STORAGE_KEY = "temaro-deposit-jump-debug";
+  const [debugMode, setDebugMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(DEBUG_STORAGE_KEY) === "true";
+  });
+  type DebugEntry = {
+    id: string;
+    ts: number;
+    event: "deposit_jump_success" | "deposit_jump_miss";
+    payload: Record<string, unknown>;
+  };
+  const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
+  const debugLogRef = useRef<HTMLDivElement | null>(null);
+
+  const logDepositJumpDebug = useCallback(
+    (event: "deposit_jump_success" | "deposit_jump_miss", payload: Record<string, unknown>) => {
+      const entry: DebugEntry = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ts: Date.now(), event, payload };
+      // Always mirror to the console so testers can inspect in DevTools even before toggling on-screen mode.
+      // eslint-disable-next-line no-console
+      console.log(`[deposit-jump-debug] ${event}`, payload);
+      if (debugMode) {
+        setDebugLog((prev) => [entry, ...prev].slice(0, 50));
+      }
+    },
+    [debugMode],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DEBUG_STORAGE_KEY, debugMode ? "true" : "false");
+  }, [debugMode]);
+
   // Pull keyboard focus onto the not-found heading so the message is read at once.
   useEffect(() => {
     if (!jumpMiss) return;
@@ -260,6 +293,15 @@ export function QuoteDepositPanel({ quote }: Props) {
     if (resolution.kind === "miss") {
       // Graceful fallback: the linked event isn't in view. Explain why and land
       // the reader at the closest available spot (first entry / timeline top).
+      const missPayload = {
+        quote_id: quote.id,
+        event_id: incomingEventId,
+        reason: resolution.reason,
+        source: incomingSource,
+        fallback_index: resolution.fallbackIndex,
+        filtered_count: filteredAudit.length,
+        total_audit_count: audit?.length ?? 0,
+      };
       trackDepositJump({
         kind: "miss",
         quoteId: quote.id,
@@ -267,6 +309,7 @@ export function QuoteDepositPanel({ quote }: Props) {
         reason: resolution.reason,
         source: incomingSource,
       });
+      logDepositJumpDebug("deposit_jump_miss", missPayload);
       setJumpMiss({ id: incomingEventId, reason: resolution.reason });
       setAuditCursor(resolution.fallbackIndex);
       // Strip the deep-link params immediately (not in a rAF) so a refresh or
@@ -281,12 +324,20 @@ export function QuoteDepositPanel({ quote }: Props) {
       return;
     }
 
+    const successPayload = {
+      quote_id: quote.id,
+      event_id: incomingEventId,
+      source: incomingSource,
+      resolved_index: resolution.index,
+      filtered_count: filteredAudit.length,
+    };
     trackDepositJump({
       kind: "success",
       quoteId: quote.id,
       eventId: incomingEventId,
       source: incomingSource,
     });
+    logDepositJumpDebug("deposit_jump_success", successPayload);
     setJumpMiss(null);
     setAuditCursor(resolution.index);
     setJumpedId(incomingEventId);
@@ -646,6 +697,18 @@ export function QuoteDepositPanel({ quote }: Props) {
           className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
         >
           export deposit audit (csv){auditFiltersActive ? " · filtered" : ""}
+        </button>
+        <button
+          onClick={() => setDebugMode((v) => !v)}
+          aria-pressed={debugMode}
+          aria-label={debugMode ? "Disable deposit jump debug mode" : "Enable deposit jump debug mode"}
+          className={`mono rounded-sm border px-3 py-1.5 text-[10px] uppercase tracking-wider transition-colors ${
+            debugMode
+              ? "border-violet bg-violet/20 text-violet hover:bg-violet/30"
+              : "border-border text-muted-foreground hover:border-primary hover:text-paper"
+          }`}
+        >
+          {debugMode ? "debug: on" : "debug: off"}
         </button>
       </div>
 
@@ -1043,7 +1106,76 @@ export function QuoteDepositPanel({ quote }: Props) {
                 </li>
               );
             })}
-          </ol>
+           </ol>
+          )}
+        </div>
+      )}
+
+      {debugMode && (
+        <div
+          ref={debugLogRef}
+          className="rounded-sm border border-violet/40 bg-violet/5 p-3 space-y-2"
+          aria-label="Deposit jump debug log"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="mono text-[10px] uppercase tracking-widest text-violet">
+              // deposit jump debug log · {debugLog.length} event
+              {debugLog.length === 1 ? "" : "s"}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard
+                    .writeText(JSON.stringify(debugLog, null, 2))
+                    .then(() => toast.success("Debug log copied as JSON."))
+                    .catch(() => toast.error("Copy failed."));
+                }}
+                disabled={debugLog.length === 0}
+                className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
+              >
+                copy json
+              </button>
+              <button
+                onClick={() => setDebugLog([])}
+                disabled={debugLog.length === 0}
+                className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
+              >
+                clear
+              </button>
+              <button
+                onClick={() => setDebugMode(false)}
+                className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20"
+              >
+                hide
+              </button>
+            </div>
+          </div>
+          {debugLog.length === 0 ? (
+            <div className="mono text-[11px] text-muted-foreground">
+              // no events yet. navigate with a deep link (eventId / depositEvent) to populate this log.
+            </div>
+          ) : (
+            <ol className="max-h-64 space-y-2 overflow-auto rounded-sm border border-violet/20 bg-charcoal/40 p-2">
+              {debugLog.map((entry) => (
+                <li key={entry.id} className="mono text-[11px]">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={
+                        entry.event === "deposit_jump_success" ? "text-moss" : "text-orange"
+                      }
+                    >
+                      {entry.event}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {new Date(entry.ts).toLocaleTimeString("en-US", { hour12: false })}
+                    </span>
+                  </div>
+                  <pre className="mt-1 whitespace-pre-wrap break-all rounded-sm bg-charcoal/60 p-2 text-[10px] text-paper">
+                    {JSON.stringify(entry.payload, null, 2)}
+                  </pre>
+                </li>
+              ))}
+            </ol>
           )}
         </div>
       )}
