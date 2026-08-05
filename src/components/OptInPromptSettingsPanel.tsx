@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { sendTestOptInPrompt, getTestSmsStatus } from "@/lib/opt-in-prompt.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  OPT_IN_PROMPT_TEST_ACTION,
   DEFAULT_OPT_IN_PROMPT_TEMPLATE,
   OPT_IN_PROMPT_COOLDOWN_MAX,
   OPT_IN_PROMPT_COOLDOWN_MIN,
@@ -53,6 +54,23 @@ export function OptInPromptSettingsPanel({
   const [testPhone, setTestPhone] = useState("");
   const [draft, setDraft] = useState("");
   const [cooldown, setCooldown] = useState(String(OPT_IN_PROMPT_COOLDOWN_MINUTES));
+
+  const testHistory = useQuery({
+    queryKey: ["opt-in-prompt-test-history"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return [];
+      const { data, error } = await supabase
+        .from("logs")
+        .select("id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash")
+        .eq("user_id", u.user.id)
+        .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   useEffect(() => {
     setTestPhone(ownerPhone ?? "");
@@ -118,6 +136,7 @@ export function OptInPromptSettingsPanel({
     onSuccess: (res) => {
       setLastTest({ to: res.to, sid: res.sid, at: new Date().toLocaleTimeString(), status: res.status });
       void pollStatus(res.sid);
+      void qc.invalidateQueries({ queryKey: ["opt-in-prompt-test-history"] });
       toast.success(`Test prompt sent to ${res.to}`);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -379,6 +398,69 @@ export function OptInPromptSettingsPanel({
           )}
         </div>
       )}
+
+      <div className="mt-6 border-t border-border pt-4">
+        <div className="label-eyebrow">Test SMS history</div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Last 10 test sends from this account, newest first.
+        </p>
+        {testHistory.isLoading ? (
+          <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Loading…
+          </p>
+        ) : (testHistory.data?.length ?? 0) === 0 ? (
+          <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            No test sends yet
+          </p>
+        ) : (
+          <div className="mt-3 overflow-x-auto">
+            <table className="mono w-full text-[11px]">
+              <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                <tr className="text-left">
+                  <th className="py-1 pr-3 font-normal">Sent</th>
+                  <th className="py-1 pr-3 font-normal">Result</th>
+                  <th className="py-1 pr-3 font-normal">Twilio SID</th>
+                  <th className="py-1 pr-3 font-normal">Version</th>
+                  <th className="py-1 font-normal">Cooldown</th>
+                </tr>
+              </thead>
+              <tbody>
+                {testHistory.data!.map((row) => {
+                  const mins = row.prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES;
+                  const endsAt = new Date(new Date(row.created_at).getTime() + mins * 60_000);
+                  const left = Math.ceil((endsAt.getTime() - Date.now()) / 60_000);
+                  const blocking = left > 0;
+                  return (
+                    <tr key={row.id} className="border-t border-border/60 align-top">
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
+                        {new Date(row.created_at).toLocaleString()}
+                      </td>
+                      <td
+                        className={`py-1.5 pr-3 uppercase ${
+                          row.status === "failed" ? "text-destructive" : "text-moss"
+                        }`}
+                      >
+                        {row.status}
+                      </td>
+                      <td className="py-1.5 pr-3 break-all">{row.twilio_message_sid ?? "—"}</td>
+                      <td className="py-1.5 pr-3">{row.prompt_template_hash ?? "—"}</td>
+                      <td className="py-1.5 whitespace-nowrap">
+                        {blocking ? (
+                          <span className="text-primary">
+                            {mins}m · blocking {left}m more
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">{mins}m · elapsed</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
