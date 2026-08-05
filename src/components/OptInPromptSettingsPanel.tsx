@@ -242,6 +242,71 @@ export function OptInPromptSettingsPanel({
     };
   })();
 
+  /**
+   * Inline check for the test recipient: mirrors the server-side guards that
+   * would reject the send (exclusion list, per-contact cooldown), so the error
+   * shows before the button is pressed.
+   */
+  const testCheck = useQuery({
+    queryKey: ["opt-in-test-target-check", testTarget, effectiveCooldown],
+    enabled: !!testTarget,
+    queryFn: async () => {
+      const last10 = (testTarget ?? "").replace(/\D+/g, "").slice(-10);
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+
+      const [{ data: customers }, { data: excluded }] = await Promise.all([
+        supabase
+          .from("customers")
+          .select("id, phone_number")
+          .eq("user_id", u.user.id)
+          .ilike("phone_number", `%${last10}%`)
+          .limit(5),
+        supabase.from("excluded_numbers").select("phone_number, label").eq("user_id", u.user.id),
+      ]);
+
+      const excludedRow = (excluded ?? []).find(
+        (r) => (r.phone_number || "").replace(/\D+/g, "").slice(-10) === last10,
+      );
+      const customer =
+        (customers ?? []).find(
+          (c) => (c.phone_number || "").replace(/\D+/g, "").slice(-10) === last10,
+        ) ?? null;
+
+      let lastAttempt: { created_at: string; status: string } | null = null;
+      if (customer) {
+        const { data: log } = await supabase
+          .from("logs")
+          .select("created_at, status")
+          .eq("customer_id", customer.id)
+          .eq("action_type", OPT_IN_PROMPT_ACTION)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (log) lastAttempt = { created_at: log.created_at, status: log.status };
+      }
+      return { excludedLabel: excludedRow ? excludedRow.label || "no label" : null, lastAttempt };
+    },
+  });
+
+  /** Human-readable reason the test send would be rejected, if any. */
+  const testBlockedReason = (() => {
+    if (!testTarget || !testCheck.data) return null;
+    if (testCheck.data.excludedLabel)
+      return `Blocked — ${testTarget} is on your exclusion list (${testCheck.data.excludedLabel}). Remove it there to test this number.`;
+    const la = testCheck.data.lastAttempt;
+    if (la) {
+      const remaining = Math.ceil(
+        (effectiveCooldown * 60_000 - (Date.now() - new Date(la.created_at).getTime())) / 60_000,
+      );
+      if (remaining > 0)
+        return `Blocked by cooldown — last prompt ${la.status} at ${new Date(
+          la.created_at,
+        ).toLocaleString()}. Wait ${remaining} more min (cooldown is ${effectiveCooldown} min).`;
+    }
+    return null;
+  })();
+
 
   const test = useMutation({
     mutationFn: async () => {
@@ -616,7 +681,7 @@ export function OptInPromptSettingsPanel({
         >
           Reset to default
         </button>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-start gap-2">
           <div>
             <input
               value={testPhone}
@@ -625,16 +690,29 @@ export function OptInPromptSettingsPanel({
               inputMode="tel"
               maxLength={24}
               aria-label="Test phone number"
-              aria-invalid={testPhoneError ? true : undefined}
+              aria-invalid={testPhoneError || testBlockedReason ? true : undefined}
               className={`mono w-48 rounded-sm border bg-background px-3 py-2 text-sm ${
-                testPhoneError ? "border-destructive" : "border-border"
+                testPhoneError || testBlockedReason ? "border-destructive" : "border-border"
               }`}
             />
-            <div className="mono mt-1 w-48 text-[10px] uppercase tracking-widest">
+            <div className="mono mt-1 w-56 space-y-0.5 text-[10px] uppercase tracking-widest">
               {testPhoneError ? (
                 <span className="text-destructive">{testPhoneError}</span>
               ) : testTarget ? (
-                <span className="text-moss">Sends to {testTarget}</span>
+                <>
+                  <div className={testBlockedReason ? "text-muted-foreground" : "text-moss"}>
+                    Normalized (E.164): {testTarget}
+                  </div>
+                  {testCheck.isLoading ? (
+                    <div className="text-muted-foreground">Checking eligibility…</div>
+                  ) : testBlockedReason ? (
+                    <div className="normal-case tracking-normal text-destructive">
+                      [XX] {testBlockedReason}
+                    </div>
+                  ) : (
+                    <div className="text-moss">[OK] Clear to send</div>
+                  )}
+                </>
               ) : (
                 <span className="text-muted-foreground">10-digit US or E.164</span>
               )}
@@ -643,18 +721,21 @@ export function OptInPromptSettingsPanel({
           <button
             type="button"
             onClick={() => test.mutate()}
-            disabled={test.isPending || !testTarget}
+            disabled={test.isPending || !testTarget || !!testBlockedReason}
             title={
               testPhoneError
                 ? testPhoneError
-                : testTarget
-                  ? `Sends to ${testTarget}`
-                  : "Enter a test number or add your owner mobile first"
+                : testBlockedReason
+                  ? testBlockedReason
+                  : testTarget
+                    ? `Sends to ${testTarget}`
+                    : "Enter a test number or add your owner mobile first"
             }
             className="rounded-sm border border-primary px-4 py-2 text-xs uppercase tracking-widest text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
           >
             {test.isPending ? "Sending…" : "Send test SMS"}
           </button>
+
           {ownerPhone && testPhone.trim() !== ownerPhone && (
             <button
               type="button"
