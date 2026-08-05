@@ -158,22 +158,23 @@ export function DepositRowPopover({
         </dl>
 
         <div className="flex flex-wrap gap-2 pt-1">
-          <a
-            href={quoteHref}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={onPreviewQuote}
+            aria-label={`Open quote ${shortId} details preview`}
             className="mono inline-flex items-center rounded-sm border border-violet/60 bg-violet/10 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            open quote ↗
-          </a>
-          <a
-            href={customerHref}
-            target="_blank"
-            rel="noreferrer"
+            open quote
+          </button>
+          <button
+            type="button"
+            onClick={onPreviewCustomer}
+            aria-label={`Open customer view preview for quote ${shortId}`}
             className="mono inline-flex items-center rounded-sm border border-steel/60 bg-steel/10 px-2 py-1 text-[10px] uppercase tracking-wider text-steel hover:bg-steel/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            customer view ↗
-          </a>
+            customer view
+          </button>
+
           <button
             type="button"
             onClick={onCopyShareLink}
