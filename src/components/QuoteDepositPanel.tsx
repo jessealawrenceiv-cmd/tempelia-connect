@@ -172,7 +172,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   }
 
   function exportAudit() {
-    const rows: DepositAuditCsvRow[] = (audit ?? [])
+    const rows: DepositAuditCsvRow[] = filteredAudit
       .slice()
       .reverse()
       .map((row) => {
