@@ -2,6 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchTeamInviteEvents,
+  logTeamInviteEvent,
+  type TeamInviteEvent,
+} from "@/lib/team-invite-audit";
 
 type Member = {
   id: string;
@@ -61,15 +66,24 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
       if (!u.user) throw new Error("Not signed in");
       const addr = email.trim().toLowerCase();
       if (!addr) throw new Error("Enter an email address.");
-      const { error } = await supabase
+      const { data: row, error } = await supabase
         .from("team_members")
-        .insert({ business_owner_id: u.user.id, invited_email: addr, role: "staff" });
+        .insert({ business_owner_id: u.user.id, invited_email: addr, role: "staff" })
+        .select("id")
+        .single();
       if (error) throw error;
+      await logTeamInviteEvent({
+        businessOwnerId: u.user.id,
+        teamMemberId: row?.id ?? null,
+        invitedEmail: addr,
+        eventType: "created",
+      });
     },
     onSuccess: () => {
       toast.success("Invite created. Tell them to sign in with that exact email address.");
       setEmail("");
       qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_invite_events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -82,17 +96,35 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
         .update({ invited_at: new Date().toISOString() })
         .eq("id", m.id);
       if (error) throw error;
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user)
+        await logTeamInviteEvent({
+          businessOwnerId: u.user.id,
+          teamMemberId: m.id,
+          invitedEmail: m.invited_email,
+          eventType: "resent",
+        });
       return m;
     },
     onSuccess: (m) => {
       toast.success(`Invite for ${m.invited_email} extended 7 more days.`);
       qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_invite_events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const revoke = useMutation({
     mutationFn: async (m: Member) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user)
+        await logTeamInviteEvent({
+          businessOwnerId: u.user.id,
+          teamMemberId: m.id,
+          invitedEmail: m.invited_email,
+          eventType: "revoked",
+          detail: `${u.user.email ?? "owner"} · ${m.accepted_at ? "access removed" : "pending invite revoked"}`,
+        });
       const { error } = await supabase.from("team_members").delete().eq("id", m.id);
       if (error) throw error;
       return m;
@@ -104,6 +136,7 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
           : `Invite for ${m.invited_email} revoked.`,
       );
       qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_invite_events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
