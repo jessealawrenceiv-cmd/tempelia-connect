@@ -316,6 +316,26 @@ function NewQuotePage() {
   const taxAmount = round2(subtotal * (taxRate / 100));
   const total = round2(subtotal + taxAmount);
 
+  // ─── DEPOSIT (live, mirrors the DB consistency trigger) ────────
+  const depositRequired = depositSelection !== "none";
+  const depositCustomError =
+    depositSelection === "custom" ? amountErr(depositCustomValue, true) : null;
+  const depositAmount = useMemo(
+    () =>
+      resolveDepositAmount({
+        selection: depositSelection,
+        customType: depositCustomType,
+        customValue: toNum(depositCustomValue),
+        total,
+        defaultType: companyDefaultType,
+        defaultFixed: companyDefaultFixed != null ? Number(companyDefaultFixed) : null,
+      }),
+    [depositSelection, depositCustomType, depositCustomValue, total, companyDefaultType, companyDefaultFixed],
+  );
+  const depositTooLarge = depositRequired && depositAmount > total + 0.01;
+
+
+
   // "Send" requires at least one checked line item with a positive amount
   // (Labor alone counts). Draft can be saved without this.
   const hasAnyValidLine =
