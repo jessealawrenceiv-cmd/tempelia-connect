@@ -217,7 +217,7 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
         prompt_template_hash: promptVersionHash(body),
         prompt_cooldown_minutes: cooldown,
       });
-      return { ok: true as const, to, sid: res.sid, body, cooldown };
+      return { ok: true as const, to, sid: res.sid, status: res.status, body, cooldown };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       await supabase.from("logs").insert({
@@ -231,4 +231,39 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
       });
       throw new Error(`Send failed — ${msg}`);
     }
+  });
+
+/**
+ * Poll Twilio for the delivery state of a test SMS this owner sent.
+ * The SID must appear in this owner's own logs, so nobody can inspect
+ * another account's messages.
+ */
+export const getTestSmsStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { sid: string }) => {
+    const sid = String(input?.sid ?? "").trim();
+    if (!/^SM[0-9a-zA-Z]{10,}$/.test(sid)) throw new Error("Invalid message SID.");
+    return { sid };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: owned } = await supabase
+      .from("logs")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("twilio_message_sid", data.sid)
+      .limit(1)
+      .maybeSingle();
+    if (!owned) throw new Error("That message was not sent from this account.");
+
+    const { fetchTwilioMessage } = await import("./twilio.server");
+    const m = await fetchTwilioMessage(data.sid);
+    return {
+      sid: m.sid,
+      status: m.status,
+      errorCode: m.errorCode,
+      errorMessage: m.errorMessage,
+      to: m.to,
+      dateSent: m.dateSent,
+    };
   });
