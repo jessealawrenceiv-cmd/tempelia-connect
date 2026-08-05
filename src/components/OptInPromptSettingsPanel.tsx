@@ -153,8 +153,19 @@ export function OptInPromptSettingsPanel({
 
   const issues = validateOptInPromptTemplate(draft);
   const hasError = issues.some((i) => i.level === "error");
+  const missingBusiness = issues.some(
+    (i) => i.level === "warning" && i.message.includes("{business}"),
+  );
 
   const preview = buildOptInPrompt(businessName ?? "", draft);
+
+  /** Lead-ins that pass validation, shown as one-tap fixes. */
+  const exampleTemplates = [
+    DEFAULT_OPT_IN_PROMPT_TEMPLATE,
+    "{business} here — thanks for calling.",
+    "Sorry we missed your call, this is {business}.",
+  ];
+
 
   return (
     <div className="panel p-6 md:col-span-2">
@@ -174,12 +185,19 @@ export function OptInPromptSettingsPanel({
             rows={3}
             maxLength={OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH}
             placeholder={DEFAULT_OPT_IN_PROMPT_TEMPLATE}
-            className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+            className={`mono mt-1 block w-full rounded-sm border bg-background px-3 py-2 text-sm ${
+              hasError
+                ? "border-destructive"
+                : missingBusiness
+                  ? "border-primary/70"
+                  : "border-border"
+            }`}
           />
           <span className="mono mt-1 block text-[10px] uppercase tracking-widest text-muted-foreground">
             {"{business}"} is replaced with your business name · {draft.length}/
             {OPT_IN_PROMPT_TEMPLATE_MAX_LENGTH}
           </span>
+
         </label>
 
         <label className="block">
@@ -213,6 +231,36 @@ export function OptInPromptSettingsPanel({
           ))}
         </ul>
       )}
+
+      {missingBusiness && (
+        <div className="mt-3 rounded-sm border border-primary/40 bg-primary/5 p-3">
+          <div className="label-eyebrow text-primary">⚠ Warning only — you can still save</div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your lead-in has no {"{business}"} placeholder, so the message won&apos;t name your
+            business up front. Twilio reviewers prefer sender identification in the first line. Add
+            {" "}{"{business}"} or pick an example below.
+          </p>
+          <div className="mt-3 space-y-2">
+            {exampleTemplates.map((tpl) => (
+              <div
+                key={tpl}
+                className="flex flex-col gap-2 rounded-sm border border-border bg-background/60 p-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span className="mono text-[11px] leading-relaxed text-paper">{tpl}</span>
+                <button
+                  type="button"
+                  onClick={() => setDraft(tpl)}
+                  className="mono shrink-0 rounded-sm border border-primary/50 px-2 py-1 text-[10px] uppercase tracking-widest text-primary hover:bg-primary/10"
+                >
+                  Use this
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+
 
       <div className="mt-4 rounded-sm border border-border bg-background/60 p-3">
         <div className="label-eyebrow">Message preview</div>
