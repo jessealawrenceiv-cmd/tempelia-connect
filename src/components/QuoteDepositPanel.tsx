@@ -195,7 +195,10 @@ export function QuoteDepositPanel({ quote }: Props) {
   }
 
   // Focus the event referenced by ?eventId= / ?depositEvent= / #deposit-event-<id> on arrival.
-  const { eventId: incomingEventId } = parseDepositDeepLink(location.searchStr, location.hash);
+  const { eventId: incomingEventId, source: incomingSource } = parseDepositDeepLink(
+    location.searchStr,
+    location.hash,
+  );
   const focusedIncomingRef = useRef<string | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const [jumpedId, setJumpedId] = useState<string | null>(null);
