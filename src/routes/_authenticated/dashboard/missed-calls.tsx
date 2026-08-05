@@ -10,6 +10,7 @@ import { OPT_IN_PROMPT_ACTION } from "@/lib/opt-in-prompt";
 import { MissedCallDetailSheet, type MissedCallDetail } from "@/components/MissedCallDetailSheet";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { buildMissedCallsCsv, downloadCsv, type MissedCallCsvRow } from "@/lib/missed-calls-csv";
 
 type StatusFilter = "all" | "sent" | "failed" | "unconfirmed" | "skipped";
 
@@ -73,7 +74,12 @@ function MissedCallsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { q, status, from, to } = Route.useSearch();
   const setFilter = (patch: Partial<{ q: string; status: string; from: string; to: string }>) =>
-    navigate({ search: (prev) => ({ ...prev, ...patch }) });
+    navigate({
+      search: (prev: { q: string; status: string; from: string; to: string }) => ({
+        ...prev,
+        ...patch,
+      }),
+    });
   const [selected, setSelected] = useState<MissedCallDetail | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["missed-calls", from, to],
@@ -165,6 +171,72 @@ function MissedCallsPage() {
         .map((r) => r.customer_id!),
     ),
   );
+  // --- CSV export --------------------------------------------------------
+  const [exporting, setExporting] = useState(false);
+  const exportCsv = async () => {
+    if (rows.length === 0) {
+      toast.error("Nothing to export with the current filters");
+      return;
+    }
+    setExporting(true);
+    try {
+      const customerIds = Array.from(
+        new Set(rows.map((r) => r.customer_id).filter((id): id is string => !!id)),
+      );
+      // Every opt-in prompt attempt (not just the latest) for the visible contacts.
+      const attempts = new Map<
+        string,
+        { created_at: string; status: string; twilio_message_sid: string | null }[]
+      >();
+      if (customerIds.length > 0) {
+        const { data: promptLogs } = await supabase
+          .from("logs")
+          .select("customer_id, created_at, status, twilio_message_sid")
+          .eq("action_type", OPT_IN_PROMPT_ACTION)
+          .in("customer_id", customerIds)
+          .order("created_at", { ascending: true });
+        for (const log of promptLogs ?? []) {
+          if (!log.customer_id) continue;
+          const list = attempts.get(log.customer_id) ?? [];
+          list.push({
+            created_at: log.created_at,
+            status: log.status,
+            twilio_message_sid: log.twilio_message_sid,
+          });
+          attempts.set(log.customer_id, list);
+        }
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("twilio_phone_number")
+        .maybeSingle();
+      const businessNumber = profile?.twilio_phone_number ?? "";
+
+      const csvRows: MissedCallCsvRow[] = rows.map((r) => ({
+        created_at: r.created_at,
+        from_number: r.customers?.phone_number ?? "",
+        to_number: businessNumber,
+        customer_name: r.customers?.first_name ?? "",
+        auto_reply_status: rowStatus(r),
+        auto_reply_sid: r.twilio_message_sid ?? "",
+        call_sid: r.call_sid ?? "",
+        voicemail_url: r.voicemail_url ?? "",
+        recording_sid: r.recording_sid ?? "",
+        opt_in_consent: r.customers ? String(r.customers.opt_in_consent) : "",
+        prompt_attempts: r.customer_id ? (attempts.get(r.customer_id) ?? []) : [],
+      }));
+
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      downloadCsv(`missed-calls-${stamp}.csv`, buildMissedCallsCsv(csvRows));
+      toast.success(`Exported ${csvRows.length} call${csvRows.length === 1 ? "" : "s"}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const allSelected = eligibleIds.length > 0 && eligibleIds.every((id) => checked.has(id));
   const toggle = (id: string) =>
     setChecked((prev) => {
@@ -240,6 +312,14 @@ function MissedCallsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={exporting}
+            className="rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-paper transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {exporting ? "Exporting…" : "Export CSV"}
+          </button>
           <button
             type="button"
             onClick={() => {
