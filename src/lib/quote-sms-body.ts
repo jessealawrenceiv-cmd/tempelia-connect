@@ -47,3 +47,34 @@ export function smsSegmentCount(message: string): { chars: number; segments: num
   const segments = chars <= limit ? 1 : Math.ceil(chars / multi);
   return { chars, segments, unicode };
 }
+
+/**
+ * Extra preview-only detail on top of smsSegmentCount: which encoding Twilio
+ * will pick, how much room is left before the message spills into another
+ * segment, and any non-ASCII characters responsible for a UCS-2 downgrade.
+ */
+export function smsSegmentDetail(message: string): {
+  chars: number;
+  segments: number;
+  unicode: boolean;
+  encoding: "GSM-7" | "UCS-2";
+  segmentCapacity: number;
+  charsUntilNextSegment: number;
+  nonAsciiChars: string[];
+} {
+  const { chars, segments, unicode } = smsSegmentCount(message);
+  const limit = unicode ? 70 : 160;
+  const multi = unicode ? 67 : 153;
+  const segmentCapacity = segments === 1 ? limit : multi * segments;
+  const nonAsciiChars = Array.from(new Set(message.match(/[^\u0000-\u007F]/g) ?? []));
+  return {
+    chars,
+    segments,
+    unicode,
+    encoding: unicode ? "UCS-2" : "GSM-7",
+    segmentCapacity,
+    charsUntilNextSegment: Math.max(0, segmentCapacity - chars),
+    nonAsciiChars,
+  };
+}
+
