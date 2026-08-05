@@ -153,4 +153,52 @@ describe("DepositRowPopover keyboard accessibility", () => {
 
     expect(document.activeElement).toBe(before);
   });
+
+  it("gives every popover control an accessible name", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    trigger().focus();
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog");
+
+    const controls = Array.from(
+      dialog.querySelectorAll<HTMLElement>("button, a[href], [tabindex]:not([tabindex='-1'])"),
+    );
+    expect(controls.length).toBeGreaterThan(0);
+    for (const el of controls) {
+      const name = (el.getAttribute("aria-label") ?? el.textContent ?? "").trim();
+      expect(name.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("moves focus from the row trigger into the popover and wraps both directions", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const btn = trigger();
+    btn.focus();
+    expect(btn.getAttribute("aria-label")).toMatch(/preview quote/i);
+
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    const controls = Array.from(dialog.querySelectorAll<HTMLButtonElement>("button"));
+    const first = controls[0]!;
+    const last = controls[controls.length - 1]!;
+
+    // focus enters at the first control
+    expect(document.activeElement).toBe(first);
+
+    // shift+tab from the first control wraps to the last (trap holds)
+    await user.tab({ shift: true });
+    await waitFor(() => expect(document.activeElement).toBe(last));
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    // tab from the last control wraps back to the first
+    await user.tab();
+    await waitFor(() => expect(document.activeElement).toBe(first));
+  });
 });
+
