@@ -176,6 +176,83 @@ function AdminDepositRecoveryPage() {
               )}
             </section>
 
+            {/* Retry attempts */}
+            <section className="panel p-5">
+              <h2 className="label-eyebrow">Retry attempts after a miss</h2>
+              {data.retries.total === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No repeat deep-link attempts recorded in this window.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                    <SummaryTile
+                      icon={<MousePointerClick size={14} />}
+                      label="Retries"
+                      value={String(data.retries.total)}
+                    />
+                    <SummaryTile
+                      icon={<MousePointerClick size={14} />}
+                      label="Max attempt"
+                      value={
+                        data.retries.maxAttemptIndex == null
+                          ? "—"
+                          : String(data.retries.maxAttemptIndex)
+                      }
+                    />
+                    <SummaryTile
+                      icon={<Timer size={14} />}
+                      label="Median since first miss"
+                      value={fmtMs(data.retries.medianMsSinceFirstMiss)}
+                    />
+                    <SummaryTile
+                      icon={<Timer size={14} />}
+                      label="p90 since first miss"
+                      value={fmtMs(data.retries.p90MsSinceFirstMiss)}
+                    />
+                  </div>
+                  <div className="mt-4 h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={data.retries.byAttemptIndex.map((b) => ({
+                          label: `#${b.attemptIndex}`,
+                          count: b.count,
+                        }))}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="hsl(var(--border))"
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11 }}
+                          stroke="hsl(var(--muted-foreground))"
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fontSize: 11 }}
+                          stroke="hsl(var(--muted-foreground))"
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            background: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            fontSize: 12,
+                          }}
+                        />
+                        <Bar dataKey="count" name="retries" radius={[2, 2, 0, 0]}>
+                          {data.retries.byAttemptIndex.map((b) => (
+                            <Cell key={b.attemptIndex} fill="hsl(var(--violet))" />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              )}
+            </section>
+
             {/* Histogram */}
             <section className="panel p-5">
               <h2 className="label-eyebrow">ms_since_miss distribution</h2>
@@ -216,6 +293,8 @@ function AdminDepositRecoveryPage() {
                       <th className="py-2 pr-4">When</th>
                       <th className="py-2 pr-4">Action</th>
                       <th className="py-2 pr-4">ms since miss</th>
+                      <th className="py-2 pr-4">attempt</th>
+                      <th className="py-2 pr-4">ms since 1st miss</th>
                       <th className="py-2 pr-4">Requested id</th>
                       <th className="py-2">Reason</th>
                     </tr>
@@ -223,7 +302,7 @@ function AdminDepositRecoveryPage() {
                   <tbody className="font-mono">
                     {data.recent.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-3 text-muted-foreground">
+                        <td colSpan={7} className="py-3 text-muted-foreground">
                           No entries.
                         </td>
                       </tr>
@@ -235,6 +314,8 @@ function AdminDepositRecoveryPage() {
                             {r.action}
                           </td>
                           <td className="py-2 pr-4">{r.msSinceMiss ?? "—"}</td>
+                          <td className="py-2 pr-4">{r.attemptIndex ?? "—"}</td>
+                          <td className="py-2 pr-4">{r.msSinceFirstMiss ?? "—"}</td>
                           <td className="py-2 pr-4 break-all">{r.eventId ?? "—"}</td>
                           <td className="py-2">{r.reason ?? "—"}</td>
                         </tr>
