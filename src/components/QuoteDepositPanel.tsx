@@ -14,6 +14,7 @@ import { markQuoteDeposit, DEPOSIT_AUDIT_ACTION } from "@/lib/deposit.functions"
 import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type Props = {
   quote: {
@@ -72,6 +73,9 @@ export function QuoteDepositPanel({ quote }: Props) {
   const [busy, setBusy] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [auditQuery, setAuditQuery] = useState("");
+  const [openPreviewId, setOpenPreviewId] = useState<string | null>(null);
+  const currentBalanceRemaining =
+    Number(quote.total_amount ?? 0) - (quote.deposit_paid ? Number(quote.deposit_amount ?? 0) : 0);
   const [auditAction, setAuditAction] = useState<"all" | "deposit_received" | "deposit_undone">(
     "all",
   );
@@ -657,14 +661,54 @@ export function QuoteDepositPanel({ quote }: Props) {
                     }`}
                   />
                   <div className="mono text-[11px]">
-                    <span className={received ? "text-moss" : "text-orange"}>
-                      {received ? "deposit received" : "deposit undone"}
-                    </span>
+                    <Popover
+                      open={openPreviewId === row.id}
+                      onOpenChange={(o) => setOpenPreviewId(o ? row.id : null)}
+                    >
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          onMouseEnter={() => setOpenPreviewId(row.id)}
+                          onMouseLeave={() => setOpenPreviewId((c) => (c === row.id ? null : c))}
+                          className={`underline decoration-dotted underline-offset-2 ${
+                            received ? "text-moss" : "text-orange"
+                          }`}
+                        >
+                          {received ? "deposit received" : "deposit undone"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        className="w-64 space-y-1 border-border bg-card p-3"
+                        onMouseEnter={() => setOpenPreviewId(row.id)}
+                        onMouseLeave={() => setOpenPreviewId((c) => (c === row.id ? null : c))}
+                      >
+                        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          quote preview
+                        </div>
+                        <div className="mono text-[11px] text-foreground">
+                          short id {(p.quote_id ?? quote.id).slice(0, 8)}
+                        </div>
+                        <div className="mono text-[11px] text-muted-foreground">
+                          deposit at event · {money(p.deposit_amount ?? 0)}
+                        </div>
+                        <div className="mono text-[11px] text-muted-foreground">
+                          balance at event · {money(p.balance_remaining ?? 0)}
+                        </div>
+                        <div className="mono text-[11px] text-muted-foreground">
+                          quote total · {money(p.total_amount ?? quote.total_amount)}
+                        </div>
+                        <div className="mono border-t border-border/60 pt-1 text-[11px] text-violet">
+                          current balance · {money(currentBalanceRemaining)}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <span className="text-muted-foreground">
                       {" "}
                       · {new Date(row.created_at).toLocaleString("en-US")}
                     </span>
                   </div>
+
                   <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                     by {actor}
                     {p.actor_is_owner === false ? " (staff)" : ""}
