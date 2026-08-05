@@ -207,6 +207,34 @@ export function QuoteDepositPanel({ quote }: Props) {
   >(null);
   const jumpMissHeadingRef = useRef<HTMLHeadingElement | null>(null);
 
+  // Debug mode for deposit-jump event payloads.
+  const DEBUG_STORAGE_KEY = "temaro-deposit-jump-debug";
+  const [debugMode, setDebugMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(DEBUG_STORAGE_KEY) === "true";
+  });
+  type DebugEntry = {
+    id: string;
+    ts: number;
+    event: "deposit_jump_success" | "deposit_jump_miss";
+    payload: Record<string, unknown>;
+  };
+  const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
+  const debugLogRef = useRef<HTMLDivElement | null>(null);
+
+  const logDepositJumpDebug = useCallback(
+    (event: "deposit_jump_success" | "deposit_jump_miss", payload: Record<string, unknown>) => {
+      const entry: DebugEntry = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ts: Date.now(), event, payload };
+      // Always mirror to the console so testers can inspect in DevTools even before toggling on-screen mode.
+      // eslint-disable-next-line no-console
+      console.log(`[deposit-jump-debug] ${event}`, payload);
+      if (debugMode) {
+        setDebugLog((prev) => [entry, ...prev].slice(0, 50));
+      }
+    },
+    [debugMode],
+  );
+
   // Pull keyboard focus onto the not-found heading so the message is read at once.
   useEffect(() => {
     if (!jumpMiss) return;
