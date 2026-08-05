@@ -793,10 +793,18 @@ export function QuoteDepositPanel({ quote }: Props) {
                     <Popover
                       open={openPreviewId === row.id}
                       onOpenChange={(o) => {
-                        if (!o) openModeRef.current = null;
+                        if (!o) {
+                          const id = openPreviewId;
+                          if (id && (openModeRef.current === "keyboard" || popoverFocusedRef.current)) {
+                            requestAnimationFrame(() => triggerRefs.current[id]?.focus());
+                          }
+                          openModeRef.current = null;
+                          popoverFocusedRef.current = false;
+                        }
                         setOpenPreviewId(o ? row.id : null);
                       }}
                     >
+
                       <PopoverTrigger asChild>
                         <button
                           type="button"
