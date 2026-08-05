@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { InviteEmailPreviewDialog } from "@/components/InviteEmailPreviewDialog";
 import {
   fetchTeamInviteEvents,
   logTeamInviteEvent,
@@ -61,7 +62,25 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : 
 export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
+  /** null = closed; otherwise the invite being previewed (new invite has no id). */
+  const [preview, setPreview] = useState<
+    { email: string; expiresAt: string | null; isNew: boolean } | null
+  >(null);
   const isStandard = tier === "standard";
+
+  const { data: businessName } = useQuery({
+    queryKey: ["profile_business_name"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return "";
+      const { data } = await supabase
+        .from("profiles")
+        .select("business_name")
+        .eq("id", u.user.id)
+        .maybeSingle();
+      return data?.business_name ?? "";
+    },
+  });
 
   const { data: members } = useQuery({
     queryKey: ["team_members"],
@@ -100,6 +119,7 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
     onSuccess: () => {
       toast.success("Invite created. Tell them to sign in with that exact email address.");
       setEmail("");
+      setPreview(null);
       qc.invalidateQueries({ queryKey: ["team_members"] });
       qc.invalidateQueries({ queryKey: ["team_invite_events"] });
     },
@@ -234,6 +254,19 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
               className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
             />
             <button
+              onClick={() => {
+                const addr = email.trim().toLowerCase();
+                if (!addr) {
+                  toast.error("Enter an email address to preview.");
+                  return;
+                }
+                setPreview({ email: addr, expiresAt: null, isNew: true });
+              }}
+              className="rounded-sm border border-violet/50 px-4 py-2 text-xs uppercase tracking-wider text-violet"
+            >
+              Preview email
+            </button>
+            <button
               onClick={() => invite.mutate()}
               disabled={invite.isPending}
               className="rounded-sm bg-violet px-4 py-2 text-xs uppercase tracking-wider text-paper disabled:opacity-50"
@@ -296,6 +329,18 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
                           Resend (+7 days)
                         </button>
                         <button
+                          onClick={() =>
+                            setPreview({
+                              email: m.invited_email,
+                              expiresAt: m.expires_at,
+                              isNew: false,
+                            })
+                          }
+                          className="rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                        >
+                          Preview email
+                        </button>
+                        <button
                           onClick={() => copyInstructions(m)}
                           className="rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
                         >
@@ -323,6 +368,18 @@ export function TeamMembersPanel({ tier }: { tier: string | null | undefined }) 
           </div>
         )}
       </div>
+
+      {preview && (
+        <InviteEmailPreviewDialog
+          open
+          onOpenChange={(o) => !o && setPreview(null)}
+          invitedEmail={preview.email}
+          businessName={businessName ?? ""}
+          expiresAt={preview.expiresAt}
+          onConfirm={preview.isNew ? () => invite.mutate() : undefined}
+          confirmPending={invite.isPending}
+        />
+      )}
 
       {isStandard && (
         <div className="mt-6 border-t border-border pt-4">
