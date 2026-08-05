@@ -92,7 +92,7 @@ export function QuoteDepositPanel({ quote }: Props) {
     depositPaid: quote.deposit_paid,
   });
 
-  const { data: audit } = useQuery({
+  const { data: audit, isLoading: auditLoading } = useQuery({
     queryKey: ["quote-deposit-audit", quote.id],
     queryFn: async (): Promise<AuditRow[]> => {
       const { data, error } = await supabase
