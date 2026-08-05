@@ -269,12 +269,14 @@ export function QuoteDepositPanel({ quote }: Props) {
       });
       setJumpMiss({ id: incomingEventId, reason: resolution.reason });
       setAuditCursor(resolution.fallbackIndex);
+      // Strip the deep-link params immediately (not in a rAF) so a refresh or
+      // back navigation never retries a jump we already know can't resolve.
+      clearJumpParams();
       requestAnimationFrame(() => {
         const fallbackId = filteredAudit[resolution.fallbackIndex]?.id;
         const target = fallbackId ? entryRefs.current[fallbackId] : timelineRef.current;
         (target ?? timelineRef.current)?.scrollIntoView({ behavior: "smooth", block: "center" });
         if (fallbackId) entryRefs.current[fallbackId]?.focus({ preventScroll: true });
-        clearJumpParams();
       });
       return;
     }
