@@ -128,7 +128,12 @@ export function OptInPromptSettingsPanel({
               ? { ...prev, status: m.status, errorCode: m.errorCode, errorMessage: m.errorMessage }
               : prev,
           );
-          if (TERMINAL.includes(m.status)) break;
+          if (TERMINAL.includes(m.status)) {
+            // The server writes the final result onto the log row; refresh the table.
+            void qc.invalidateQueries({ queryKey: ["opt-in-prompt-test-history"] });
+            break;
+          }
+
         } catch {
           break;
         }
