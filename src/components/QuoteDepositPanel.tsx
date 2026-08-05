@@ -642,8 +642,24 @@ export function QuoteDepositPanel({ quote }: Props) {
               >
                 next event →
               </button>
+              {activeEntry && (
+                <span className="ml-auto flex items-center gap-2 text-muted-foreground">
+                  <span className="text-paper">
+                    deposit {money(parsePayload(activeEntry).deposit_amount ?? 0)}
+                  </span>
+                  <span>·</span>
+                  <span className="text-moss">
+                    balance {money(parsePayload(activeEntry).balance_remaining ?? 0)}
+                  </span>
+                  <span>·</span>
+                  <span>
+                    total {money(parsePayload(activeEntry).total_amount ?? quote.total_amount)}
+                  </span>
+                </span>
+              )}
             </div>
           )}
+
 
           {filteredAudit.length === 0 ? (
             <div className="mono text-[11px] text-muted-foreground">
