@@ -280,6 +280,27 @@ export type Database = {
         }
         Relationships: []
       }
+      invite_cleanup_runs: {
+        Row: {
+          created_at: string
+          deleted_count: number
+          id: string
+          ran_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_count?: number
+          id?: string
+          ran_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_count?: number
+          id?: string
+          ran_at?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           completed_at: string | null
@@ -791,6 +812,7 @@ export type Database = {
     Functions: {
       claim_team_invite: { Args: { _invite_id: string }; Returns: boolean }
       claim_team_invites: { Args: never; Returns: number }
+      cleanup_expired_team_invites: { Args: never; Returns: number }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
