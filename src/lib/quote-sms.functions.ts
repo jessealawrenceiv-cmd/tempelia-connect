@@ -143,7 +143,7 @@ export const previewQuoteSms = createServerFn({ method: "POST" })
       publicBase: PROJECT_PUBLIC_BASE,
       stopSuffix: STOP_SUFFIX,
     });
-    const counts = smsSegmentCount(message);
+    const counts = smsSegmentDetail(message);
 
     let cooldownMinutesLeft = 0;
     if (q.last_sms_sent_at) {
