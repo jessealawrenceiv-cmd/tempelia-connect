@@ -56,7 +56,7 @@ export const markQuoteDeposit = createServerFn({ method: "POST" })
     const balanceRemaining = Math.round((total - (data.paid ? depositAmount : 0)) * 100) / 100;
 
     // Audit trail — tenant-scoped row, actor captured in the payload.
-    await supabase.from("logs").insert({
+    const { error: logErr } = await supabase.from("logs").insert({
       user_id: q.user_id,
       customer_id: q.customer_id,
       action_type: DEPOSIT_AUDIT_ACTION,
@@ -76,6 +76,7 @@ export const markQuoteDeposit = createServerFn({ method: "POST" })
         at: nowIso,
       }),
     });
+    if (logErr) console.error("deposit audit log failed", logErr.message);
 
     return {
       ok: true as const,
@@ -83,5 +84,7 @@ export const markQuoteDeposit = createServerFn({ method: "POST" })
       paidAt: data.paid ? nowIso : null,
       depositAmount,
       balanceRemaining,
+      audited: !logErr,
     };
   });
+
