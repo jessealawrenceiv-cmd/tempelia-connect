@@ -14,6 +14,11 @@ import { markQuoteDeposit, DEPOSIT_AUDIT_ACTION } from "@/lib/deposit.functions"
 import { previewQuoteSms } from "@/lib/quote-sms.functions";
 import { buildDepositAuditCsv, type DepositAuditCsvRow } from "@/lib/deposit-audit-csv";
 import { downloadCsv } from "@/lib/missed-calls-csv";
+import {
+  parseDepositDeepLink,
+  resolveDepositJump,
+  type DepositJumpMissReason,
+} from "@/lib/deposit-deep-link";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
@@ -188,18 +193,12 @@ export function QuoteDepositPanel({ quote }: Props) {
   }
 
   // Focus the event referenced by ?eventId= / ?depositEvent= / #deposit-event-<id> on arrival.
-  const incomingSearch = new URLSearchParams(location.searchStr ?? "");
-  const incomingEventId =
-    incomingSearch.get("eventId") ??
-    incomingSearch.get("depositEvent") ??
-    (location.hash?.startsWith("deposit-event-")
-      ? location.hash.replace("deposit-event-", "")
-      : null);
+  const { eventId: incomingEventId } = parseDepositDeepLink(location.searchStr, location.hash);
   const focusedIncomingRef = useRef<string | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const [jumpedId, setJumpedId] = useState<string | null>(null);
   const [jumpMiss, setJumpMiss] = useState<
-    { id: string; reason: "filtered" | "missing" | "empty" } | null
+    { id: string; reason: DepositJumpMissReason } | null
   >(null);
 
 
@@ -216,29 +215,30 @@ export function QuoteDepositPanel({ quote }: Props) {
     if (!incomingEventId || focusedIncomingRef.current === incomingEventId) return;
     if (auditLoading) return;
 
-    const idx = filteredAudit.findIndex((r) => r.id === incomingEventId);
     focusedIncomingRef.current = incomingEventId;
+    const resolution = resolveDepositJump(
+      incomingEventId,
+      filteredAudit.map((r) => r.id),
+      (audit ?? []).map((r) => r.id),
+    );
 
-    if (idx < 0) {
+    if (resolution.kind === "miss") {
       // Graceful fallback: the linked event isn't in view. Explain why and land
       // the reader at the closest available spot (first entry / timeline top).
-      const existsUnfiltered = (audit ?? []).some((r) => r.id === incomingEventId);
-      setJumpMiss({
-        id: incomingEventId,
-        reason: !audit || audit.length === 0 ? "empty" : existsUnfiltered ? "filtered" : "missing",
-      });
-      setAuditCursor(0);
+      setJumpMiss({ id: incomingEventId, reason: resolution.reason });
+      setAuditCursor(resolution.fallbackIndex);
       requestAnimationFrame(() => {
-        const fallbackId = filteredAudit[0]?.id;
+        const fallbackId = filteredAudit[resolution.fallbackIndex]?.id;
         const target = fallbackId ? entryRefs.current[fallbackId] : timelineRef.current;
         (target ?? timelineRef.current)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (fallbackId) entryRefs.current[fallbackId]?.focus({ preventScroll: true });
         clearJumpParams();
       });
       return;
     }
 
     setJumpMiss(null);
-    setAuditCursor(idx);
+    setAuditCursor(resolution.index);
     setJumpedId(incomingEventId);
     requestAnimationFrame(() => {
       const el = entryRefs.current[incomingEventId];
@@ -249,6 +249,7 @@ export function QuoteDepositPanel({ quote }: Props) {
       clearJumpParams();
     });
   }, [incomingEventId, filteredAudit, audit, auditLoading]);
+
 
   // Fade the arrival highlight after a moment, keeping focus where it is.
   useEffect(() => {
