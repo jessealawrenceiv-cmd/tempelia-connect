@@ -953,7 +953,16 @@ export function OptInPromptSettingsPanel({
               {lastTest.status}
             </span>
             {polling && !TERMINAL.includes(lastTest.status) ? (
-              <span className="text-muted-foreground"> · checking…</span>
+              <>
+                <span className="text-muted-foreground"> · checking…</span>
+                <button
+                  type="button"
+                  onClick={stopPolling}
+                  className="ml-2 underline text-muted-foreground hover:text-foreground"
+                >
+                  Stop polling
+                </button>
+              </>
             ) : null}
             {!polling && !TERMINAL.includes(lastTest.status) ? (
               <button
@@ -961,10 +970,17 @@ export function OptInPromptSettingsPanel({
                 onClick={() => void pollStatus(lastTest.sid)}
                 className="ml-2 underline text-muted-foreground hover:text-foreground"
               >
-                Refresh
+                {pollInfo.attempts > 0 ? "Resume checking" : "Refresh"}
               </button>
             ) : null}
           </p>
+          {!TERMINAL.includes(lastTest.status) ? (
+            <p className="text-muted-foreground">
+              Checks: {pollInfo.attempts}/{MAX_POLL_ATTEMPTS} · Last check:{" "}
+              {pollInfo.lastCheckedAt ?? "—"}
+              {!polling && pollInfo.attempts > 0 ? " · stopped" : ""}
+            </p>
+          ) : null}
           {(lastTest.errorCode || lastTest.errorMessage) && (
             <p className="text-destructive normal-case tracking-normal">
               Error {lastTest.errorCode ?? "—"}: {lastTest.errorMessage ?? "no detail returned"}
