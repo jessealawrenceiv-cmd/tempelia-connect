@@ -11,10 +11,11 @@ export type DepositRowPopoverProps = {
   balanceAtEvent: string;
   quoteTotal: string;
   currentBalance: string;
-  quoteHref: string;
-  customerHref: string;
+  onPreviewQuote: () => void;
+  onPreviewCustomer: () => void;
   onCopyShortId: () => void;
   onCopyShareLink: () => void;
+
 };
 
 /**
