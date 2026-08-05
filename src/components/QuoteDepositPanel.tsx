@@ -864,9 +864,13 @@ export function QuoteDepositPanel({ quote }: Props) {
                         }}
                       >
 
-                        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        <h3
+                          id={`deposit-preview-title-${row.id}`}
+                          className="mono text-[10px] uppercase tracking-widest text-muted-foreground"
+                        >
                           quote preview
-                        </div>
+                        </h3>
+
                         <div className="flex items-center gap-2">
                           <div className="mono text-[11px] text-foreground">
                             short id {(p.quote_id ?? quote.id).slice(0, 8)}
