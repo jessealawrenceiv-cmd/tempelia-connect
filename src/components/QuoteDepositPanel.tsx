@@ -845,7 +845,14 @@ export function QuoteDepositPanel({ quote }: Props) {
                           // Hover-opened popovers must not steal focus; keyboard/click opens trap focus.
                           if (openModeRef.current === "hover") e.preventDefault();
                         }}
+                        onFocusCapture={() => {
+                          // Once focus moves inside the popover, treat it as a keyboard interaction
+                          // so Escape/click-outside returns focus to the trigger.
+                          popoverFocusedRef.current = true;
+                          openModeRef.current = "keyboard";
+                        }}
                         onEscapeKeyDown={() => setOpenPreviewId(null)}
+
                         onMouseEnter={() => {
                           if (openModeRef.current === "hover") setOpenPreviewId(row.id);
                         }}
