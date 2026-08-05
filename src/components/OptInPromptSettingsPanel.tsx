@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { sendTestOptInPrompt, getTestSmsStatus } from "@/lib/opt-in-prompt.functions";
@@ -68,6 +68,13 @@ export function OptInPromptSettingsPanel({
     raw?: Record<string, unknown> | null;
   } | null>(null);
   const [polling, setPolling] = useState(false);
+  /** Attempt count + last check time for the in-progress status poll. */
+  const [pollInfo, setPollInfo] = useState<{ attempts: number; lastCheckedAt: string | null }>({
+    attempts: 0,
+    lastCheckedAt: null,
+  });
+  /** Flipped by the Stop polling control so the loop bails out early. */
+  const stopPollingRef = useRef(false);
   const [showRaw, setShowRaw] = useState(false);
   const [sampleName, setSampleName] = useState("Dana Reyes");
   const [samplePhone, setSamplePhone] = useState("+15015550123");
@@ -129,13 +136,27 @@ export function OptInPromptSettingsPanel({
 
   const TERMINAL = ["delivered", "undelivered", "failed", "canceled"];
 
+  const MAX_POLL_ATTEMPTS = 8;
+
+  function stopPolling() {
+    stopPollingRef.current = true;
+    setPolling(false);
+  }
+
   async function pollStatus(sid: string) {
+    stopPollingRef.current = false;
     setPolling(true);
+    setPollInfo({ attempts: 0, lastCheckedAt: null });
     try {
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         await new Promise((r) => setTimeout(r, i === 0 ? 1500 : 3000));
+        if (stopPollingRef.current) break;
         try {
           const m = await checkStatus({ data: { sid } });
+          setPollInfo({
+            attempts: i + 1,
+            lastCheckedAt: new Date().toLocaleTimeString(),
+          });
           setLastTest((prev) =>
             prev && prev.sid === sid
               ? {
