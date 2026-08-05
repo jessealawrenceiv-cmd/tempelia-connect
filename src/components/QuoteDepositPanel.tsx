@@ -20,7 +20,7 @@ import {
   resolveDepositJump,
   type DepositJumpMissReason,
 } from "@/lib/deposit-deep-link";
-import { trackDepositJump } from "@/lib/analytics";
+import { trackDepositJump, trackDepositJumpRecovery } from "@/lib/analytics";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
@@ -216,7 +216,7 @@ export function QuoteDepositPanel({ quote }: Props) {
   type DebugEntry = {
     id: string;
     ts: number;
-    event: "deposit_jump_success" | "deposit_jump_miss";
+    event: "deposit_jump_success" | "deposit_jump_miss" | "deposit_jump_recovery";
     payload: Record<string, unknown>;
   };
   const [debugLog, setDebugLog] = useState<DebugEntry[]>([]);
@@ -816,6 +816,7 @@ export function QuoteDepositPanel({ quote }: Props) {
                       setAuditAction("all");
                       setAuditActor("all");
                       setAuditFrom("");
+                      recordRecovery("clear_filters");
                       setAuditTo("");
                       focusedIncomingRef.current = null;
                       setJumpMiss(null);
@@ -832,6 +833,7 @@ export function QuoteDepositPanel({ quote }: Props) {
                 {filteredAudit.length > 0 && (
                   <button
                     onClick={() => {
+                      recordRecovery("show_latest");
                       const latest = filteredAudit[0];
                       setJumpMiss(null);
                       setAuditCursor(0);
@@ -851,6 +853,7 @@ export function QuoteDepositPanel({ quote }: Props) {
                 )}
                 <button
                   onClick={() => {
+                    recordRecovery("return_to_top");
                     setJumpMiss(null);
                     goToEntry(0);
                   }}
@@ -859,7 +862,10 @@ export function QuoteDepositPanel({ quote }: Props) {
                   return to timeline top
                 </button>
                 <button
-                  onClick={() => setJumpMiss(null)}
+                  onClick={() => {
+                    recordRecovery("dismiss");
+                    setJumpMiss(null);
+                  }}
                   className="rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper"
                 >
                   dismiss
