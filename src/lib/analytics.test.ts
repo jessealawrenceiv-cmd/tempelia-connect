@@ -1,19 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { capture, identify, reset, trackDepositJump } from "@/lib/analytics";
+import { createAnalytics } from "@/lib/analytics";
 
 const captureMock = vi.fn();
 const identifyMock = vi.fn();
 const resetMock = vi.fn();
 const initMock = vi.fn();
 
-vi.mock("posthog-js", () => ({
-  default: {
-    init: (...args: unknown[]) => initMock(...args),
-    capture: (...args: unknown[]) => captureMock(...args),
-    identify: (...args: unknown[]) => identifyMock(...args),
-    reset: (...args: unknown[]) => resetMock(...args),
-  },
-}));
+const fakePosthog = {
+  init: (...args: unknown[]) => initMock(...args),
+  capture: (...args: unknown[]) => captureMock(...args),
+  identify: (...args: unknown[]) => identifyMock(...args),
+  reset: (...args: unknown[]) => resetMock(...args),
+} as unknown as typeof import("posthog-js").default;
 
 function setEnv(token?: string, region?: string) {
   if (token != null) {
@@ -32,14 +30,11 @@ describe("analytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setEnv("phc_test", "us");
-    // Force re-initialization on the next capture by reloading the module state.
-    // We do this by mutating the internal flag via a side-effect import helper.
-    vi.resetModules();
   });
 
-  it("initializes PostHog once and captures an event", async () => {
-    const { capture: captureFresh } = await import("@/lib/analytics");
-    captureFresh("deposit_jump_success", { quote_id: "q1" });
+  it("initializes PostHog once and captures an event", () => {
+    const { capture } = createAnalytics(fakePosthog);
+    capture("deposit_jump_success", { quote_id: "q1" });
     expect(initMock).toHaveBeenCalledTimes(1);
     expect(initMock).toHaveBeenCalledWith("phc_test", {
       api_host: "https://us.i.posthog.com",
@@ -48,32 +43,32 @@ describe("analytics", () => {
     });
     expect(captureMock).toHaveBeenCalledWith("deposit_jump_success", { quote_id: "q1" });
 
-    captureFresh("deposit_jump_success", { quote_id: "q2" });
+    capture("deposit_jump_success", { quote_id: "q2" });
     expect(initMock).toHaveBeenCalledTimes(1);
     expect(captureMock).toHaveBeenCalledTimes(2);
   });
 
-  it("uses the EU host when region is eu", async () => {
+  it("uses the EU host when region is eu", () => {
     setEnv("phc_test", "eu");
-    const { capture: captureFresh } = await import("@/lib/analytics");
-    captureFresh("test");
+    const { capture } = createAnalytics(fakePosthog);
+    capture("test");
     expect(initMock).toHaveBeenCalledWith(
       "phc_test",
       expect.objectContaining({ api_host: "https://eu.i.posthog.com" }),
     );
   });
 
-  it("no-ops when PostHog token is not configured", async () => {
+  it("no-ops when PostHog token is not configured", () => {
     setEnv(undefined, undefined);
-    const { capture: captureFresh } = await import("@/lib/analytics");
-    captureFresh("test");
+    const { capture } = createAnalytics(fakePosthog);
+    capture("test");
     expect(initMock).not.toHaveBeenCalled();
     expect(captureMock).not.toHaveBeenCalled();
   });
 
-  it("tracks a successful deposit jump", async () => {
-    const { trackDepositJump: trackFresh } = await import("@/lib/analytics");
-    trackFresh({
+  it("tracks a successful deposit jump", () => {
+    const { trackDepositJump } = createAnalytics(fakePosthog);
+    trackDepositJump({
       kind: "success",
       quoteId: "quote-1",
       eventId: "evt-1",
@@ -86,15 +81,16 @@ describe("analytics", () => {
     });
   });
 
-  it("tracks a missed deposit jump with reason", async () => {
-    const { trackDepositJump: trackFresh } = await import("@/lib/analytics");
-    trackFresh({
+  it("tracks a missed deposit jump with reason", () => {
+    const { trackDepositJump } = createAnalytics(fakePosthog);
+    trackDepositJump({
       kind: "miss",
       quoteId: "quote-2",
       eventId: "evt-2",
       reason: "filtered",
       source: "hash",
     });
+    expect(captureMock).toHaveBeenCalledWith("deposit_jump_success", expect.anything());
     expect(captureMock).toHaveBeenCalledWith("deposit_jump_miss", {
       quote_id: "quote-2",
       event_id: "evt-2",
@@ -103,11 +99,11 @@ describe("analytics", () => {
     });
   });
 
-  it("identifies and resets users", async () => {
-    const { identify: identifyFresh, reset: resetFresh } = await import("@/lib/analytics");
-    identifyFresh("user-1", { email: "a@temaro.io" });
+  it("identifies and resets users", () => {
+    const { identify, reset } = createAnalytics(fakePosthog);
+    identify("user-1", { email: "a@temaro.io" });
     expect(identifyMock).toHaveBeenCalledWith("user-1", { email: "a@temaro.io" });
-    resetFresh();
+    reset();
     expect(resetMock).toHaveBeenCalled();
   });
 });
