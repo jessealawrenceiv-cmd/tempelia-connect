@@ -242,6 +242,71 @@ export function OptInPromptSettingsPanel({
     };
   })();
 
+  /**
+   * Inline check for the test recipient: mirrors the server-side guards that
+   * would reject the send (exclusion list, per-contact cooldown), so the error
+   * shows before the button is pressed.
+   */
+  const testCheck = useQuery({
+    queryKey: ["opt-in-test-target-check", testTarget, effectiveCooldown],
+    enabled: !!testTarget,
+    queryFn: async () => {
+      const last10 = (testTarget ?? "").replace(/\D+/g, "").slice(-10);
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+
+      const [{ data: customers }, { data: excluded }] = await Promise.all([
+        supabase
+          .from("customers")
+          .select("id, phone_number")
+          .eq("user_id", u.user.id)
+          .ilike("phone_number", `%${last10}%`)
+          .limit(5),
+        supabase.from("excluded_numbers").select("phone_number, label").eq("user_id", u.user.id),
+      ]);
+
+      const excludedRow = (excluded ?? []).find(
+        (r) => (r.phone_number || "").replace(/\D+/g, "").slice(-10) === last10,
+      );
+      const customer =
+        (customers ?? []).find(
+          (c) => (c.phone_number || "").replace(/\D+/g, "").slice(-10) === last10,
+        ) ?? null;
+
+      let lastAttempt: { created_at: string; status: string } | null = null;
+      if (customer) {
+        const { data: log } = await supabase
+          .from("logs")
+          .select("created_at, status")
+          .eq("customer_id", customer.id)
+          .eq("action_type", OPT_IN_PROMPT_ACTION)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (log) lastAttempt = { created_at: log.created_at, status: log.status };
+      }
+      return { excludedLabel: excludedRow ? excludedRow.label || "no label" : null, lastAttempt };
+    },
+  });
+
+  /** Human-readable reason the test send would be rejected, if any. */
+  const testBlockedReason = (() => {
+    if (!testTarget || !testCheck.data) return null;
+    if (testCheck.data.excludedLabel)
+      return `Blocked — ${testTarget} is on your exclusion list (${testCheck.data.excludedLabel}). Remove it there to test this number.`;
+    const la = testCheck.data.lastAttempt;
+    if (la) {
+      const remaining = Math.ceil(
+        (effectiveCooldown * 60_000 - (Date.now() - new Date(la.created_at).getTime())) / 60_000,
+      );
+      if (remaining > 0)
+        return `Blocked by cooldown — last prompt ${la.status} at ${new Date(
+          la.created_at,
+        ).toLocaleString()}. Wait ${remaining} more min (cooldown is ${effectiveCooldown} min).`;
+    }
+    return null;
+  })();
+
 
   const test = useMutation({
     mutationFn: async () => {
