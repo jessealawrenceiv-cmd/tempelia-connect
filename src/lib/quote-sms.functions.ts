@@ -58,18 +58,19 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
     const from = prof?.twilio_phone_number;
     if (!from) throw new Error("Provision your Temaro number in Settings before sending.");
 
-    const link = `${PROJECT_PUBLIC_BASE}/quote/${q.id}`;
-    const validLine = q.valid_until
-      ? ` Valid until ${new Date(q.valid_until).toLocaleDateString("en-US")}.`
-      : "";
-    const { depositCustomerLine } = await import("./deposit");
-    const depositLine = depositCustomerLine({
+    const { buildQuoteSmsBody } = await import("./quote-sms-body");
+    const { message } = buildQuoteSmsBody({
+      firstName: q.customer_first_name,
+      businessName: biz,
+      quoteId: q.id,
+      validUntil: q.valid_until,
+      total: q.total_amount,
       depositRequired: q.deposit_required,
       depositAmount: q.deposit_amount,
-      total: q.total_amount,
+      publicBase: PROJECT_PUBLIC_BASE,
+      stopSuffix: STOP_SUFFIX,
     });
-    const depositSuffix = depositLine ? ` ${depositLine}` : "";
-    const message = `Hi ${q.customer_first_name || "there"}, here's your quote from ${biz}: ${link}.${validLine}${depositSuffix}${STOP_SUFFIX}`;
+
 
     try {
       const res = await sendTwilioSms(from, q.customer_phone, message);
@@ -100,4 +101,72 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
       });
       throw e;
     }
+  });
+
+/**
+ * Deposit SMS preview — builds the exact outbound body (same builder the real
+ * send uses) without contacting Twilio and without touching the quote.
+ */
+export const previewQuoteSms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ quoteId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { STOP_SUFFIX } = await import("./twilio.server");
+    const { buildQuoteSmsBody, smsSegmentCount } = await import("./quote-sms-body");
+
+    const { data: q, error: qErr } = await supabase
+      .from("quotes")
+      .select(
+        "id, status, customer_first_name, customer_phone, valid_until, last_sms_sent_at, total_amount, deposit_required, deposit_amount, deposit_paid",
+      )
+      .eq("id", data.quoteId)
+      .maybeSingle();
+    if (qErr) throw new Error(qErr.message);
+    if (!q) throw new Error("Quote not found");
+
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("business_name, twilio_phone_number")
+      .eq("id", userId)
+      .maybeSingle();
+    const biz = prof?.business_name || "our team";
+
+    const { message, link, depositLine } = buildQuoteSmsBody({
+      firstName: q.customer_first_name,
+      businessName: biz,
+      quoteId: q.id,
+      validUntil: q.valid_until,
+      total: q.total_amount,
+      depositRequired: q.deposit_required,
+      depositAmount: q.deposit_amount,
+      publicBase: PROJECT_PUBLIC_BASE,
+      stopSuffix: STOP_SUFFIX,
+    });
+    const counts = smsSegmentCount(message);
+
+    let cooldownMinutesLeft = 0;
+    if (q.last_sms_sent_at) {
+      const ageMin = (Date.now() - new Date(q.last_sms_sent_at).getTime()) / 60_000;
+      cooldownMinutesLeft = Math.max(0, Math.ceil(DOUBLE_SEND_COOLDOWN_MIN - ageMin));
+    }
+
+    return {
+      message,
+      link,
+      depositLine,
+      businessName: biz,
+      fromNumber: prof?.twilio_phone_number ?? null,
+      toNumber: q.customer_phone ?? null,
+      status: q.status,
+      chars: counts.chars,
+      segments: counts.segments,
+      unicode: counts.unicode,
+      lastSentAt: q.last_sms_sent_at,
+      cooldownMinutesLeft,
+      sendable:
+        !!prof?.twilio_phone_number &&
+        !!q.customer_phone &&
+        !["archived", "accepted", "declined"].includes(q.status),
+    };
   });
