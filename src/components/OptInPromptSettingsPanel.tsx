@@ -35,6 +35,16 @@ type Props = {
  * Owner-configurable lead-in and cooldown for the missed-call opt-in prompt.
  * The compliant YES-to-opt-in / STOP body is fixed and always appended.
  */
+function safeParse(json: string | null | undefined): Record<string, unknown> | null {
+  if (!json) return null;
+  try {
+    const v = JSON.parse(json);
+    return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function OptInPromptSettingsPanel({
   businessName,
   template,
@@ -133,7 +143,7 @@ export function OptInPromptSettingsPanel({
                   status: m.status,
                   errorCode: m.errorCode,
                   errorMessage: m.errorMessage,
-                  raw: m.raw ?? null,
+                  raw: safeParse(m.rawJson),
                 }
               : prev,
           );
