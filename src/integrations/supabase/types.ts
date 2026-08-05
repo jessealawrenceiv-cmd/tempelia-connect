@@ -811,6 +811,51 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_events: {
+        Row: {
+          created_at: string
+          event_kind: string
+          from_number: string | null
+          id: string
+          payload: Json
+          received_at: string
+          request_path: string | null
+          signature_detail: string | null
+          signature_valid: boolean
+          source: string
+          to_number: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_kind: string
+          from_number?: string | null
+          id?: string
+          payload?: Json
+          received_at?: string
+          request_path?: string | null
+          signature_detail?: string | null
+          signature_valid?: boolean
+          source: string
+          to_number?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_kind?: string
+          from_number?: string | null
+          id?: string
+          payload?: Json
+          received_at?: string
+          request_path?: string | null
+          signature_detail?: string | null
+          signature_valid?: boolean
+          source?: string
+          to_number?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -851,6 +896,7 @@ export type Database = {
         }[]
       }
       tier_seat_limit: { Args: { _tier: string }; Returns: number }
+      webhook_events_prune: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"
