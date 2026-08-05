@@ -20,6 +20,7 @@ import {
   resolveDepositJump,
   type DepositJumpMissReason,
 } from "@/lib/deposit-deep-link";
+import { trackDepositJump } from "@/lib/analytics";
 import { DepositRowPopover } from "@/components/DepositRowPopover";
 import {
   DepositInlinePreviewDialog,
