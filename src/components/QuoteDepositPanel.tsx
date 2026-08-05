@@ -698,6 +698,18 @@ export function QuoteDepositPanel({ quote }: Props) {
         >
           export deposit audit (csv){auditFiltersActive ? " · filtered" : ""}
         </button>
+        <button
+          onClick={() => setDebugMode((v) => !v)}
+          aria-pressed={debugMode}
+          aria-label={debugMode ? "Disable deposit jump debug mode" : "Enable deposit jump debug mode"}
+          className={`mono rounded-sm border px-3 py-1.5 text-[10px] uppercase tracking-wider transition-colors ${
+            debugMode
+              ? "border-violet bg-violet/20 text-violet hover:bg-violet/30"
+              : "border-border text-muted-foreground hover:border-primary hover:text-paper"
+          }`}
+        >
+          {debugMode ? "debug: on" : "debug: off"}
+        </button>
       </div>
 
       {previewBlock}
