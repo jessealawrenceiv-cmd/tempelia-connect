@@ -8,13 +8,12 @@ import { useLocation } from "@tanstack/react-router";
 export function BackToTimelineEventLink({ className = "" }: { className?: string }) {
   const location = useLocation();
   const params = new URLSearchParams(location.searchStr ?? "");
-  const eventId = params.get("depositEvent");
+  const eventId = params.get("eventId") ?? params.get("depositEvent");
   const returnTo = params.get("returnTo");
   if (!eventId || !returnTo || !returnTo.startsWith("/")) return null;
 
-  const href = `${returnTo}${returnTo.includes("?") ? "&" : "?"}depositEvent=${encodeURIComponent(
-    eventId,
-  )}#deposit-event-${eventId}`;
+  const id = encodeURIComponent(eventId);
+  const href = `${returnTo}${returnTo.includes("?") ? "&" : "?"}eventId=${id}&depositEvent=${id}#deposit-event-${id}`;
 
   return (
     <a
