@@ -730,12 +730,23 @@ export function QuoteDepositPanel({ quote }: Props) {
                         <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                           quote preview
                         </div>
-                        <div className="mono text-[11px] text-foreground">
-                          short id {(p.quote_id ?? quote.id).slice(0, 8)}
+                        <div className="flex items-center gap-2">
+                          <div className="mono text-[11px] text-foreground">
+                            short id {(p.quote_id ?? quote.id).slice(0, 8)}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => copyShortId(p.quote_id ?? quote.id)}
+                            aria-label={`Copy quote short ID ${(p.quote_id ?? quote.id).slice(0, 8)}`}
+                            className="mono rounded-sm border border-border px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            copy
+                          </button>
                         </div>
                         <div className="mono text-[11px] text-muted-foreground">
                           deposit at event · {money(p.deposit_amount ?? 0)}
                         </div>
+
                         <div className="mono text-[11px] text-muted-foreground">
                           balance at event · {money(p.balance_remaining ?? 0)}
                         </div>
