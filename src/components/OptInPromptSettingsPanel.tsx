@@ -69,11 +69,14 @@ export function OptInPromptSettingsPanel({
       if (!u.user) return [];
       const { data, error } = await supabase
         .from("logs")
-        .select("id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash")
+        .select(
+          "id, created_at, status, twilio_message_sid, prompt_cooldown_minutes, prompt_template_hash, message_sent",
+        )
         .eq("user_id", u.user.id)
         .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(50);
+
       if (error) throw error;
       return data ?? [];
     },
@@ -125,7 +128,12 @@ export function OptInPromptSettingsPanel({
               ? { ...prev, status: m.status, errorCode: m.errorCode, errorMessage: m.errorMessage }
               : prev,
           );
-          if (TERMINAL.includes(m.status)) break;
+          if (TERMINAL.includes(m.status)) {
+            // The server writes the final result onto the log row; refresh the table.
+            void qc.invalidateQueries({ queryKey: ["opt-in-prompt-test-history"] });
+            break;
+          }
+
         } catch {
           break;
         }
@@ -396,6 +404,52 @@ export function OptInPromptSettingsPanel({
     URL.revokeObjectURL(url);
     toast.success(`Exported preview as ${kind.toUpperCase()}`);
   }
+
+  /** Downloads the test-send audit trail (timestamp, fingerprint, cooldown, result) as CSV. */
+  function exportTestHistory() {
+    const rows = testHistory.data ?? [];
+    if (rows.length === 0) {
+      toast.error("No test sends to export yet.");
+      return;
+    }
+    const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+    const header = [
+      "sent_at",
+      "delivery_result",
+      "twilio_message_sid",
+      "template_version",
+      "cooldown_minutes",
+      "cooldown_ends_at",
+      "message_body",
+    ];
+    const lines = rows.map((r) => {
+      const mins = r.prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES;
+      const endsAt = new Date(new Date(r.created_at).getTime() + mins * 60_000).toISOString();
+      return [
+        new Date(r.created_at).toISOString(),
+        r.status ?? "",
+        r.twilio_message_sid ?? "",
+        r.prompt_template_hash ?? "",
+        String(mins),
+        endsAt,
+        r.message_sent ?? "",
+      ]
+        .map(esc)
+        .join(",");
+    });
+    const content = [header.join(","), ...lines].join("\r\n");
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const url = URL.createObjectURL(
+      new Blob([content], { type: "text/csv;charset=utf-8" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `temaro-test-sms-log-${stamp}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} test send${rows.length === 1 ? "" : "s"} as CSV`);
+  }
+
 
 
 
@@ -869,10 +923,22 @@ export function OptInPromptSettingsPanel({
       )}
 
       <div className="mt-6 border-t border-border pt-4">
-        <div className="label-eyebrow">Test SMS history</div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="label-eyebrow">Test SMS history</div>
+          <button
+            type="button"
+            onClick={exportTestHistory}
+            disabled={(testHistory.data?.length ?? 0) === 0}
+            className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper disabled:opacity-50"
+          >
+            Export log (CSV)
+          </button>
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Last 10 test sends from this account, newest first.
+          Last 50 test sends from this account, newest first — timestamp, template version, cooldown
+          used and final delivery result.
         </p>
+
         {testHistory.isLoading ? (
           <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
             Loading…
@@ -906,7 +972,10 @@ export function OptInPromptSettingsPanel({
                       </td>
                       <td
                         className={`py-1.5 pr-3 uppercase ${
-                          row.status === "failed" ? "text-destructive" : "text-moss"
+                          ["failed", "undelivered", "canceled"].includes(row.status ?? "")
+                            ? "text-destructive"
+                            : "text-moss"
+
                         }`}
                       >
                         {row.status}

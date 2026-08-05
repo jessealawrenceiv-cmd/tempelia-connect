@@ -260,6 +260,15 @@ export const getTestSmsStatus = createServerFn({ method: "POST" })
 
     const { fetchTwilioMessage } = await import("./twilio.server");
     const m = await fetchTwilioMessage(data.sid);
+
+    // Persist the delivery outcome onto the activity log row so the audit
+    // trail (and CSV export) reflects the final Twilio result, not just "sent".
+    const TERMINAL = ["delivered", "undelivered", "failed", "canceled"];
+    if (TERMINAL.includes(m.status)) {
+      await supabase.from("logs").update({ status: m.status }).eq("id", owned.id);
+
+    }
+
     return {
       sid: m.sid,
       status: m.status,
@@ -269,3 +278,4 @@ export const getTestSmsStatus = createServerFn({ method: "POST" })
       dateSent: m.dateSent,
     };
   });
+
