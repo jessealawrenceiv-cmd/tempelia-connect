@@ -79,9 +79,11 @@ export function OptInPromptSettingsPanel({
     },
   });
 
+  // Prefill with the last number actually tested for this business; fall back
+  // to the owner mobile the first time.
   useEffect(() => {
-    setTestPhone(ownerPhone ?? "");
-  }, [ownerPhone]);
+    setTestPhone(lastTestPhone ?? ownerPhone ?? "");
+  }, [lastTestPhone, ownerPhone]);
 
   useEffect(() => {
     setDraft(template ?? DEFAULT_OPT_IN_PROMPT_TEMPLATE);
