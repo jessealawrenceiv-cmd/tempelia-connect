@@ -283,6 +283,18 @@ export function QuoteDepositPanel({ quote }: Props) {
   const debugFiltersActive =
     debugEventFilter !== "all" || debugOutcomeFilter !== "all" || debugRangeFilter !== "all";
 
+  // On-screen persistence status so a tester can see whether saving/loading
+  // saved debug rows is actually working (especially right after a refresh).
+  type PersistStatus =
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "loaded"; count: number; at: number }
+    | { kind: "saving" }
+    | { kind: "saved"; at: number }
+    | { kind: "error"; op: "load" | "save" | "clear"; message: string; at: number };
+  const [persistStatus, setPersistStatus] = useState<PersistStatus>({ kind: "idle" });
+  const errText = (e: unknown) =>
+    e instanceof Error ? e.message : typeof e === "string" ? e : "unknown error";
 
   const logDepositJumpDebug = useCallback(
     (
@@ -303,13 +315,19 @@ export function QuoteDepositPanel({ quote }: Props) {
       if (debugMode) {
         setDebugLog((prev) => [entry, ...prev].slice(0, 50));
         // Persist so the test run is still reviewable after a refresh.
+        setPersistStatus({ kind: "saving" });
         void saveDepositJumpDebugEvent({
           data: { quoteId: quote.id, event, payload: stamped, correlationId },
-        }).catch(() => {});
+        })
+          .then(() => setPersistStatus({ kind: "saved", at: Date.now() }))
+          .catch((e) =>
+            setPersistStatus({ kind: "error", op: "save", message: errText(e), at: Date.now() }),
+          );
       }
     },
     [debugMode, quote.id, correlationId],
   );
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -317,32 +335,37 @@ export function QuoteDepositPanel({ quote }: Props) {
   }, [debugMode]);
 
   // Rehydrate the saved debug log once, when debug mode is on.
-  useEffect(() => {
-    if (!debugMode || debugHydrated) return;
-    let cancelled = false;
-    setDebugHydrated(true);
-    void listDepositJumpDebugEvents({ data: { quoteId: quote.id, limit: 50 } })
+  const reloadSavedDebugLog = useCallback(() => {
+    setPersistStatus({ kind: "loading" });
+    return listDepositJumpDebugEvents({ data: { quoteId: quote.id, limit: 50 } })
       .then((rows) => {
-        if (cancelled || !rows?.length) return;
+        const saved: DebugEntry[] = (rows ?? []).map((r) => ({
+          id: r.id,
+          ts: new Date(r.occurredAt).getTime(),
+          event: r.event,
+          payload: r.payload as Record<string, unknown>,
+          correlationId: r.correlationId ?? null,
+        }));
         setDebugLog((prev) => {
-          const saved: DebugEntry[] = rows.map((r) => ({
-            id: r.id,
-            ts: new Date(r.occurredAt).getTime(),
-            event: r.event,
-            payload: r.payload as Record<string, unknown>,
-            correlationId: r.correlationId ?? null,
-          }));
           const seen = new Set(prev.map((e) => e.id));
           return [...prev, ...saved.filter((e) => !seen.has(e.id))]
             .sort((a, b) => b.ts - a.ts)
             .slice(0, 50);
         });
+        setPersistStatus({ kind: "loaded", count: saved.length, at: Date.now() });
       })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [debugMode, debugHydrated, quote.id]);
+      .catch((e) =>
+        setPersistStatus({ kind: "error", op: "load", message: errText(e), at: Date.now() }),
+      );
+  }, [quote.id]);
+
+  // Rehydrate the saved debug log once, when debug mode is on.
+  useEffect(() => {
+    if (!debugMode || debugHydrated) return;
+    setDebugHydrated(true);
+    void reloadSavedDebugLog();
+  }, [debugMode, debugHydrated, reloadSavedDebugLog]);
+
 
   // Pull keyboard focus onto the not-found heading so the message is read at once.
   useEffect(() => {
@@ -1483,8 +1506,19 @@ export function QuoteDepositPanel({ quote }: Props) {
                 onClick={() => {
                   setDebugLog([]);
                   void clearDepositJumpDebugEvents({ data: { quoteId: quote.id } })
-                    .then(() => toast.success("Debug log cleared (saved entries removed)."))
-                    .catch(() => toast.error("Cleared on screen, but saved entries remain."));
+                    .then(() => {
+                      setPersistStatus({ kind: "loaded", count: 0, at: Date.now() });
+                      toast.success("Debug log cleared (saved entries removed).");
+                    })
+                    .catch((e) => {
+                      setPersistStatus({
+                        kind: "error",
+                        op: "clear",
+                        message: errText(e),
+                        at: Date.now(),
+                      });
+                      toast.error("Cleared on screen, but saved entries remain.");
+                    });
                 }}
                 disabled={debugLog.length === 0}
                 className="mono rounded-sm border border-violet/40 px-2 py-1 text-[10px] uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
@@ -1499,6 +1533,44 @@ export function QuoteDepositPanel({ quote }: Props) {
               </button>
             </div>
           </div>
+
+          {/* Persistence status: shows whether saving/loading saved rows works. */}
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mono flex flex-wrap items-center gap-2 rounded-sm border px-2 py-1 text-[10px] ${
+              persistStatus.kind === "error"
+                ? "border-orange/60 bg-orange/10 text-orange"
+                : "border-steel/40 bg-charcoal/40 text-muted-foreground"
+            }`}
+          >
+            <span className="uppercase tracking-widest">persistence</span>
+            <span className="text-paper">
+              {persistStatus.kind === "idle" && "not checked yet"}
+              {persistStatus.kind === "loading" && "loading saved entries…"}
+              {persistStatus.kind === "loaded" &&
+                `loaded ${persistStatus.count} saved entr${
+                  persistStatus.count === 1 ? "y" : "ies"
+                } at ${new Date(persistStatus.at).toLocaleTimeString()}`}
+              {persistStatus.kind === "saving" && "saving entry…"}
+              {persistStatus.kind === "saved" &&
+                `saved at ${new Date(persistStatus.at).toLocaleTimeString()}`}
+              {persistStatus.kind === "error" &&
+                `${persistStatus.op} failed at ${new Date(
+                  persistStatus.at,
+                ).toLocaleTimeString()} — ${persistStatus.message}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => void reloadSavedDebugLog()}
+              disabled={persistStatus.kind === "loading"}
+              title="Re-read saved entries from the backend to confirm persistence"
+              className="ml-auto rounded-sm border border-violet/40 px-2 py-0.5 uppercase tracking-wider text-violet hover:bg-violet/20 disabled:opacity-50"
+            >
+              {persistStatus.kind === "error" && persistStatus.op === "load" ? "retry load" : "recheck"}
+            </button>
+          </div>
+
 
           {/* Filters: event type, success vs miss, and time range. */}
           <div
