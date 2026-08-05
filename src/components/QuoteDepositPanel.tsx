@@ -278,26 +278,89 @@ export function QuoteDepositPanel({ quote }: Props) {
           <pre className="mono whitespace-pre-wrap break-words rounded-sm border border-border/60 bg-background/60 p-3 text-[12px] text-paper">
 {preview.message}
           </pre>
-          <div className="mono flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-widest text-muted-foreground">
-            <span>
-              {preview.chars} chars · {preview.segments} segment
-              {preview.segments === 1 ? "" : "s"}
-              {preview.unicode ? " · unicode" : ""}
-            </span>
-            <span>from {preview.fromNumber ?? "— no number provisioned"}</span>
-            <span>to {preview.toNumber ?? "— no phone on quote"}</span>
-            {preview.cooldownMinutesLeft > 0 && (
-              <span className="text-orange">
-                cooldown {preview.cooldownMinutesLeft}m left
-              </span>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+            {[
+              {
+                k: "encoding",
+                v: `${preview.encoding}${preview.unicode ? " (unicode)" : ""}`,
+              },
+              {
+                k: "length",
+                v: `${preview.chars} / ${preview.segmentCapacity} chars`,
+              },
+              {
+                k: "segments",
+                v: `${preview.segments} × billed`,
+              },
+              {
+                k: "room left",
+                v: `${preview.charsUntilNextSegment} chars`,
+              },
+              { k: "from", v: preview.fromNumber ?? "— none provisioned" },
+              { k: "to", v: preview.toNumber ?? "— no phone on quote" },
+              { k: "quote status", v: preview.status },
+              {
+                k: "last sent",
+                v: preview.lastSentAt
+                  ? new Date(preview.lastSentAt).toLocaleString("en-US")
+                  : "never",
+              },
+            ].map((d) => (
+              <div key={d.k}>
+                <dt className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {d.k}
+                </dt>
+                <dd className="mono break-words text-[11px] text-paper">{d.v}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {preview.nonAsciiChars.length > 0 && (
+            <div className="mono text-[10px] uppercase tracking-widest text-orange">
+              // non-gsm characters force ucs-2 (halves capacity):{" "}
+              {preview.nonAsciiChars.join(" ")}
+            </div>
+          )}
+
+          <div className="mono break-all text-[10px] text-muted-foreground">
+            link <span className="text-steel">{preview.link}</span>
+          </div>
+
+          <div className="rounded-sm border border-border/60 bg-background/40 p-2">
+            <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              deposit wording
+            </div>
+            {preview.depositLine ? (
+              <>
+                <div className="mono mt-1 text-[11px] text-moss">{preview.depositLine}</div>
+                <div className="mono mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                  deposit {money(preview.depositAmount)} · total {money(preview.totalAmount)} ·
+                  balance {money(preview.totalAmount - preview.depositAmount)}
+                  {preview.depositPaid ? " · already received" : ""}
+                </div>
+              </>
+            ) : (
+              <div className="mono mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                // none — this quote has no deposit requirement
+              </div>
             )}
-            {!preview.sendable && <span className="text-orange">not sendable as-is</span>}
           </div>
-          <div className="mono text-[10px] uppercase tracking-widest text-moss">
-            {preview.depositLine
-              ? "// deposit wording included above"
-              : "// no deposit wording — quote has no deposit"}
+
+          {preview.blockedReasons.length > 0 ? (
+            <div className="mono text-[10px] uppercase tracking-widest text-orange">
+              // not sendable as-is: {preview.blockedReasons.join(" · ")}
+            </div>
+          ) : (
+            <div className="mono text-[10px] uppercase tracking-widest text-moss">
+              // ready to send
+            </div>
+          )}
+
+          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            // preview generated {new Date(preview.generatedAt).toLocaleString("en-US")} · byte-for-byte
+            identical to the real send
           </div>
+
         </>
       )}
     </div>
