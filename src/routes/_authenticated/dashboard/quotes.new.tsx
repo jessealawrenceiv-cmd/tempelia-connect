@@ -884,12 +884,12 @@ function NewQuotePage() {
               className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider"
             >Cancel</button>
             <button
-              disabled={save.isPending || hasInvalidInput}
+              disabled={save.isPending || hasInvalidInput || depositBlocked}
               onClick={() => save.mutate("draft")}
               className="rounded-sm border border-border px-4 py-2 text-xs uppercase tracking-wider disabled:opacity-50"
             >Save as draft</button>
             <button
-              disabled={save.isPending || hasInvalidInput || !hasAnyValidLine}
+              disabled={save.isPending || hasInvalidInput || depositBlocked || !hasAnyValidLine}
               onClick={() => save.mutate("sent")}
               className="rounded-sm bg-primary px-4 py-2 text-xs uppercase tracking-wider text-primary-foreground disabled:opacity-50"
             >Save & mark sent</button>
