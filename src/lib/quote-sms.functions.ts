@@ -151,6 +151,19 @@ export const previewQuoteSms = createServerFn({ method: "POST" })
       cooldownMinutesLeft = Math.max(0, Math.ceil(DOUBLE_SEND_COOLDOWN_MIN - ageMin));
     }
 
+    const sendable =
+      !!prof?.twilio_phone_number &&
+      !!q.customer_phone &&
+      !["archived", "accepted", "declined"].includes(q.status);
+
+    const blockedReasons: string[] = [];
+    if (!prof?.twilio_phone_number) blockedReasons.push("no Temaro number provisioned");
+    if (!q.customer_phone) blockedReasons.push("quote has no customer phone");
+    if (["archived", "accepted", "declined"].includes(q.status))
+      blockedReasons.push(`quote is ${q.status}`);
+    if (cooldownMinutesLeft > 0)
+      blockedReasons.push(`double-send cooldown: ${cooldownMinutesLeft}m left`);
+
     return {
       message,
       link,
@@ -162,11 +175,19 @@ export const previewQuoteSms = createServerFn({ method: "POST" })
       chars: counts.chars,
       segments: counts.segments,
       unicode: counts.unicode,
+      encoding: counts.encoding,
+      segmentCapacity: counts.segmentCapacity,
+      charsUntilNextSegment: counts.charsUntilNextSegment,
+      nonAsciiChars: counts.nonAsciiChars,
+      validUntil: q.valid_until ?? null,
+      depositRequired: !!q.deposit_required,
+      depositPaid: !!q.deposit_paid,
+      totalAmount: Number(q.total_amount ?? 0),
+      depositAmount: Number(q.deposit_amount ?? 0),
+      generatedAt: new Date().toISOString(),
+      blockedReasons,
       lastSentAt: q.last_sms_sent_at,
       cooldownMinutesLeft,
-      sendable:
-        !!prof?.twilio_phone_number &&
-        !!q.customer_phone &&
-        !["archived", "accepted", "declined"].includes(q.status),
+      sendable,
     };
   });
