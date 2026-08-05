@@ -140,3 +140,39 @@ export const getIsAdmin = createServerFn({ method: "GET" })
     return { isAdmin: Boolean(data) };
   });
 
+export interface AdminAccessLogRow {
+  id: string;
+  occurredAt: string;
+  functionName: string;
+  outcome: string;
+  rowCount: number | null;
+  detail: string | null;
+}
+
+// Recent audit trail for cross-tenant admin tools. Admin-gated; reads through the
+// caller's own client so the admin-only RLS policy is the enforcing layer too.
+export const listAdminAccessLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminAccessLogRow[]> => {
+    const { supabase } = context;
+    const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", { _role: "admin" });
+    if (roleErr) throw new Error(roleErr.message);
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data, error } = await supabase
+      .from("admin_access_log")
+      .select("id, occurred_at, function_name, outcome, row_count, detail")
+      .order("occurred_at", { ascending: false })
+      .limit(25);
+    if (error) throw new Error(error.message);
+
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      occurredAt: r.occurred_at,
+      functionName: r.function_name,
+      outcome: r.outcome,
+      rowCount: r.row_count,
+      detail: r.detail,
+    }));
+  });
+
