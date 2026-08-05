@@ -400,6 +400,52 @@ export function OptInPromptSettingsPanel({
     toast.success(`Exported preview as ${kind.toUpperCase()}`);
   }
 
+  /** Downloads the test-send audit trail (timestamp, fingerprint, cooldown, result) as CSV. */
+  function exportTestHistory() {
+    const rows = testHistory.data ?? [];
+    if (rows.length === 0) {
+      toast.error("No test sends to export yet.");
+      return;
+    }
+    const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+    const header = [
+      "sent_at",
+      "delivery_result",
+      "twilio_message_sid",
+      "template_version",
+      "cooldown_minutes",
+      "cooldown_ends_at",
+      "message_body",
+    ];
+    const lines = rows.map((r) => {
+      const mins = r.prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES;
+      const endsAt = new Date(new Date(r.created_at).getTime() + mins * 60_000).toISOString();
+      return [
+        new Date(r.created_at).toISOString(),
+        r.status ?? "",
+        r.twilio_message_sid ?? "",
+        r.prompt_template_hash ?? "",
+        String(mins),
+        endsAt,
+        r.message_sent ?? "",
+      ]
+        .map(esc)
+        .join(",");
+    });
+    const content = [header.join(","), ...lines].join("\r\n");
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const url = URL.createObjectURL(
+      new Blob([content], { type: "text/csv;charset=utf-8" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `temaro-test-sms-log-${stamp}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} test send${rows.length === 1 ? "" : "s"} as CSV`);
+  }
+
+
 
 
   /** Lead-ins that pass validation, shown as one-tap fixes. */
