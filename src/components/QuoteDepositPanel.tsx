@@ -223,7 +223,10 @@ export function QuoteDepositPanel({ quote }: Props) {
   const debugLogRef = useRef<HTMLDivElement | null>(null);
 
   const logDepositJumpDebug = useCallback(
-    (event: "deposit_jump_success" | "deposit_jump_miss", payload: Record<string, unknown>) => {
+    (
+      event: "deposit_jump_success" | "deposit_jump_miss" | "deposit_jump_recovery",
+      payload: Record<string, unknown>,
+    ) => {
       const entry: DebugEntry = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ts: Date.now(), event, payload };
       // Always mirror to the console so testers can inspect in DevTools even before toggling on-screen mode.
       // eslint-disable-next-line no-console
@@ -248,6 +251,42 @@ export function QuoteDepositPanel({ quote }: Props) {
     });
     return () => cancelAnimationFrame(t);
   }, [jumpMiss]);
+
+  // When the miss banner appears, start a clock so we know how long the reader
+  // hesitated before choosing a recovery action (or giving up to the top).
+  const missShownAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    missShownAtRef.current = jumpMiss
+      ? typeof performance !== "undefined"
+        ? performance.now()
+        : Date.now()
+      : null;
+  }, [jumpMiss]);
+
+  const recordRecovery = useCallback(
+    (action: "return_to_top" | "show_latest" | "clear_filters" | "dismiss") => {
+      const startedAt = missShownAtRef.current;
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const msSinceMiss = startedAt == null ? null : Math.round(now - startedAt);
+      const payload = {
+        action,
+        quote_id: quote.id,
+        event_id: jumpMiss?.id ?? null,
+        reason: jumpMiss?.reason ?? null,
+        ms_since_miss: msSinceMiss,
+      };
+      trackDepositJumpRecovery({
+        action,
+        quoteId: quote.id,
+        eventId: jumpMiss?.id ?? null,
+        reason: jumpMiss?.reason ?? null,
+        msSinceMiss,
+      });
+      logDepositJumpDebug("deposit_jump_recovery", payload);
+    },
+    [jumpMiss, quote.id, logDepositJumpDebug],
+  );
+
 
 
   function clearJumpParams() {
