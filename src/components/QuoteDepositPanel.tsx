@@ -580,6 +580,28 @@ export function QuoteDepositPanel({ quote }: Props) {
             </div>
           )}
 
+          {filteredAudit.length > 1 && (
+            <div className="mono mb-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest">
+              <button
+                onClick={() => goToEntry(auditCursor - 1)}
+                disabled={auditCursor === 0}
+                className="rounded-sm border border-border px-2 py-1 text-muted-foreground hover:border-primary hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ← prev event
+              </button>
+              <span className="text-muted-foreground">
+                event {auditCursor + 1} of {filteredAudit.length}
+                {activeEntry ? ` · ${new Date(activeEntry.created_at).toLocaleString("en-US")}` : ""}
+              </span>
+              <button
+                onClick={() => goToEntry(auditCursor + 1)}
+                disabled={auditCursor >= filteredAudit.length - 1}
+                className="rounded-sm border border-border px-2 py-1 text-muted-foreground hover:border-primary hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                next event →
+              </button>
+            </div>
+          )}
 
           {filteredAudit.length === 0 ? (
             <div className="mono text-[11px] text-muted-foreground">
@@ -587,12 +609,22 @@ export function QuoteDepositPanel({ quote }: Props) {
             </div>
           ) : (
           <ol className="relative space-y-3 border-l border-border/70 pl-4">
-            {filteredAudit.map((row) => {
+            {filteredAudit.map((row, idx) => {
               const p = parsePayload(row);
               const received = row.status === "deposit_received";
               const actor = p.actor_email || p.actor_user_id || "unknown";
+              const isActive = idx === auditCursor && filteredAudit.length > 1;
               return (
-                <li key={row.id} className="relative">
+                <li
+                  key={row.id}
+                  ref={(el) => {
+                    entryRefs.current[row.id] = el;
+                  }}
+                  className={`relative ${
+                    isActive ? "-ml-2 rounded-sm border-l-2 border-primary bg-primary/5 pl-2" : ""
+                  }`}
+                >
+
                   <span
                     className={`absolute -left-[21px] top-1 h-2 w-2 rounded-full ${
                       received ? "bg-moss" : "bg-orange"
