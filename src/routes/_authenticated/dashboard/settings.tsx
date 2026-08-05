@@ -8,6 +8,8 @@ import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel"
 import { WebhookCheckPanel } from "@/components/WebhookCheckPanel";
 import { WebhookEventLogPanel } from "@/components/WebhookEventLogPanel";
 import { DepositDefaultsPanel } from "@/components/DepositDefaultsPanel";
+import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
+
 import { useTeamRole } from "@/hooks/useTeamRole";
 
 import { useEffect, useState } from "react";
