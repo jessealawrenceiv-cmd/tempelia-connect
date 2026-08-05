@@ -918,10 +918,22 @@ export function OptInPromptSettingsPanel({
       )}
 
       <div className="mt-6 border-t border-border pt-4">
-        <div className="label-eyebrow">Test SMS history</div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="label-eyebrow">Test SMS history</div>
+          <button
+            type="button"
+            onClick={exportTestHistory}
+            disabled={(testHistory.data?.length ?? 0) === 0}
+            className="mono rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-paper disabled:opacity-50"
+          >
+            Export log (CSV)
+          </button>
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Last 10 test sends from this account, newest first.
+          Last 50 test sends from this account, newest first — timestamp, template version, cooldown
+          used and final delivery result.
         </p>
+
         {testHistory.isLoading ? (
           <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
             Loading…
