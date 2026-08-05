@@ -1410,8 +1410,9 @@ export function QuoteDepositPanel({ quote }: Props) {
         >
           <div className="flex items-center justify-between gap-2">
             <div className="mono text-[10px] uppercase tracking-widest text-violet">
-              // deposit jump debug log · {debugLog.length} event
-              {debugLog.length === 1 ? "" : "s"}
+              // deposit jump debug log · {filteredDebugLog.length}
+              {debugFiltersActive ? ` of ${debugLog.length}` : ""} event
+              {filteredDebugLog.length === 1 && !debugFiltersActive ? "" : "s"}
               <button
                 type="button"
                 onClick={() => {
