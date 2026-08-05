@@ -342,9 +342,12 @@ export function OptInPromptSettingsPanel({
         <dl className="mono mt-3 space-y-1 text-[11px] uppercase tracking-widest text-muted-foreground">
           <div className="flex justify-between gap-3">
             <dt>To</dt>
-            <dd className="text-paper">
-              {samplePhone.trim() || "—"}
-              {sampleName.trim() ? ` (${sampleName.trim()})` : ""}
+            <dd className={samplePhone.trim() && !sampleParsed.ok ? "text-destructive" : "text-paper"}>
+              {samplePhone.trim()
+                ? sampleParsed.ok
+                  ? `${sampleParsed.e164}${sampleName.trim() ? ` (${sampleName.trim()})` : ""}`
+                  : sampleParsed.error
+                : "—"}
             </dd>
           </div>
           <div className="flex justify-between gap-3">
