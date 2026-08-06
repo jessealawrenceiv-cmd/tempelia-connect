@@ -15,6 +15,8 @@ const STATUS_REFRESH_FN = "c3RhdHVzLXJlZnJlc2g";
 async function failStatusRefresh(page: Page) {
   await page.route("**/_serverFn/**", async (route) => {
     if (route.request().url().includes(STATUS_REFRESH_FN)) {
+      // Small latency so the in-flight (aria-busy) state is observable.
+      await new Promise((r) => setTimeout(r, 500));
       await route.fulfill({
         status: 500,
         contentType: "application/json",
