@@ -84,7 +84,7 @@ const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> =
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
-  const [originFilter, setOriginFilter] = useState<"all" | "this-device" | "other-device" | "backend">("all");
+  const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
@@ -103,7 +103,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const filtered = (data ?? []).filter((row) => {
     if (originFilter !== "all") {
       if (row.action_type !== "automation_status_change") return false;
-      if (row.status !== originFilter) return false;
+      if (originFilter !== "active" && row.status !== originFilter) return false;
       return true;
     }
     if (statusRefreshOnly && row.action_type !== "status_refresh") return false;
@@ -113,6 +113,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     }
     return true;
   });
+
 
   useEffect(() => {
     const latest = filtered[0];
@@ -180,8 +181,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">ACTIVE source</span>
-            {(["all", "this-device", "other-device", "backend"] as const).map((key) => {
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">ACTIVE changes</span>
+            {(["all", "active", "this-device", "other-device", "backend"] as const).map((key) => {
               const active = originFilter === key;
               return (
                 <button
@@ -201,11 +202,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                       : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                   }`}
                 >
-                  {key === "all" ? "All" : ORIGIN_LABEL[key]}
+                  {key === "all" ? "All activity" : key === "active" ? "ACTIVE only" : ORIGIN_LABEL[key]}
                 </button>
               );
             })}
           </div>
+
         </div>
       </div>
 
