@@ -123,23 +123,40 @@ function SettingsPage() {
     ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "—";
 
-  const advancedAutomations: { name: string; mode: string }[] = [
-    { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD" },
-    { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL" },
+  const jumpToAdvanced = (anchorId: string) => {
+    setTab("advanced");
+    window.setTimeout(() => {
+      const el = document.getElementById(anchorId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-1", "ring-orange");
+      window.setTimeout(() => el.classList.remove("ring-1", "ring-orange"), 1800);
+    }, 60);
+  };
+
+  const advancedAutomations: { name: string; mode: string; anchorId: string }[] = [
+    { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD", anchorId: "adv-opt-in-prompt" },
+    { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL", anchorId: "adv-webhook-diagnostics" },
   ];
 
   const advancedTooltip = (
     <div className="space-y-1">
       <div className="text-foreground">Advanced automations</div>
       {advancedAutomations.map((a) => (
-        <div key={a.name} className="flex items-center justify-between gap-3">
-          <span>{a.name}</span>
+        <button
+          key={a.name}
+          type="button"
+          onClick={() => jumpToAdvanced(a.anchorId)}
+          className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground"
+        >
+          <span className="underline decoration-dotted underline-offset-2">{a.name}</span>
           <span className="text-foreground">{a.mode}</span>
-        </div>
+        </button>
       ))}
       <div className="border-t border-border pt-1">Last evaluated {evaluatedLabel}</div>
     </div>
   );
+
 
 
   if (isStaff) {
@@ -376,17 +393,24 @@ function SettingsPage() {
 
       {tab === "advanced" && (
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
-        <OptInPromptSettingsPanel
-          businessName={profile?.business_name}
-          template={profile?.opt_in_prompt_template}
-          cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
-          ownerPhone={profile?.owner_phone}
-          fromNumber={profile?.twilio_phone_number}
-          lastTestPhone={profile?.last_test_phone}
-        />
+        <div id="adv-opt-in-prompt" className="scroll-mt-24 rounded-sm transition md:col-span-2">
+          <OptInPromptSettingsPanel
+            businessName={profile?.business_name}
+            template={profile?.opt_in_prompt_template}
+            cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
+            ownerPhone={profile?.owner_phone}
+            fromNumber={profile?.twilio_phone_number}
+            lastTestPhone={profile?.last_test_phone}
+          />
+        </div>
 
-        {!isStaff && <WebhookCheckPanel />}
-        {!isStaff && <WebhookEventLogPanel />}
+        {!isStaff && (
+          <div id="adv-webhook-diagnostics" className="scroll-mt-24 space-y-5 rounded-sm transition md:col-span-2">
+            <WebhookCheckPanel />
+            <WebhookEventLogPanel />
+          </div>
+        )}
+
 
         <div className="panel p-6 md:col-span-2">
           <div className="label-eyebrow">Compliance</div>
@@ -448,7 +472,8 @@ function AutomationBadge({
       </span>
       <span
         role="tooltip"
-        className="mono pointer-events-none absolute right-0 top-full z-20 mt-2 hidden w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg group-hover:block group-focus-within:block"
+        className="mono absolute right-0 top-full z-20 mt-2 hidden w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg group-hover:block group-focus-within:block"
+
       >
         {tooltip}
       </span>
