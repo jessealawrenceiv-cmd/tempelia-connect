@@ -60,11 +60,6 @@ async function patchProfile(api: APIRequestContext, id: string, patch: Record<st
   expect(res.ok(), `profile update failed: ${res.status()} ${await res.text()}`).toBe(true);
 }
 
-async function openAdvanced(page: Page) {
-  const advanced = page.getByRole("tab", { name: /advanced/i }).first();
-  if (await advanced.isVisible().catch(() => false)) await advanced.click();
-}
-
 async function badgeTrigger(page: Page) {
   const panel = page
     .getByRole("heading", { name: "Automations in Advanced" })
@@ -80,7 +75,8 @@ async function badgeTrigger(page: Page) {
 async function openTooltip(page: Page) {
   const trigger = await badgeTrigger(page);
   const id = await trigger.getAttribute("aria-controls");
-  await trigger.click();
+  // The badge opens its tooltip on focus/hover (and Enter/Space for keyboards).
+  await trigger.focus();
   const panel = page.locator(`#${id}`);
   await expect(panel).toBeVisible();
   return { trigger, panel };
@@ -115,7 +111,6 @@ test.describe("Settings · live update source attribution", () => {
 
     await page.goto(SETTINGS_PATH, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Settings" }).first()).toBeVisible();
-    await openAdvanced(page);
     await waitForLive(page);
   });
 
@@ -196,8 +191,9 @@ test.describe("Settings · live update source attribution", () => {
   }) => {
     // The Activity log carries the same attribution as the tooltip/toast.
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    const activity = page.getByRole("button", { name: /activity/i }).first();
-    if (await activity.isVisible().catch(() => false)) await activity.click();
+    const activity = page.getByRole("button", { name: "Activity log", exact: true }).first();
+    await expect(activity).toBeVisible({ timeout: 20_000 });
+    if ((await activity.getAttribute("aria-expanded")) !== "true") await activity.click();
 
     const backendChip = page.getByRole("button", { name: "Backend", exact: true }).first();
     await expect(backendChip).toBeVisible({ timeout: 20_000 });
