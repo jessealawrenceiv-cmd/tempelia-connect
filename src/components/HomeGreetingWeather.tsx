@@ -58,7 +58,13 @@ export function HomeGreetingWeather({
         {greetingLine(now, businessName)}
       </h2>
 
-      <div className="flex items-center gap-3 sm:justify-end" data-testid="home-weather">
+      <div
+        className="flex items-center gap-3 sm:justify-end"
+        data-testid="home-weather"
+        // Diagnostics: lets us prove the hourly cache is being honoured.
+        data-weather-cached={data ? String(data.cached) : undefined}
+        data-weather-upstream-fetches={data ? String(data.upstreamFetches) : undefined}
+      >
         {!hasZip ? (
           <p className="mono text-[11px] uppercase tracking-widest text-muted-foreground" data-testid="home-weather-empty">
             Add your ZIP code in Settings to see today's weather
