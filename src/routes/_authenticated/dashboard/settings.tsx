@@ -225,7 +225,19 @@ function SettingsPage() {
         ))}
       </ul>
       <div className="border-t border-border pt-1">
-        Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
+        <div>
+          Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
+        </div>
+        <button
+          type="button"
+          onClick={refreshStatuses}
+          disabled={isRefreshingStatuses}
+          aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : "Refresh automation statuses now"}
+          className="mt-1 flex w-full items-center justify-between rounded-sm px-1 py-0.5 text-left uppercase tracking-widest text-foreground hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:opacity-50"
+        >
+          <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
+          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "↻"}</span>
+        </button>
       </div>
     </div>
   );
