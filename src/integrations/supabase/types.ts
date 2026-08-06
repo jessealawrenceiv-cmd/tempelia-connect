@@ -1119,6 +1119,39 @@ export type Database = {
           },
         ]
       }
+      status_refresh_locks: {
+        Row: {
+          created_at: string
+          last_finished_at: string | null
+          last_result: string | null
+          locked_at: string | null
+          released_at: string | null
+          run_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_finished_at?: string | null
+          last_result?: string | null
+          locked_at?: string | null
+          released_at?: string | null
+          run_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_finished_at?: string | null
+          last_result?: string | null
+          locked_at?: string | null
+          released_at?: string | null
+          run_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -1369,6 +1402,14 @@ export type Database = {
           _total: number
         }
         Returns: number
+      }
+      status_refresh_release: {
+        Args: { _result?: string; _run_id: string }
+        Returns: boolean
+      }
+      status_refresh_try_lock: {
+        Args: { _ttl_seconds?: number }
+        Returns: string
       }
       team_seat_usage: {
         Args: never
