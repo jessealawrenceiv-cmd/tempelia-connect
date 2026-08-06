@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { Filter } from "lucide-react";
+
 
 const DOT: Record<string, string> = {
   missed_call_text: "bg-orange",
@@ -51,6 +54,9 @@ function describe(row: { action_type: string; status: string | null; message_sen
 
 
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
+  const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
+  const [failedOnly, setFailedOnly] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["logs", limit],
     queryFn: async () => {
@@ -63,6 +69,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     },
   });
 
+  const filtered = (data ?? []).filter((row) => {
+    if (statusRefreshOnly && row.action_type !== "status_refresh") return false;
+    if (failedOnly) {
+      if (row.action_type !== "status_refresh") return false;
+      if (row.status !== "failed") return false;
+    }
+    return true;
+  });
+
   return (
     <div className="panel">
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
@@ -72,12 +87,52 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           Live
         </span>
       </div>
+      <div className="border-b border-border px-5 py-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <Filter size={12} />
+            Filter
+          </span>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-primary"
+              checked={statusRefreshOnly}
+              onChange={(e) => {
+                setStatusRefreshOnly(e.target.checked);
+                if (!e.target.checked) setFailedOnly(false);
+              }}
+            />
+            STATUS_REFRESH only
+          </label>
+          <label
+            className={`flex items-center gap-2 text-xs ${
+              statusRefreshOnly ? "cursor-pointer text-foreground" : "cursor-not-allowed text-muted-foreground"
+            }`}
+          >
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-primary"
+              checked={failedOnly}
+              disabled={!statusRefreshOnly}
+              onChange={(e) => setFailedOnly(e.target.checked)}
+            />
+            Failed only
+          </label>
+        </div>
+      </div>
+
       <ul className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
         {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
-        {!isLoading && data?.length === 0 && (
-          <li className="p-5 text-muted-foreground">No dispatches yet. Actions will appear here in real time.</li>
+        {!isLoading && filtered.length === 0 && (
+          <li className="p-5 text-muted-foreground">
+            {data?.length === 0
+              ? "No dispatches yet. Actions will appear here in real time."
+              : "No entries match the selected filters."}
+          </li>
         )}
-        {data?.map((row) => (
+        {filtered.map((row) => (
+
           <li key={row.id} className="grid grid-cols-[auto_auto_1fr] items-start gap-3 px-5 py-3">
             <span className="text-muted-foreground">
               {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
