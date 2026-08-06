@@ -7,6 +7,7 @@ import { TeamMembersPanel } from "@/components/TeamMembersPanel";
 import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel";
 import { WebhookCheckPanel } from "@/components/WebhookCheckPanel";
 import { WebhookEventLogPanel } from "@/components/WebhookEventLogPanel";
+import { ActiveChangeAuditPanel } from "@/components/ActiveChangeAuditPanel";
 import { DepositDefaultsPanel } from "@/components/DepositDefaultsPanel";
 import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 
@@ -1429,6 +1430,10 @@ function SettingsPage() {
           </div>
         )}
 
+
+        <div id="adv-active-audit" className="scroll-mt-24 md:col-span-2">
+          <ActiveChangeAuditPanel />
+        </div>
 
         <div className="panel p-6 md:col-span-2">
           <div className="label-eyebrow">Compliance</div>
