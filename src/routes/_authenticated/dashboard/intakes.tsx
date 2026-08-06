@@ -318,6 +318,26 @@ function IntakesPage() {
           </div>
         )}
 
+        {deferredUpdates && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mono flex flex-wrap items-center justify-between gap-3 rounded-sm border border-steel/60 bg-steel/10 px-4 py-3 text-[11px] text-steel"
+          >
+            <span className="normal-case">
+              New intake activity arrived. It's held so your place isn't lost — it applies when you leave this submission.
+            </span>
+            <button
+              type="button"
+              onClick={applyIntakeUpdates}
+              className="mono min-h-8 rounded-sm border border-steel/60 px-2 py-1 text-[10px] uppercase tracking-wider hover:bg-steel hover:text-charcoal focus-visible:ring-2 focus-visible:ring-violet"
+            >
+              show updates now
+            </button>
+          </div>
+        )}
+
+
         {isLoading && <div className="text-muted-foreground">Loading…</div>}
         {!isLoading && rows?.length === 0 && (
           <div className="panel p-6 text-muted-foreground text-sm">No submissions yet. Share your intake URL above.</div>
