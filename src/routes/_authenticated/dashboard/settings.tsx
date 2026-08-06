@@ -1182,7 +1182,13 @@ function SettingsPage() {
                         ? `Disconnected (try ${realtimeAttempt})`
                         : "Connecting…"}
                 </span>
+                <span className="text-muted-foreground/70 normal-case tracking-normal">
+                  {lastSyncAt
+                    ? `· synced ${lastSyncAt.toLocaleTimeString()}`
+                    : "· not yet synced"}
+                </span>
               </div>
+
               <button
                 type="button"
                 role="switch"
