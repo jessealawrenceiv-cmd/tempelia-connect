@@ -2,7 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { endOfDay, startOfDay } from "date-fns";
 import { Filter, Search } from "lucide-react";
+import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
