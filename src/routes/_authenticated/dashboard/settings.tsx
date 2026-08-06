@@ -773,6 +773,7 @@ function SettingsPage() {
         duration_ms: Date.now() - startedAt,
       });
       setStatusAnnouncement(`Refresh failed. ${message}`);
+      announceTooltipStatus(`Refresh failed — statuses unchanged. ${message}`);
       toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
@@ -780,7 +781,7 @@ function SettingsPage() {
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
-  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts, runStatusRefreshFn]);
+  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts, runStatusRefreshFn, announceTooltipStatus, optInPromptActive]);
 
   // Optional auto-refresh: re-evaluate statuses on a configurable interval while
   // this Settings page is visible. Skips ticks when hidden, already refreshing,
