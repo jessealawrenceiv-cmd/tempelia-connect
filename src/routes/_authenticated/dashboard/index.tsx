@@ -223,7 +223,12 @@ function HomePage() {
             <ul className="divide-y divide-border">
               {attention!.intakes.map((i) => (
                 <li key={`i-${i.id}`} className="px-5 py-3 text-sm">
-                  <Link to="/dashboard/intakes" className="flex flex-wrap items-baseline gap-2 hover:underline">
+                  <Link
+                    to="/dashboard/intakes"
+                    search={{ intakeId: i.id }}
+                    hash={`intake-${i.id}`}
+                    className="flex flex-wrap items-baseline gap-2 hover:underline"
+                  >
                     <span className="mono text-[10px] uppercase tracking-widest text-orange">New request</span>
                     <span className="font-medium text-foreground">
                       {i.customer_first_name} {i.customer_last_name}

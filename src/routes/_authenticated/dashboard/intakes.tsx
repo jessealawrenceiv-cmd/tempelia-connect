@@ -1,13 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { signIntakePhotos } from "@/lib/intake.functions";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  parseIntakeDeepLink,
+  resolveIntakeJump,
+  type IntakeJumpMissReason,
+} from "@/lib/intake-deep-link";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/intakes")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    intakeId: typeof search.intakeId === "string" ? search.intakeId : undefined,
+  }),
   component: IntakesPage,
 });
 
@@ -77,6 +85,55 @@ function IntakesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ── Deep link: jump to a specific submission (?intakeId= / #intake-<id>) ──
+  const location = useLocation();
+  const { intakeId: incomingIntakeId } = parseIntakeDeepLink(location.searchStr, location.hash);
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [jumpedId, setJumpedId] = useState<string | null>(null);
+  const [jumpMiss, setJumpMiss] = useState<{ id: string; reason: IntakeJumpMissReason } | null>(null);
+  const jumpMissHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const handledJumpRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!incomingIntakeId || isLoading || !rows) return;
+    if (handledJumpRef.current === incomingIntakeId) return;
+    handledJumpRef.current = incomingIntakeId;
+
+    const ids = rows.map((r) => r.id);
+    const res = resolveIntakeJump(incomingIntakeId, ids, ids);
+    if (res.kind === "hit") {
+      setJumpMiss(null);
+      setJumpedId(incomingIntakeId);
+      requestAnimationFrame(() => {
+        const el = rowRefs.current[incomingIntakeId];
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        el?.focus({ preventScroll: true });
+      });
+    } else {
+      setJumpedId(null);
+      setJumpMiss({ id: incomingIntakeId, reason: res.reason });
+      const fallback = ids[res.fallbackIndex];
+      if (fallback) {
+        requestAnimationFrame(() => {
+          rowRefs.current[fallback]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+    }
+  }, [incomingIntakeId, isLoading, rows]);
+
+  useEffect(() => {
+    if (!jumpMiss) return;
+    const t = window.setTimeout(() => jumpMissHeadingRef.current?.focus(), 60);
+    return () => window.clearTimeout(t);
+  }, [jumpMiss]);
+
+  // Fade the highlight after a few seconds so the page settles.
+  useEffect(() => {
+    if (!jumpedId) return;
+    const t = window.setTimeout(() => setJumpedId(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [jumpedId]);
+
   return (
     <div>
       <PageHeader eyebrow="Feature 04" title="Project intakes" />
@@ -96,6 +153,56 @@ function IntakesPage() {
           <p className="mt-2 text-xs text-muted-foreground">Share this link with prospects. Submissions land here.</p>
         </div>
 
+        {jumpMiss && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            className="mono rounded-sm border border-orange/60 bg-orange/10 px-4 py-3 text-[11px] text-orange"
+          >
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 text-lg leading-none" aria-hidden="true">🔎</div>
+              <div className="flex-1">
+                <h3
+                  ref={jumpMissHeadingRef}
+                  tabIndex={-1}
+                  className="font-semibold uppercase tracking-widest text-[10px] outline-none focus-visible:ring-2 focus-visible:ring-orange/70"
+                >
+                  // we couldn't find that submission
+                </h3>
+                <p className="mt-1 normal-case text-muted-foreground">
+                  {jumpMiss.reason === "empty"
+                    ? "There are no intake submissions on this account yet, so there's nothing to jump to."
+                    : jumpMiss.reason === "filtered"
+                      ? "That submission exists but isn't in the current view. Reload the list to reveal it."
+                      : "That submission is no longer in your intake list — it may have been deleted, or the link points at another account."}
+                  {jumpMiss.reason !== "empty" && " We landed you on the newest submission instead."}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">requested id</span>
+                  <code className="mono break-all rounded-sm border border-orange/40 bg-charcoal/40 px-1.5 py-0.5 text-[11px] text-paper">
+                    {jumpMiss.id}
+                  </code>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => { setJumpMiss(null); qc.invalidateQueries({ queryKey: ["intake-submissions"] }); handledJumpRef.current = null; }}
+                    className="rounded-sm border border-orange/60 px-2 py-1 text-[10px] uppercase tracking-wider hover:bg-orange/20"
+                  >
+                    reload &amp; retry
+                  </button>
+                  <button
+                    onClick={() => setJumpMiss(null)}
+                    className="rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-paper"
+                  >
+                    dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoading && <div className="text-muted-foreground">Loading…</div>}
         {!isLoading && rows?.length === 0 && (
           <div className="panel p-6 text-muted-foreground text-sm">No submissions yet. Share your intake URL above.</div>
@@ -105,7 +212,16 @@ function IntakesPage() {
           {rows?.map((r) => {
             const resp = (r.responses ?? {}) as Record<string, string>;
             return (
-              <div key={r.id} className="panel p-5">
+              <div
+                key={r.id}
+                id={`intake-${r.id}`}
+                ref={(el) => { rowRefs.current[r.id] = el; }}
+                tabIndex={-1}
+                data-jumped={jumpedId === r.id ? "true" : undefined}
+                className={`panel p-5 outline-none transition-shadow ${
+                  jumpedId === r.id ? "ring-2 ring-violet shadow-[0_0_0_4px_rgba(108,74,182,0.18)]" : ""
+                }`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
