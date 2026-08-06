@@ -161,4 +161,48 @@ test.describe("Settings · automation status tooltip a11y", () => {
     );
     expect(focusInside).toBe(true);
   });
+
+  test("repeated clicks keep focus on Refresh now without jumping", async ({ page }) => {
+    const trigger = await openAdvancedTab(page);
+    const tooltipId = await trigger.getAttribute("aria-controls");
+    const tooltip = page.locator(`#${tooltipId}`);
+
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(tooltip).toBeVisible();
+
+    const refresh = tooltip.getByRole("button", { name: /Refresh automation statuses now/i });
+    const lastRefreshed = tooltip.locator('[aria-live="polite"]', { hasText: /Last evaluated/i }).first();
+    const before = (await lastRefreshed.textContent())?.trim();
+
+    await refresh.focus();
+    await expect(refresh).toBeFocused();
+
+    // Click repeatedly in quick succession. Because the button uses aria-disabled
+    // instead of disabled, focus never drops to <body> even while re-evaluating.
+    await refresh.click();
+    await expect(refresh).toBeFocused();
+
+    await refresh.click();
+    await expect(refresh).toBeFocused();
+
+    await refresh.click();
+    await expect(refresh).toBeFocused();
+
+    // The live region eventually reports a fresh evaluation timestamp.
+    await expect
+      .poll(async () => (await lastRefreshed.textContent())?.trim(), { timeout: 20_000 })
+      .not.toBe(before);
+
+    // After the refresh settles, focus is still on the Refresh now control.
+    await expect(refresh).toBeFocused();
+
+    // One more click after the update also keeps focus pinned.
+    await refresh.click();
+    await expect(refresh).toBeFocused();
+
+    // The active element is the Refresh now button, never the page body.
+    const active = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+    expect(active).toMatch(/Refresh automation statuses/i);
+  });
 });

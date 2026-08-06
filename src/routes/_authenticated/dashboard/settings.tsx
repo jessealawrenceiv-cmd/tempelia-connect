@@ -1355,8 +1355,15 @@ const AutomationBadge = forwardRef<
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            setOpen((o) => !o);
-            if (!open) {
+            if (open) {
+              // Tooltip already open (e.g. from focus) — move focus inside instead of closing.
+              window.setTimeout(() => {
+                containerRef.current
+                  ?.querySelector<HTMLButtonElement>(`#${CSS.escape(tooltipId)} button`)
+                  ?.focus();
+              }, 0);
+            } else {
+              setOpen(true);
               window.setTimeout(() => {
                 containerRef.current
                   ?.querySelector<HTMLButtonElement>(`#${CSS.escape(tooltipId)} button`)
