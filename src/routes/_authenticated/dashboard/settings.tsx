@@ -423,7 +423,7 @@ function AutomationBadge({
   };
   const defaults: Record<string, string> = {
     active: activeCount ? `${activeCount} active` : "Active",
-    homeless: "",
+    
     manual: "Manual",
     hold: "On hold",
     off: "Off",
