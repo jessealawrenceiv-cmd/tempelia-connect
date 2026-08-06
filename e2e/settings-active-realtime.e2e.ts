@@ -102,15 +102,19 @@ test.describe("Settings · ACTIVE badge reacts to live row updates", () => {
     // The panel badge stays a well-formed status while live updates arrive.
     await expect(trigger).toHaveAttribute("aria-label", /Automation status: .+/i);
 
-    const voicemailSwitch = page.getByRole("switch").first();
-    const before = await voicemailSwitch.getAttribute("aria-checked");
+    const voicemailRow = page
+      .getByText("Voicemail on missed calls", { exact: true })
+      .locator("xpath=ancestor::div[contains(@class,'justify-between')][1]");
+    const voicemailToggle = voicemailRow.locator('input[type="checkbox"]').first();
+    await expect(voicemailToggle).toBeVisible();
+    const before = await voicemailToggle.isChecked();
 
     await patchProfile(api!, original!.id, { voicemail_enabled: !original!.voicemail_enabled });
 
     // Voicemail state re-renders from the live payload — no navigation, no reload.
-    await expect
-      .poll(async () => voicemailSwitch.getAttribute("aria-checked"), { timeout: 20_000 })
-      .not.toBe(before);
+    await expect.poll(async () => voicemailToggle.isChecked(), { timeout: 20_000 }).toBe(!before);
+    await expect(voicemailRow).toContainText(before ? "Off" : "On");
+
 
     // A toast describes the change and when it happened.
     await expect(page.getByText(/Automation status updated/i).first()).toBeVisible({ timeout: 20_000 });
