@@ -110,6 +110,10 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const declineMode = (profile?.decline_followup_mode ?? "off") as "off" | "manual" | "auto";
+  const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
+  const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
+
   if (isStaff) {
     return (
       <div>
