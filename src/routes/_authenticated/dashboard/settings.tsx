@@ -508,6 +508,22 @@ function SettingsPage() {
         ))}
       </ul>
       <div className="border-t border-border pt-1">
+        {refreshError ? (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mb-1 space-y-0.5 rounded-sm border border-orange/60 bg-orange/10 px-1.5 py-1 normal-case tracking-normal"
+          >
+            <div className="text-foreground">Refresh failed</div>
+            <div className="break-words text-muted-foreground">
+              {refreshError.code ? `${refreshError.code}: ` : null}
+              {refreshError.message}
+            </div>
+            <div className="text-muted-foreground">
+              {refreshError.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </div>
+          </div>
+        ) : null}
         <div aria-live="polite" aria-atomic="true">
           Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
         </div>
