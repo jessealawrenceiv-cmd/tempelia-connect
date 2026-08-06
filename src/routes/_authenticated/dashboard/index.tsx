@@ -355,7 +355,7 @@ function HomePage() {
               {attention!.accepted.map((q) => (
                 <li key={`a-${q.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
                   <Link to="/dashboard/quotes" className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline">
-                    <span className="mono text-[10px] uppercase tracking-widest text-violet">Accepted · book it</span>
+                    <span className="mono text-[10px] uppercase tracking-widest text-orange">Accepted · book it</span>
                     <span className="font-medium text-foreground">
                       {q.customer_first_name} {q.customer_last_name ?? ""}
                     </span>
