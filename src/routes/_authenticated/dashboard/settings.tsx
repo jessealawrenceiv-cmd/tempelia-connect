@@ -1200,17 +1200,15 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
 }
 
 
-function AutomationBadge({
-  state,
-  label,
-  activeCount,
-  tooltip,
-}: {
-  state: "active" | "manual" | "hold" | "off";
-  label?: string;
-  activeCount?: number;
-  tooltip?: React.ReactNode;
-}) {
+const AutomationBadge = forwardRef<
+  { contains: (el: Node | null) => boolean; restoreFocus: (el: HTMLElement | null) => void },
+  {
+    state: "active" | "manual" | "hold" | "off";
+    label?: string;
+    activeCount?: number;
+    tooltip?: React.ReactNode;
+  }
+>(function AutomationBadge({ state, label, activeCount, tooltip }, ref) {
   const styles: Record<string, string> = {
     active: "border-moss/60 bg-moss/15 text-moss",
     manual: "border-steel/60 bg-steel/15 text-steel",
@@ -1241,6 +1239,20 @@ function AutomationBadge({
       }, 0);
     }, 0);
   };
+
+  // Expose methods to the parent so the refresh flow can restore focus to the
+  // exact element that was focused inside the tooltip before the button disabled.
+  useImperativeHandle(ref, () => ({
+    contains: (el: Node | null) => containerRef.current?.contains(el ?? null) ?? false,
+    restoreFocus: (el: HTMLElement | null) => {
+      if (!el || !el.isConnected) return;
+      // Reopen the tooltip if it closed, then hand focus back to the element.
+      setOpen(true);
+      window.setTimeout(() => {
+        window.requestAnimationFrame(() => el.focus());
+      }, 50);
+    },
+  }));
 
   useEffect(() => {
     if (!open) return;
