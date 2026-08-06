@@ -7,7 +7,7 @@ const SETTINGS_PATH = "/dashboard/settings";
 function indicator(page: Page) {
   return page
     .locator('[role="status"][aria-live="polite"]')
-    .filter({ hasText: /Live|Reconnecting|Connecting/i })
+    .filter({ hasText: /Live|Reconnecting|Disconnected|Connecting/i })
     .first();
 }
 
@@ -104,11 +104,12 @@ test.describe("Settings · Realtime disconnect, backoff reconnect, and status in
     openSockets.forEach((ws) => ws.close({ code: 1006, reason: "simulated outage" }));
 
     // Wait until the 4th attempt is announced (1s + 2s + 4s ladder ≈ 7s).
-    await expect(status).toContainText(/try 4/i, { timeout: 45_000 });
+    // By then the indicator has escalated from Reconnecting to Disconnected.
+    await expect(status).toContainText(/Disconnected \(try 4\)/i, { timeout: 45_000 });
     await watcher.stop();
 
     // Attempt numbers are surfaced to the user in order.
-    const attemptSamples = watcher.samples.filter((s) => /Reconnecting/i.test(s.text));
+    const attemptSamples = watcher.samples.filter((s) => /Reconnecting|Disconnected/i.test(s.text));
     expect(attemptSamples.length).toBeGreaterThanOrEqual(3);
     const attemptNumbers = attemptSamples.map((s) => Number(/try (\d+)/i.exec(s.text)?.[1] ?? 1));
     for (let i = 1; i < attemptNumbers.length; i += 1) {
@@ -144,6 +145,45 @@ test.describe("Settings · Realtime disconnect, backoff reconnect, and status in
     await expect(status).toContainText(/Reconnecting|Connecting/i, { timeout: 20_000 });
     // Same node stays mounted (announcement, not a remount).
     await expect(status).toHaveAttribute("role", "status");
+
+    dropConnections = false;
+    await expect(status).toContainText(/Live/i, { timeout: 40_000 });
+  });
+
+  test("transitions are announced via aria-live and toasted, and toasts can be turned off", async ({ page }) => {
+    const status = indicator(page);
+    await expect(status).toContainText(/Live/i, { timeout: 20_000 });
+
+    const announcer = page.locator('.sr-only[aria-live="polite"]').first();
+    const toggle = page.getByRole("switch", { name: /Toast me when live updates/i });
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+
+    dropConnections = true;
+    openSockets.forEach((ws) => ws.close({ code: 1006, reason: "simulated outage" }));
+
+    await expect(announcer).toContainText(/Live updates interrupted/i, { timeout: 20_000 });
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /Live updates interrupted/i }).first(),
+    ).toBeVisible({ timeout: 20_000 });
+
+    dropConnections = false;
+    await expect(announcer).toContainText(/reconnected/i, { timeout: 40_000 });
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /Live updates reconnected/i }).first(),
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(status).toContainText(/Live/i);
+
+    // Turning toasts off keeps the announcement but stops the popups.
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await page.locator("[data-sonner-toast]").first().waitFor({ state: "hidden", timeout: 20_000 }).catch(() => {});
+
+    dropConnections = true;
+    openSockets.forEach((ws) => ws.close({ code: 1006, reason: "simulated outage" }));
+    await expect(announcer).toContainText(/Live updates interrupted/i, { timeout: 20_000 });
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /Live updates interrupted/i }),
+    ).toHaveCount(0);
 
     dropConnections = false;
     await expect(status).toContainText(/Live/i, { timeout: 40_000 });

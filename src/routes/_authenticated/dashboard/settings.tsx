@@ -98,10 +98,77 @@ function SettingsPage() {
   >(null);
 
   // Live status: refresh the ACTIVE badge/tooltip the moment the profile row changes.
-  // Auto-reconnects with backoff and surfaces a live/reconnecting indicator.
-  const [realtimeState, setRealtimeState] = useState<"connecting" | "live" | "reconnecting">("connecting");
+  // Auto-reconnects with backoff and surfaces a live/reconnecting/disconnected indicator.
+  const [realtimeState, setRealtimeState] = useState<
+    "connecting" | "live" | "reconnecting" | "disconnected"
+  >("connecting");
   const [realtimeAttempt, setRealtimeAttempt] = useState(0);
   const [statusAnnouncement, setStatusAnnouncement] = useState("");
+  const [realtimeToasts, setRealtimeToasts] = useState(true);
+  const realtimeToastsRef = useRef(true);
+
+  // Toast preference persists per browser; the aria-live announcement always fires.
+  useEffect(() => {
+    const saved = window.localStorage.getItem("temaro:realtime-toasts");
+    if (saved !== null) {
+      const on = saved === "1";
+      setRealtimeToasts(on);
+      realtimeToastsRef.current = on;
+    }
+  }, []);
+
+  const setRealtimeToastPref = useCallback((on: boolean) => {
+    setRealtimeToasts(on);
+    realtimeToastsRef.current = on;
+    window.localStorage.setItem("temaro:realtime-toasts", on ? "1" : "0");
+  }, []);
+
+  // Announce (and optionally toast) every connection-state transition.
+  const prevRealtimeStateRef = useRef<typeof realtimeState | null>(null);
+  useEffect(() => {
+    const prev = prevRealtimeStateRef.current;
+    prevRealtimeStateRef.current = realtimeState;
+    if (prev === null || prev === realtimeState) return;
+
+    const time = new Date().toLocaleTimeString();
+    if (realtimeState === "live") {
+      const message =
+        prev === "connecting"
+          ? "Live updates connected."
+          : "Live updates reconnected. Settings are back in sync.";
+      setStatusAnnouncement(`${message} ${time}`);
+      if (realtimeToastsRef.current) {
+        toast.success("Live updates reconnected", { description: `Back in sync at ${time}.` });
+      }
+      return;
+    }
+
+    if (realtimeState === "reconnecting") {
+      const message = `Live updates interrupted. Reconnecting${realtimeAttempt > 1 ? `, attempt ${realtimeAttempt}` : ""}.`;
+      setStatusAnnouncement(`${message} ${time}`);
+      if (realtimeToastsRef.current && prev !== "disconnected") {
+        toast.warning("Live updates interrupted", {
+          description: `Reconnecting automatically — started at ${time}.`,
+        });
+      }
+      return;
+    }
+
+    if (realtimeState === "disconnected") {
+      setStatusAnnouncement(
+        `Live updates disconnected after ${realtimeAttempt} attempts. Statuses may be out of date. ${time}`,
+      );
+      if (realtimeToastsRef.current) {
+        toast.error("Live updates disconnected", {
+          description: `Still retrying, but statuses may be stale. Last attempt ${time}.`,
+        });
+      }
+      return;
+    }
+
+    setStatusAnnouncement(`Connecting to live updates. ${time}`);
+  }, [realtimeState, realtimeAttempt]);
+
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -199,7 +266,8 @@ function SettingsPage() {
       if (cancelled || retryTimer !== null) return;
       attempt += 1;
       setRealtimeAttempt(attempt);
-      setRealtimeState("reconnecting");
+      // After a few failed attempts the outage is no longer a blip — say so.
+      setRealtimeState(attempt >= 4 ? "disconnected" : "reconnecting");
       const delay = Math.min(30_000, 1000 * 2 ** (attempt - 1));
       retryTimer = window.setTimeout(() => {
         retryTimer = null;
@@ -1096,7 +1164,9 @@ function SettingsPage() {
                       ? "bg-moss"
                       : realtimeState === "reconnecting"
                         ? "animate-pulse bg-orange"
-                        : "animate-pulse bg-muted-foreground"
+                        : realtimeState === "disconnected"
+                          ? "bg-orange"
+                          : "animate-pulse bg-muted-foreground"
                   }`}
                 />
                 <span className={realtimeState === "live" ? "text-muted-foreground" : "text-orange"}>
@@ -1104,9 +1174,26 @@ function SettingsPage() {
                     ? "Live"
                     : realtimeState === "reconnecting"
                       ? `Reconnecting${realtimeAttempt > 1 ? ` (try ${realtimeAttempt})` : ""}…`
-                      : "Connecting…"}
+                      : realtimeState === "disconnected"
+                        ? `Disconnected (try ${realtimeAttempt})`
+                        : "Connecting…"}
                 </span>
               </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={realtimeToasts}
+                aria-label="Toast me when live updates connect or drop"
+                onClick={() => setRealtimeToastPref(!realtimeToasts)}
+                className={`mono kb-focus rounded-sm border px-1.5 py-0.5 text-[10px] uppercase tracking-widest ${
+                  realtimeToasts
+                    ? "border-orange/60 text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {realtimeToasts ? "Toasts on" : "Toasts off"}
+              </button>
+
 
             </div>
           </div>
