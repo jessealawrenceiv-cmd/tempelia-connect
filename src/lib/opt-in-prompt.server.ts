@@ -54,6 +54,18 @@ export async function sendPromptToCustomer(
     return fail("On your exclusion list", cust.phone_number);
   }
 
+  // PERMANENT: no prompt without a real prior inbound engagement on record.
+  const { checkInboundEngagement } = await import("./inbound-engagement.server");
+  const engagement = await checkInboundEngagement(supabase, userId, cust);
+  if (!engagement.ok) return fail("No inbound call or text on record", cust.phone_number);
+
+  // HOLD: real customer sends disabled pending carrier registration.
+  const { OPT_IN_PROMPT_REAL_SENDS_ENABLED, OPT_IN_PROMPT_HOLD_REASON } = await import(
+    "./opt-in-prompt-gate"
+  );
+  if (!OPT_IN_PROMPT_REAL_SENDS_ENABLED) return fail(OPT_IN_PROMPT_HOLD_REASON, cust.phone_number);
+
+
   const cooldown = clampCooldownMinutes(
     profile.opt_in_prompt_cooldown_minutes ?? OPT_IN_PROMPT_COOLDOWN_MINUTES,
   );
