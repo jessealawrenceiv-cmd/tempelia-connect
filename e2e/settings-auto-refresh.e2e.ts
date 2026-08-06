@@ -106,31 +106,25 @@ test.describe("Settings · auto-refresh interval", () => {
   });
 
   test("enabling auto-refresh schedules a status re-check and logs it as auto-triggered", async ({ page }) => {
-    // Switch to Advanced tab.
+    // Pre-enable auto-refresh via the API so the timer starts as soon as the page mounts.
+    await patchProfile(api!, original!.id, {
+      auto_refresh_enabled: true,
+      auto_refresh_interval_minutes: 1,
+    });
+
+    // Switch to Advanced tab and verify the UI reflects the persisted state.
     await page.getByRole("button", { name: "Advanced" }).first().click();
     await expect(page.getByRole("heading", { name: "Auto-refresh statuses" }).first()).toBeVisible();
 
-    // Enable auto-refresh with the shortest allowed interval (1 minute).
-    const toggle = page
+    const panel = page
       .getByRole("heading", { name: "Auto-refresh statuses" })
-      .locator("xpath=ancestor::div[contains(@class,'panel')][1]")
-      .locator('input[type="checkbox"]')
-      .first();
+      .locator("xpath=ancestor::div[contains(@class,'panel')][1]");
+    const toggle = panel.locator('input[type="checkbox"]').first();
     await expect(toggle).toBeVisible();
-    if (!(await toggle.isChecked())) {
-      await toggle.click();
-    }
+    await expect.poll(async () => toggle.isChecked(), { timeout: 10_000 }).toBe(true);
 
-    const intervalInput = page.locator('input[type="number"][min="1"][max="120"]').first();
-    await expect(intervalInput).toBeVisible();
-    await intervalInput.fill("1");
-    await intervalInput.blur();
-
-    // Wait for the profile to persist the enabled state.
-    await expect.poll(async () => {
-      const p = await readProfile(api!);
-      return p?.auto_refresh_enabled === true && p?.auto_refresh_interval_minutes === 1;
-    }, { timeout: 10_000 }).toBe(true);
+    const intervalInput = panel.locator('input[type="number"][min="1"][max="120"]').first();
+    await expect(intervalInput).toHaveValue("1");
 
     // Wait for one auto-refresh tick (interval is 1 minute).
     const beforeIso = new Date().toISOString();
@@ -144,4 +138,5 @@ test.describe("Settings · auto-refresh interval", () => {
     expect(payload["trigger"]).toBe("auto");
     expect(row!.status).toMatch(/^(updated|already_current)$/);
   });
+
 });
