@@ -47,6 +47,8 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
+  const runStatusRefreshFn = useServerFn(runStatusRefresh);
+
   const { isStaff } = useTeamRole();
   const [tab, setTab] = useState<"settings" | "advanced">("settings");
   const [reviewUrl, setReviewUrl] = useState("");
