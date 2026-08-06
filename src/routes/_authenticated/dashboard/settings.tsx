@@ -264,7 +264,7 @@ function SettingsPage() {
             <span aria-hidden="true" className={isRefreshingStatuses ? "animate-spin" : ""}>↻</span>
             <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
           </span>
-          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "Manual"}</span>
+          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "↻"}</span>
         </button>
       </div>
     </div>
