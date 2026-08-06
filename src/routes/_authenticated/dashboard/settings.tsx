@@ -802,8 +802,10 @@ function SettingsPage() {
       announceTooltipStatus(`Refresh failed — statuses unchanged. ${message}`);
       toast.error("Refresh failed", { description: message });
     } finally {
+      refreshInFlightRef.current = false;
       setIsRefreshingStatuses(false);
       if (focusWasInTooltip && focusBefore) {
+
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
