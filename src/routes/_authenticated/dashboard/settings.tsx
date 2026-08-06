@@ -195,6 +195,7 @@ function SettingsPage() {
     mutationFn: async (enabled: boolean) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      markLocalEdit("voicemail_enabled");
       const { error } = await supabase.from("profiles")
         .update({ voicemail_enabled: enabled }).eq("id", u.user.id);
       if (error) throw error;
@@ -207,6 +208,7 @@ function SettingsPage() {
     mutationFn: async (enabled: boolean) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      markLocalEdit("review_requests_enabled");
       const { error } = await supabase.from("profiles")
         .update({ review_requests_enabled: enabled }).eq("id", u.user.id);
       if (error) throw error;
@@ -218,6 +220,7 @@ function SettingsPage() {
     mutationFn: async (mode: "off" | "manual" | "auto") => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      markLocalEdit("decline_followup_mode");
       const { error } = await supabase.from("profiles")
         .update({ decline_followup_mode: mode }).eq("id", u.user.id);
       if (error) throw error;
@@ -225,6 +228,7 @@ function SettingsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const declineMode = (profile?.decline_followup_mode ?? "off") as "off" | "manual" | "auto";
   const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
