@@ -519,6 +519,9 @@ function SettingsPage() {
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
+  // Which kind of refresh is currently running, so the in-progress banner can
+  // distinguish "you clicked this" from a background auto re-check.
+  const [refreshTrigger, setRefreshTrigger] = useState<"manual" | "auto">("manual");
   const [refreshError, setRefreshError] = useState<{
     message: string;
     code?: string;
