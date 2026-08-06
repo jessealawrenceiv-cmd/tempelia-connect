@@ -670,7 +670,8 @@ function AutomationBadge({
         onMouseLeave={hide}
         onBlur={hide}
         onKeyDown={(e) => {
-          if (e.key !== "Tab") return;
+          const navKeys = ["Tab", "ArrowDown", "ArrowUp", "Home", "End"];
+          if (!navKeys.includes(e.key)) return;
           const tooltipEl = containerRef.current?.querySelector<HTMLElement>(`#${CSS.escape(tooltipId)}`);
           const focusables = Array.from(
             tooltipEl?.querySelectorAll<HTMLElement>(
@@ -680,14 +681,31 @@ function AutomationBadge({
           if (focusables.length === 0) return;
           const first = focusables[0];
           const last = focusables[focusables.length - 1];
-          if (e.shiftKey && document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault();
+          const index = focusables.indexOf(document.activeElement as HTMLElement);
+
+          if (e.key === "Tab") {
+            if (e.shiftKey && document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+            return;
+          }
+
+          e.preventDefault();
+          if (e.key === "Home") {
             first.focus();
+          } else if (e.key === "End") {
+            last.focus();
+          } else if (e.key === "ArrowDown") {
+            focusables[index < 0 ? 0 : (index + 1) % focusables.length].focus();
+          } else if (e.key === "ArrowUp") {
+            focusables[index < 0 ? focusables.length - 1 : (index - 1 + focusables.length) % focusables.length].focus();
           }
         }}
+
       >
         {tooltip}
       </span>
