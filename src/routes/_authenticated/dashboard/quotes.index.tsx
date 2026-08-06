@@ -108,7 +108,7 @@ function QuotesListPage() {
     if (!paid && !window.confirm("Undo this deposit? The action is recorded in the log.")) return;
     setDepositId(quoteId);
     try {
-      const res = await markDepositFn({ data: { quoteId, paid } });
+      await markDepositFn({ data: { quoteId, paid } });
       toast.success(paid ? "Deposit marked received." : "Deposit receipt undone.");
       // Audit entry is written by a database trigger in the same transaction,
       // so it cannot fail independently of the deposit change itself.
