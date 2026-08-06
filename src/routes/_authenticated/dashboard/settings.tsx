@@ -684,7 +684,22 @@ function SettingsPage() {
     }
   }, [collectAffected, qc]);
 
+  // Synchronous in-flight flag + observable counters. The counters are exposed as
+  // data attributes on the Refresh now button so tests can prove that a keypress
+  // during busy/cooldown started no additional refresh run.
+  const refreshInFlightRef = useRef(false);
+  const [refreshRunsStarted, setRefreshRunsStarted] = useState(0);
+  const [ignoredRefreshKeys, setIgnoredRefreshKeys] = useState(0);
+
   const refreshStatuses = useCallback(async (trigger: "manual" | "auto" = "manual") => {
+    // Hard, synchronous re-entrancy guard. React state (isRefreshingStatuses)
+    // updates asynchronously, so two activations in the same tick could both
+    // pass a state-only check and queue a second refresh. This ref cannot.
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+    setRefreshRunsStarted((n) => n + 1);
+
+
     // Remember the exact element that had focus inside the ACTIVE tooltip so we
     // can hand focus back to it after the refresh button flips from disabled.
     const focusBefore = document.activeElement as HTMLElement | null;
@@ -692,6 +707,7 @@ function SettingsPage() {
 
     setRefreshTrigger(trigger);
     setIsRefreshingStatuses(true);
+
     // NOTE: the previous error is intentionally kept until we know the outcome.
     // Clearing it here unmounted the error alert — and with it the Retry button
     // the user had just focused — dropping focus to <body> on every retry.
@@ -786,8 +802,10 @@ function SettingsPage() {
       announceTooltipStatus(`Refresh failed — statuses unchanged. ${message}`);
       toast.error("Refresh failed", { description: message });
     } finally {
+      refreshInFlightRef.current = false;
       setIsRefreshingStatuses(false);
       if (focusWasInTooltip && focusBefore) {
+
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
@@ -941,6 +959,9 @@ function SettingsPage() {
           <button
             key="refresh-now-btn"
             type="button"
+            data-testid="refresh-now-btn"
+            data-refresh-runs={refreshRunsStarted}
+            data-ignored-keys={ignoredRefreshKeys}
             aria-disabled={isRefreshingStatuses || isInCooldown}
             aria-busy={isRefreshingStatuses}
             aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
@@ -949,10 +970,24 @@ function SettingsPage() {
               refreshStatuses("manual");
             }}
             onKeyDown={(e) => {
-              if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+              if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") return;
+              if (!(isRefreshingStatuses || isInCooldown)) return;
+              // Busy or cooling down: swallow the activation entirely. No refresh
+              // is queued, the tooltip must not close, and focus stays here.
+              e.preventDefault();
+              e.stopPropagation();
+              setIgnoredRefreshKeys((n) => n + 1);
+              e.currentTarget.focus();
+            }}
+            onKeyUp={(e) => {
+              // Native buttons fire click on Space keyup — swallow that too.
+              if ((e.key === " " || e.key === "Spacebar") && (isRefreshingStatuses || isInCooldown)) {
                 e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.focus();
               }
             }}
+
             className={`relative mt-1 flex min-h-[26px] w-full items-center justify-between overflow-hidden rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
           >
             {/* Indeterminate progress bar: absolutely positioned so it never affects layout */}
@@ -1067,7 +1102,10 @@ function SettingsPage() {
       refreshAttempts,
       jumpToAdvanced,
       refreshStatuses,
+      refreshRunsStarted,
+      ignoredRefreshKeys,
     ],
+
   );
 
 
