@@ -16,6 +16,12 @@ import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
+const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
+  "this-device": "from this device",
+  "other-device": "from another device",
+  backend: "from the backend",
+};
+
 export const Route = createFileRoute("/_authenticated/dashboard/settings")({
   component: SettingsPage,
 });
@@ -64,6 +70,15 @@ function SettingsPage() {
     }
   }, [profile]);
 
+  // Attribution for the most recent live status change.
+  const localEditsRef = useRef<Map<string, number>>(new Map());
+  const markLocalEdit = (field: string) => {
+    localEditsRef.current.set(field, Date.now());
+  };
+  const [lastUpdate, setLastUpdate] = useState<
+    { origin: "this-device" | "other-device" | "backend"; at: Date } | null
+  >(null);
+
   // Live status: refresh the ACTIVE badge/tooltip the moment the profile row changes.
   // Auto-reconnects with backoff and surfaces a live/reconnecting indicator.
   const [realtimeState, setRealtimeState] = useState<"connecting" | "live" | "reconnecting">("connecting");
@@ -85,19 +100,38 @@ function SettingsPage() {
       const nextVoicemail = !!next["voicemail_enabled"];
       const nextDecline = (next["decline_followup_mode"] as string) ?? "off";
       const changes: string[] = [];
+      const changedFields: string[] = [];
       if (nextVoicemail !== prev.voicemail) {
         changes.push(`Voicemail ${nextVoicemail ? "ACTIVE" : "OFF"}`);
+        changedFields.push("voicemail_enabled");
       }
       if (nextDecline !== prev.decline) {
         changes.push(`Declined-quote follow-up ${nextDecline.toUpperCase()}`);
+        changedFields.push("decline_followup_mode");
       }
       if (changes.length === 0) return;
 
+      // Attribute the change: a matching edit from this tab within the last 15s
+      // means we made it; otherwise it came from another signed-in device, or
+      // from server-side automation for fields the UI never writes.
+      const now = Date.now();
+      const isLocal = changedFields.some((f) => {
+        const at = localEditsRef.current.get(f);
+        return at !== undefined && now - at < 15_000;
+      });
+      const uiWritable = changedFields.every((f) =>
+        f === "voicemail_enabled" || f === "decline_followup_mode" || f === "review_requests_enabled",
+      );
+      const origin = isLocal ? "this-device" : uiWritable ? "other-device" : "backend";
+      changedFields.forEach((f) => localEditsRef.current.delete(f));
+      setLastUpdate({ origin, at: new Date() });
+
       statusSnapshotRef.current = { voicemail: nextVoicemail, decline: nextDecline };
       toast.success("Automation status updated", {
-        description: `${changes.join(" · ")} — live at ${new Date().toLocaleTimeString()}`,
+        description: `${changes.join(" · ")} — ${UPDATE_ORIGIN_LABEL[origin]} at ${new Date().toLocaleTimeString()}`,
       });
     };
+
 
     const scheduleReconnect = () => {
       if (cancelled || retryTimer !== null) return;
@@ -195,6 +229,7 @@ function SettingsPage() {
     mutationFn: async (enabled: boolean) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      markLocalEdit("voicemail_enabled");
       const { error } = await supabase.from("profiles")
         .update({ voicemail_enabled: enabled }).eq("id", u.user.id);
       if (error) throw error;
@@ -207,6 +242,7 @@ function SettingsPage() {
     mutationFn: async (enabled: boolean) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      markLocalEdit("review_requests_enabled");
       const { error } = await supabase.from("profiles")
         .update({ review_requests_enabled: enabled }).eq("id", u.user.id);
       if (error) throw error;
@@ -218,6 +254,7 @@ function SettingsPage() {
     mutationFn: async (mode: "off" | "manual" | "auto") => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      markLocalEdit("decline_followup_mode");
       const { error } = await supabase.from("profiles")
         .update({ decline_followup_mode: mode }).eq("id", u.user.id);
       if (error) throw error;
@@ -225,6 +262,7 @@ function SettingsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const declineMode = (profile?.decline_followup_mode ?? "off") as "off" | "manual" | "auto";
   const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
@@ -412,6 +450,12 @@ function SettingsPage() {
         <div aria-live="polite" aria-atomic="true">
           Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
         </div>
+        <div aria-live="polite" aria-atomic="true" className="text-muted-foreground">
+          {lastUpdate
+            ? `Last live update ${UPDATE_ORIGIN_LABEL[lastUpdate.origin]} · ${lastUpdate.at.toLocaleTimeString()}`
+            : "No live update since this page opened"}
+        </div>
+
         <button
           type="button"
           onClick={() => {
