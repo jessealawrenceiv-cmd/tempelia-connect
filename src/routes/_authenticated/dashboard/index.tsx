@@ -302,46 +302,108 @@ function HomePage() {
           ) : (
             <ul className="divide-y divide-border">
               {attention!.intakes.map((i) => (
-                <li key={`i-${i.id}`} className="px-5 py-3 text-sm">
+                <li key={`i-${i.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
                   <Link
                     to="/dashboard/intakes"
                     search={{ intakeId: i.id }}
                     hash={`intake-${i.id}`}
-                    className="flex flex-wrap items-baseline gap-2 hover:underline"
+                    className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
                   >
                     <span className="mono text-[10px] uppercase tracking-widest text-orange">New request</span>
                     <span className="font-medium text-foreground">
                       {i.customer_first_name} {i.customer_last_name}
                     </span>
                     <span className="text-muted-foreground">wants a quote</span>
+                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
+                      {relativeTime(i.submitted_at)}
+                    </span>
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => markIntakeContacted.mutate(i.id)}
+                    disabled={markIntakeContacted.isPending}
+                    title="Sets this request's status to Contacted"
+                    className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  >
+                    <Check size={12} /> Mark complete
+                  </button>
                 </li>
               ))}
               {attention!.sent.map((q) => (
-                <li key={`s-${q.id}`} className="px-5 py-3 text-sm">
-                  <Link to="/dashboard/quotes" className="flex flex-wrap items-baseline gap-2 hover:underline">
+                <li key={`s-${q.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
+                  <Link to="/dashboard/quotes" className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline">
                     <span className="mono text-[10px] uppercase tracking-widest text-steel">Waiting on customer</span>
                     <span className="font-medium text-foreground">
                       {q.customer_first_name} {q.customer_last_name ?? ""}
                     </span>
                     <span className="text-muted-foreground">quote for {money(Number(q.total_amount ?? 0))}</span>
+                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
+                      {relativeTime(q.last_sms_sent_at ?? q.created_at)}
+                    </span>
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => hideQuote.mutate(q)}
+                    disabled={hideQuote.isPending}
+                    title="Hides this quote from Home only — the quote stays live for the customer"
+                    className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  >
+                    <Check size={12} /> Mark complete
+                  </button>
+                </li>
+              ))}
+              {attention!.accepted.map((q) => (
+                <li key={`a-${q.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
+                  <Link to="/dashboard/quotes" className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline">
+                    <span className="mono text-[10px] uppercase tracking-widest text-violet">Accepted · book it</span>
+                    <span className="font-medium text-foreground">
+                      {q.customer_first_name} {q.customer_last_name ?? ""}
+                    </span>
+                    <span className="text-muted-foreground">quote for {money(Number(q.total_amount ?? 0))}</span>
+                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
+                      {relativeTime(q.responded_at ?? q.created_at)}
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => hideQuote.mutate(q)}
+                    disabled={hideQuote.isPending}
+                    title="Hides this quote from Home only — the quote stays live for the customer"
+                    className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  >
+                    <Check size={12} /> Mark complete
+                  </button>
                 </li>
               ))}
               {attention!.declined.map((q) => (
-                <li key={`d-${q.id}`} className="px-5 py-3 text-sm">
-                  <Link to="/dashboard/quotes" className="flex flex-wrap items-baseline gap-2 hover:underline">
+                <li key={`d-${q.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
+                  <Link to="/dashboard/quotes" className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline">
                     <span className="mono text-[10px] uppercase tracking-widest text-moss">Declined · review</span>
                     <span className="font-medium text-foreground">
                       {q.customer_first_name} {q.customer_last_name ?? ""}
                     </span>
-                    <span className="text-muted-foreground">“{q.decline_reason}”</span>
+                    <span className="text-muted-foreground">
+                      {q.decline_reason ? `“${q.decline_reason}”` : "no reason given"}
+                    </span>
+                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
+                      {relativeTime(q.responded_at ?? q.created_at)}
+                    </span>
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => hideQuote.mutate(q)}
+                    disabled={hideQuote.isPending}
+                    title="Hides this quote from Home only — the quote stays live for the customer"
+                    className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  >
+                    <Check size={12} /> Mark complete
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </section>
+
 
         {/* Money */}
         <section className="panel">
