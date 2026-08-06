@@ -33,6 +33,7 @@ import { Route as AuthenticatedDashboardContactsRouteImport } from './routes/_au
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedDashboardQuotesIndexRouteImport } from './routes/_authenticated/dashboard/quotes.index'
+import { Route as AuthenticatedDashboardInvoicesIndexRouteImport } from './routes/_authenticated/dashboard/invoices.index'
 import { Route as ApiPublicVoicemailLogIdRouteImport } from './routes/api/public/voicemail/$logId'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
@@ -174,6 +175,12 @@ const AuthenticatedDashboardQuotesIndexRoute =
     path: '/dashboard/quotes/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardInvoicesIndexRoute =
+  AuthenticatedDashboardInvoicesIndexRouteImport.update({
+    id: '/dashboard/invoices/',
+    path: '/dashboard/invoices/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicVoicemailLogIdRoute = ApiPublicVoicemailLogIdRouteImport.update({
   id: '/api/public/voicemail/$logId',
   path: '/api/public/voicemail/$logId',
@@ -257,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
+  '/dashboard/invoices/': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
@@ -291,6 +299,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
+  '/dashboard/invoices': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/dashboard/quotes': typeof AuthenticatedDashboardQuotesIndexRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
@@ -327,6 +336,7 @@ export interface FileRoutesById {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
+  '/_authenticated/dashboard/invoices/': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/_authenticated/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
   '/_authenticated/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/api/public/voicemail/$logId'
+    | '/dashboard/invoices/'
     | '/dashboard/quotes/'
     | '/dashboard/quotes/$quoteId/print'
   fileRoutesByTo: FileRoutesByTo
@@ -397,6 +408,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/api/public/voicemail/$logId'
+    | '/dashboard/invoices'
     | '/dashboard/quotes'
     | '/dashboard/quotes/$quoteId/print'
   id:
@@ -432,6 +444,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/api/public/voicemail/$logId'
+    | '/_authenticated/dashboard/invoices/'
     | '/_authenticated/dashboard/quotes/'
     | '/_authenticated/dashboard/quotes/$quoteId/print'
   fileRoutesById: FileRoutesById
@@ -628,6 +641,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardQuotesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/invoices/': {
+      id: '/_authenticated/dashboard/invoices/'
+      path: '/dashboard/invoices'
+      fullPath: '/dashboard/invoices/'
+      preLoaderRoute: typeof AuthenticatedDashboardInvoicesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/voicemail/$logId': {
       id: '/api/public/voicemail/$logId'
       path: '/api/public/voicemail/$logId'
@@ -707,6 +727,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardAdminDepositRecoveryRoute: typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   AuthenticatedDashboardAdminNumbersRoute: typeof AuthenticatedDashboardAdminNumbersRoute
   AuthenticatedDashboardQuotesNewRoute: typeof AuthenticatedDashboardQuotesNewRoute
+  AuthenticatedDashboardInvoicesIndexRoute: typeof AuthenticatedDashboardInvoicesIndexRoute
   AuthenticatedDashboardQuotesIndexRoute: typeof AuthenticatedDashboardQuotesIndexRoute
   AuthenticatedDashboardQuotesQuoteIdPrintRoute: typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
@@ -727,6 +748,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardAdminNumbersRoute:
     AuthenticatedDashboardAdminNumbersRoute,
   AuthenticatedDashboardQuotesNewRoute: AuthenticatedDashboardQuotesNewRoute,
+  AuthenticatedDashboardInvoicesIndexRoute:
+    AuthenticatedDashboardInvoicesIndexRoute,
   AuthenticatedDashboardQuotesIndexRoute:
     AuthenticatedDashboardQuotesIndexRoute,
   AuthenticatedDashboardQuotesQuoteIdPrintRoute:
