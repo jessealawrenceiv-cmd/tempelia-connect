@@ -1597,6 +1597,7 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
   return (
     <svg
       aria-hidden="true"
+      data-testid="motion-spinner"
       width={size}
       height={size}
       viewBox="0 0 24 24"
