@@ -127,6 +127,25 @@ test.describe("Settings · automation status tooltip a11y", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("Tab cycling out of the tooltip returns focus to the trigger on close", async ({ page }) => {
+    const trigger = await openAdvancedTab(page);
+    const tooltipId = await trigger.getAttribute("aria-controls");
+    const tooltip = page.locator(`#${tooltipId}`);
+
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip.locator("button").first()).toBeFocused();
+
+    // Simulate focus leaving the tooltip subtree (e.g. Tab cycling past the trap
+    // or the user clicking another control). The close handler should still
+    // remember that focus originated inside and return it to the trigger.
+    await page.evaluate(() => document.body.focus());
+    await expect(tooltip).toBeHidden();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).toBeFocused();
+  });
+
   test('the "last evaluated" line is a polite atomic live region that is announced on refresh', async ({
     page,
   }) => {
