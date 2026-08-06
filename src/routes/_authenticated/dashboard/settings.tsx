@@ -804,7 +804,7 @@ function AutomationBadge({
         aria-expanded={open}
         aria-controls={tooltipId}
         aria-haspopup="true"
-        aria-label={`Automation status: ${text}. Show details`}
+        aria-label={`Automation status: ${text}. ${open ? "Hide details" : "Show details"}`}
         className="cursor-help rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-orange focus-visible:ring-offset-1"
         onMouseEnter={show}
         onMouseLeave={hide}
