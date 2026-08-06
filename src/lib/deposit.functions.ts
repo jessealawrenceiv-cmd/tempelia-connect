@@ -67,7 +67,7 @@ export const markQuoteDeposit = createServerFn({ method: "POST" })
       paidAt: data.paid ? nowIso : null,
       depositAmount,
       balanceRemaining,
-      audited: !logErr,
+      audited: true as const,
     };
   });
 
