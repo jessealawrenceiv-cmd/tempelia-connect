@@ -196,7 +196,7 @@ function SettingsPage() {
         status,
         message_sent: JSON.stringify({ source: "settings_active_badge", at: new Date().toISOString(), ...detail }),
       });
-      void queryClient.invalidateQueries({ queryKey: ["logs"] });
+      void qc.invalidateQueries({ queryKey: ["logs"] });
     } catch {
       // logging must never block the refresh itself
     }
