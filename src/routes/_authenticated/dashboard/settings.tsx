@@ -837,7 +837,8 @@ function SettingsPage() {
     window.setTimeout(() => {
       const el = document.getElementById(anchorId);
       if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const reduced = prefersReducedMotion();
+      el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
       el.setAttribute("tabindex", "-1");
       (el as HTMLElement).focus({ preventScroll: true });
 
@@ -845,7 +846,7 @@ function SettingsPage() {
       const pending = highlightTimersRef.current.get(el);
       if (pending) pending.forEach((id) => window.clearTimeout(id));
 
-      el.classList.add("transition-shadow", "duration-500");
+      if (!reduced) el.classList.add("transition-shadow", "duration-500");
       el.classList.add("ring-2", "ring-orange", "ring-offset-2", "ring-offset-charcoal");
 
       // hold the highlight visible, then fade it out and clean up
@@ -853,7 +854,7 @@ function SettingsPage() {
         el.classList.remove("ring-2", "ring-orange", "ring-offset-2", "ring-offset-charcoal");
       }, 3200);
       const cleanupId = window.setTimeout(() => {
-        el.classList.remove("transition-shadow", "duration-500");
+        if (!reduced) el.classList.remove("transition-shadow", "duration-500");
         el.removeAttribute("tabindex");
         highlightTimersRef.current.delete(el);
       }, 3800);
@@ -1319,10 +1320,10 @@ function SettingsPage() {
                     realtimeState === "live"
                       ? "bg-moss"
                       : realtimeState === "reconnecting"
-                        ? "animate-pulse bg-orange"
+                        ? "motion-safe:animate-pulse bg-orange"
                         : realtimeState === "disconnected"
                           ? "bg-orange"
-                          : "animate-pulse bg-muted-foreground"
+                          : "motion-safe:animate-pulse bg-muted-foreground"
                   }`}
                 />
                 <span className={realtimeState === "live" ? "text-muted-foreground" : "text-orange"}>
@@ -1543,7 +1544,7 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      className={`animate-spin ${className}`}
+      className={`motion-safe:animate-spin ${className}`}
     >
       <circle
         cx="12"
