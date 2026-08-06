@@ -1220,6 +1220,7 @@ function AutomationBadge({
   const [open, setOpen] = useState(false);
   // set while focus is handed back programmatically, so the trigger's onFocus doesn't reopen
   const suppressReopenRef = useRef(false);
+  const focusWasInsideRef = useRef(false);
   const returnFocusToTrigger = () => {
     suppressReopenRef.current = true;
     window.setTimeout(() => {
@@ -1235,24 +1236,34 @@ function AutomationBadge({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
-        returnFocusToTrigger();
       }
+    };
+    const handleFocusIn = (e: FocusEvent) => {
+      focusWasInsideRef.current = !!containerRef.current?.contains(e.target as Node);
     };
     const handlePointerDown = (e: PointerEvent | MouseEvent) => {
       const target = e.target as Node | null;
       if (target && containerRef.current?.contains(target)) return;
-      const hadFocusInside =
-        document.activeElement instanceof Node &&
-        !!containerRef.current?.contains(document.activeElement);
       setOpen(false);
-      if (hadFocusInside) returnFocusToTrigger();
     };
     document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("focusin", handleFocusIn, true);
     document.addEventListener("pointerdown", handlePointerDown, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("focusin", handleFocusIn, true);
       document.removeEventListener("pointerdown", handlePointerDown, true);
     };
+  }, [open]);
+
+  // Whenever the tooltip closes, return focus to the trigger if focus originated inside it.
+  useEffect(() => {
+    if (!open && focusWasInsideRef.current) {
+      focusWasInsideRef.current = false;
+      if (!containerRef.current?.contains(document.activeElement as Node)) {
+        returnFocusToTrigger();
+      }
+    }
   }, [open]);
 
 
