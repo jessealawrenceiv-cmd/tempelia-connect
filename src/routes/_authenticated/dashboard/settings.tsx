@@ -1314,12 +1314,14 @@ function AutomationBadge({
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            setOpen(true);
-            window.setTimeout(() => {
-              containerRef.current
-                ?.querySelector<HTMLButtonElement>(`#${CSS.escape(tooltipId)} button`)
-                ?.focus();
-            }, 0);
+            setOpen((o) => !o);
+            if (!open) {
+              window.setTimeout(() => {
+                containerRef.current
+                  ?.querySelector<HTMLButtonElement>(`#${CSS.escape(tooltipId)} button`)
+                  ?.focus();
+              }, 0);
+            }
           }
           if (e.key === "ArrowDown") {
             e.preventDefault();
