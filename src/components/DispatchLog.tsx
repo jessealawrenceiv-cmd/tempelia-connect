@@ -103,15 +103,23 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     [searchQuery],
   );
 
+  const fromISO = dateRange?.from ? startOfDay(dateRange.from).toISOString() : undefined;
+  const toISO = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
+  const hasRange = Boolean(fromISO && toISO);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["logs", scope, limit],
+    queryKey: ["logs", scope, limit, fromISO, toISO],
     queryFn: async () => {
       if (scope === "archive") {
-        const { data } = await supabase
+        let q = supabase
           .from("logs_archive")
           .select("id, action_type, message_sent, original_created_at, status, customer_id")
-          .order("original_created_at", { ascending: false })
-          .limit(limit);
+          .order("original_created_at", { ascending: false });
+        if (fromISO) q = q.gte("original_created_at", fromISO);
+        if (toISO) q = q.lte("original_created_at", toISO);
+        if (!hasRange) q = q.limit(limit);
+        else q = q.limit(500);
+        const { data } = await q;
         return (data ?? []).map((r) => ({
           id: r.id,
           action_type: r.action_type,
@@ -121,11 +129,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           customer_id: r.customer_id,
         }));
       }
-      const { data } = await supabase
+      let q = supabase
         .from("logs")
         .select("id, action_type, message_sent, created_at, status, customer_id")
-        .order("created_at", { ascending: false })
-        .limit(limit);
+        .order("created_at", { ascending: false });
+      if (fromISO) q = q.gte("created_at", fromISO);
+      if (toISO) q = q.lte("created_at", toISO);
+      if (!hasRange) q = q.limit(limit);
+      else q = q.limit(500);
+      const { data } = await q;
       return data ?? [];
     },
   });
