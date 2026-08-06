@@ -415,6 +415,7 @@ function SettingsPage() {
       setNow(nowDate);
       setEvaluatedAt(nowDate);
       setRefreshAttempts(0);
+      setCooldownMs(0);
       const after = statusSnapshot(result?.data ?? profile);
       const checkedAt = nowDate.toLocaleTimeString([], {
         hour: "2-digit",
