@@ -497,6 +497,7 @@ function SettingsPage() {
   };
 
   const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
+    console.log("[refreshStatuses] trigger:", trigger);
     setIsRefreshingStatuses(true);
     setRefreshError(null);
     const before = statusSnapshot(profile);
