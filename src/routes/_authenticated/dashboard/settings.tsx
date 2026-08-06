@@ -116,12 +116,19 @@ function SettingsPage() {
   const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
 
   const [evaluatedAt, setEvaluatedAt] = useState<Date | null>(null);
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     if (profile !== undefined) setEvaluatedAt(new Date());
   }, [profile]);
+  useEffect(() => {
+    setNow(new Date());
+    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const evaluatedLabel = evaluatedAt
     ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "—";
+  const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const jumpToAdvanced = (anchorId: string) => {
     setTab("advanced");
@@ -153,7 +160,9 @@ function SettingsPage() {
           <span className="text-foreground">{a.mode}</span>
         </button>
       ))}
-      <div className="border-t border-border pt-1">Last evaluated {evaluatedLabel}</div>
+      <div className="border-t border-border pt-1">
+        Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
+      </div>
     </div>
   );
 
@@ -481,6 +490,17 @@ function AutomationBadge({
   );
 }
 
+
+function formatRelativeTime(past: Date, current: Date): string {
+  const seconds = Math.floor((current.getTime() - past.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
 
