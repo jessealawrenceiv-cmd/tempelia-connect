@@ -422,11 +422,14 @@ function SettingsPage() {
       }
     } catch (e) {
       const message = (e as Error)?.message || "Could not re-check automation statuses.";
-      setRefreshError(message);
+      const code = (e as { code?: string })?.code || (e as { error_code?: string })?.error_code;
+      const at = new Date();
+      setRefreshError({ message, code, at });
       setRefreshAttempts((n) => n + 1);
       void logStatusRefresh("failed", {
         outcome: "Refresh failed",
         error: message,
+        error_code: code,
         duration_ms: Date.now() - startedAt,
       });
       toast.error("Refresh failed", { description: message });
