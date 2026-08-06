@@ -15,6 +15,14 @@ async function openAdvancedTab(page: Page) {
   return trigger;
 }
 
+async function openDeclinedQuoteBadge(page: Page) {
+  const panel = page.getByRole("heading", { name: "Declined-quote follow-up" }).locator("..").locator("..");
+  await expect(panel).toBeVisible();
+  const trigger = panel.locator('button[aria-haspopup="true"][aria-controls]').first();
+  await expect(trigger).toBeVisible();
+  return trigger;
+}
+
 test.describe("Settings · automation status tooltip a11y", () => {
   test.beforeEach(async ({ context, page, baseURL }) => {
     const restored = await restoreSession(context, page, baseURL!);
