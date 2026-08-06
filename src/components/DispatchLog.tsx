@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef, useState } from "react";
-import { Filter } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Filter, Search } from "lucide-react";
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
