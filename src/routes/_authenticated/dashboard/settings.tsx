@@ -381,12 +381,21 @@ function SettingsPage() {
               <div className="label-eyebrow">Advanced</div>
               <h2 className="mt-1 text-xl">Automations in Advanced</h2>
             </div>
-            <AutomationBadge
-              state={advancedActiveCount > 0 ? "active" : "off"}
-              activeCount={advancedActiveCount}
-              tooltip={advancedTooltip}
-            />
-
+            <div className="flex flex-col items-end gap-1">
+              <AutomationBadge
+                state={advancedActiveCount > 0 ? "active" : "off"}
+                activeCount={advancedActiveCount}
+                tooltip={advancedTooltip}
+              />
+              <button
+                type="button"
+                onClick={refreshStatuses}
+                disabled={isRefreshingStatuses}
+                className="mono text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground disabled:opacity-50"
+              >
+                {isRefreshingStatuses ? "Checking…" : "Refresh statuses"}
+              </button>
+            </div>
           </div>
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
