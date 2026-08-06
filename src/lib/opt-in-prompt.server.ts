@@ -6,6 +6,7 @@ import {
   clampCooldownMinutes,
   promptVersionHash,
 } from "./opt-in-prompt";
+import { insertLog } from "@/lib/log-action-types";
 
 type Client = { from: (t: string) => any };
 
@@ -89,7 +90,7 @@ export async function sendPromptToCustomer(
   const { sendTwilioSms } = await import("./twilio.server");
   try {
     const res = await sendTwilioSms(from, cust.phone_number, body);
-    await supabase.from("logs").insert({
+    await insertLog(supabase, {
       user_id: userId,
       customer_id: cust.id,
       action_type: OPT_IN_PROMPT_ACTION,
@@ -103,7 +104,7 @@ export async function sendPromptToCustomer(
     return { customerId, ok: true, sid: res.sid ?? null, phone: cust.phone_number };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await supabase.from("logs").insert({
+    await insertLog(supabase, {
       user_id: userId,
       customer_id: cust.id,
       action_type: OPT_IN_PROMPT_ACTION,

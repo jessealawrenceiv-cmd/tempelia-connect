@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { insertLog } from "@/lib/log-action-types";
 
 interface SendInput {
   customerId: string;
@@ -53,7 +54,7 @@ export const completeJob = createServerFn({ method: "POST" })
 
     // 2. Gate: is the review-request feature turned on for this business?
     if (prof?.review_requests_enabled === false) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: null, status: "skipped_disabled",
       });
@@ -67,7 +68,7 @@ export const completeJob = createServerFn({ method: "POST" })
       .select("phone_number").eq("user_id", userId);
     const isExcluded = (excluded ?? []).some((r) => normalizePhone(r.phone_number) === custDigits);
     if (isExcluded) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: null, status: "skipped_excluded",
       });
@@ -85,7 +86,7 @@ export const completeJob = createServerFn({ method: "POST" })
     const message = `Thanks for choosing ${biz}! Mind leaving us a quick review?${linkLine}${STOP_SUFFIX}`;
 
     if (!cust.opt_in_consent) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: message, status: "needs_consent",
       });
@@ -94,7 +95,7 @@ export const completeJob = createServerFn({ method: "POST" })
     }
 
     if (!from) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: message, status: "failed",
       });
@@ -108,14 +109,14 @@ export const completeJob = createServerFn({ method: "POST" })
       await supabase.from("customers").update({
         last_service_date: new Date().toISOString().slice(0, 10),
       }).eq("id", cust.id);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: message, status: "sent", twilio_message_sid: res.sid,
       });
       await supabase.from("jobs").update({ status: "review_requested" }).eq("id", job.id);
       return { ok: true, jobId: job.id, sent: true, sid: res.sid };
     } catch (e) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "review_request",
         message_sent: message, status: "failed",
       });
@@ -150,7 +151,7 @@ export const sendReactivation = createServerFn({ method: "POST" })
       .select("phone_number").eq("user_id", userId);
     const isExcluded = (excluded ?? []).some((r) => normalizePhone(r.phone_number) === custDigits);
     if (isExcluded) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
         message_sent: null, status: "skipped_excluded",
       });
@@ -160,7 +161,7 @@ export const sendReactivation = createServerFn({ method: "POST" })
     const message = `Hi ${cust.first_name || "there"}, it's been a while! Want us to swing by for a seasonal check-up?${STOP_SUFFIX}`;
 
     if (!cust.opt_in_consent) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
         message_sent: message, status: "needs_consent",
       });
@@ -170,13 +171,13 @@ export const sendReactivation = createServerFn({ method: "POST" })
     try {
       const res = await sendTwilioSms(from, cust.phone_number, message);
       await supabase.from("customers").update({ last_reactivation_at: new Date().toISOString() }).eq("id", cust.id);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
         message_sent: message, status: "sent", twilio_message_sid: res.sid,
       });
       return { ok: true, sid: res.sid };
     } catch (e) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
         message_sent: message, status: "failed",
       });

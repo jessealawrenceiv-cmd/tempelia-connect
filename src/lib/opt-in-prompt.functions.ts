@@ -7,6 +7,7 @@ import {
   clampCooldownMinutes,
   promptVersionHash,
 } from "./opt-in-prompt";
+import { insertLog } from "@/lib/log-action-types";
 
 function validate(data: unknown): { customerId: string } {
   const { customerId } = (data ?? {}) as { customerId?: unknown };
@@ -86,7 +87,7 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
     const body = buildOptInPrompt(prof?.business_name ?? "", prof?.opt_in_prompt_template ?? null);
     try {
       const res = await sendTwilioSms(from, cust.phone_number, body);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: cust.id,
         action_type: OPT_IN_PROMPT_ACTION,
@@ -100,7 +101,7 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
       return { ok: true as const, sid: res.sid };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: cust.id,
         action_type: OPT_IN_PROMPT_ACTION,
@@ -224,7 +225,7 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
     const body = buildOptInPrompt(prof?.business_name ?? "", prof?.opt_in_prompt_template ?? null);
     try {
       const res = await sendTwilioSms(from, to, body);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         action_type: OPT_IN_PROMPT_TEST_ACTION,
         message_sent: body,
@@ -238,7 +239,7 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
       return { ok: true as const, to, sid: res.sid, status: res.status, body, cooldown };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         action_type: OPT_IN_PROMPT_TEST_ACTION,
         message_sent: body,
