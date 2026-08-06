@@ -630,7 +630,7 @@ function SettingsPage() {
     };
   }, []);
 
-  const jumpToAdvanced = (anchorId: string) => {
+  const jumpToAdvanced = useCallback((anchorId: string) => {
     setTab("advanced");
     window.setTimeout(() => {
       const el = document.getElementById(anchorId);
@@ -658,7 +658,7 @@ function SettingsPage() {
 
       highlightTimersRef.current.set(el, [fadeId, cleanupId]);
     }, 60);
-  };
+  }, []);
 
 
   const advancedAutomations: { name: string; mode: string; anchorId: string }[] = [
