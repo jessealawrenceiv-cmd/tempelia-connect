@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 function SettingsPage() {
   const qc = useQueryClient();
   const { isStaff } = useTeamRole();
+  const [tab, setTab] = useState<"settings" | "advanced">("settings");
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
@@ -128,6 +129,25 @@ function SettingsPage() {
   return (
     <div>
       <PageHeader eyebrow="Config" title="Settings" />
+
+      <div className="mono flex items-center gap-2 border-b border-border px-5 pt-5 text-[10px] uppercase tracking-widest md:px-8">
+        {(["settings", "advanced"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`-mb-px rounded-t-sm border-b-2 px-3 py-2 ${
+              tab === t
+                ? "border-orange text-orange"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t === "settings" ? "Settings" : "Advanced"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "settings" && (
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
         <div className="panel p-6">
           <div className="label-eyebrow">Integrations</div>
@@ -171,29 +191,6 @@ function SettingsPage() {
               </label>
             </div>
 
-            <div className="mt-6 border-t border-border pt-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="label-eyebrow">Declined-quote follow-up</div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    When a customer declines a quote: <span className="mono">off</span> = do nothing;
-                    <span className="mono"> manual</span> = show an "Ask why" button in the dashboard;
-                    <span className="mono"> auto</span> = text them automatically asking for a reason.
-                    Their reply is captured on the quote.
-                  </p>
-                </div>
-                <select
-                  value={profile?.decline_followup_mode ?? "off"}
-                  disabled={setDeclineMode.isPending}
-                  onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
-                  className="mono rounded-sm border border-border bg-background px-3 py-2 text-xs uppercase tracking-wider"
-                >
-                  <option value="off">Off</option>
-                  <option value="manual">Manual</option>
-                  <option value="auto">Auto</option>
-                </select>
-              </div>
-            </div>
 
             <div className="mt-6 border-t border-border pt-4">
               <div className="flex items-center justify-between">
@@ -237,7 +234,6 @@ function SettingsPage() {
 
 
 
-
         <div className="panel p-6">
           <div className="label-eyebrow">Billing</div>
           <h2 className="mt-1 text-xl">Subscription</h2>
@@ -257,6 +253,27 @@ function SettingsPage() {
           </p>
         </div>
 
+        <OnlinePaymentsPanel
+          stripe_connect_account_id={profile?.stripe_connect_account_id}
+          stripe_connect_status={profile?.stripe_connect_status}
+          platform_fee_percent={profile?.platform_fee_percent}
+          stripe_connect_connected_at={profile?.stripe_connect_connected_at}
+        />
+
+        <DepositDefaultsPanel
+          defaultType={profile?.default_deposit_type}
+          defaultFixedAmount={profile?.default_deposit_fixed_amount}
+          allowOverride={profile?.allow_deposit_override_per_quote}
+        />
+
+        <ExcludedNumbersPanel />
+
+        <TeamMembersPanel tier={profile?.subscription_tier} />
+      </div>
+      )}
+
+      {tab === "advanced" && (
+      <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
         <OptInPromptSettingsPanel
           businessName={profile?.business_name}
           template={profile?.opt_in_prompt_template}
@@ -266,30 +283,33 @@ function SettingsPage() {
           lastTestPhone={profile?.last_test_phone}
         />
 
-        <DepositDefaultsPanel
-          defaultType={profile?.default_deposit_type}
-          defaultFixedAmount={profile?.default_deposit_fixed_amount}
-          allowOverride={profile?.allow_deposit_override_per_quote}
-        />
-
-        <OnlinePaymentsPanel
-          stripe_connect_account_id={profile?.stripe_connect_account_id}
-          stripe_connect_status={profile?.stripe_connect_status}
-          platform_fee_percent={profile?.platform_fee_percent}
-          stripe_connect_connected_at={profile?.stripe_connect_connected_at}
-        />
-
+        <div className="panel p-6 md:col-span-2">
+          <div className="label-eyebrow">Automation</div>
+          <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              When a customer declines a quote: <span className="mono">off</span> = do nothing;
+              <span className="mono"> manual</span> = show an "Ask why" button in the dashboard;
+              <span className="mono"> auto</span> = text them automatically asking for a reason.
+              Their reply is captured on the quote.
+            </p>
+            <select
+              value={profile?.decline_followup_mode ?? "off"}
+              disabled={setDeclineMode.isPending}
+              onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
+              className="mono rounded-sm border border-border bg-background px-3 py-2 text-xs uppercase tracking-wider"
+            >
+              <option value="off">Off</option>
+              <option value="manual">Manual</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
+        </div>
 
         {!isStaff && <WebhookCheckPanel />}
         {!isStaff && <WebhookEventLogPanel />}
 
-        <ExcludedNumbersPanel />
-
-        <TeamMembersPanel tier={profile?.subscription_tier} />
-
-
         <div className="panel p-6 md:col-span-2">
-
           <div className="label-eyebrow">Compliance</div>
           <ul className="mono mt-3 space-y-2 text-xs text-muted-foreground">
             <li>· Every outbound SMS ends with "Reply STOP to unsubscribe."</li>
@@ -299,9 +319,11 @@ function SettingsPage() {
           </ul>
         </div>
       </div>
+      )}
     </div>
   );
 }
+
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
