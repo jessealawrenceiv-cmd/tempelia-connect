@@ -58,7 +58,7 @@ function OverviewPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Ops · This month" title="Overview" />
+      <PageHeader eyebrow="Today" title="Overview" />
 
       <div className="grid gap-4 p-5 md:grid-cols-4 md:p-8">
         <StatCard tone="orange" icon={<PhoneMissed size={18} />} label="Calls captured" value={stats?.calls ?? 0} />
