@@ -328,7 +328,8 @@ function HomePage() {
                     to="/dashboard/intakes"
                     search={{ intakeId: i.id }}
                     hash={`intake-${i.id}`}
-                    className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
+                    title="Open this request in Intakes"
+                    className="mono kb-focus flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
                   >
                     <span className="mono text-[10px] uppercase tracking-widest text-orange">New request</span>
                     <span className="font-medium text-foreground">
@@ -337,6 +338,9 @@ function HomePage() {
                     <span className="text-muted-foreground">wants a quote</span>
                     <span className="mono text-[10px] uppercase tracking-widest text-moss">
                       {relativeTime(i.submitted_at)}
+                    </span>
+                    <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
+                      <ChevronRight size={12} /> open request
                     </span>
                   </Link>
                   <button
