@@ -128,6 +128,8 @@ test.describe("Settings · auto-refresh interval", () => {
     await expect(intervalInput).toHaveValue("1");
 
     // Wait for one auto-refresh tick (interval is 1 minute).
+    const visibility = await page.evaluate(() => document.visibilityState);
+    console.log("document.visibilityState:", visibility);
     const beforeIso = new Date().toISOString();
     await page.waitForTimeout(65_000);
 
