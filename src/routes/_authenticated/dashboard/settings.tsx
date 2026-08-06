@@ -160,7 +160,9 @@ function SettingsPage() {
           <span className="text-foreground">{a.mode}</span>
         </button>
       ))}
-      <div className="border-t border-border pt-1">Last evaluated {evaluatedLabel}</div>
+      <div className="border-t border-border pt-1">
+        Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
+      </div>
     </div>
   );
 
