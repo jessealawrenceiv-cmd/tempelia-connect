@@ -352,11 +352,14 @@ function SettingsPage() {
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={refreshStatuses}
-                disabled={isRefreshingStatuses}
+                onClick={() => {
+                  if (isRefreshingStatuses) return;
+                  refreshStatuses();
+                }}
+                aria-disabled={isRefreshingStatuses}
                 aria-busy={isRefreshingStatuses}
                 aria-label="Retry refreshing automation statuses"
-                className="flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground hover:bg-orange/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:cursor-not-allowed disabled:opacity-40"
+                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses ? "cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
               >
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
                 {isRefreshingStatuses ? "Retrying…" : "Retry"}
