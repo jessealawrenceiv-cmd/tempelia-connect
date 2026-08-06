@@ -724,6 +724,10 @@ function SettingsPage() {
         second: "2-digit",
       });
       const changed = before !== after;
+      announceTooltipStatus(
+        `Opt-in prompt & cooldown ${optInPromptActive ? "ACTIVE" : "ON HOLD"}. ` +
+          `${changed ? "Statuses updated" : "Statuses already current"} — re-checked at ${checkedAt}.`,
+      );
       void logStatusRefresh(changed ? "updated" : "already_current", {
         trigger,
         outcome: changed ? "Statuses updated" : "Statuses already current",
