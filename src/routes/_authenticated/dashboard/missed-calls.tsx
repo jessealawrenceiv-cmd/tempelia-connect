@@ -329,7 +329,18 @@ function MissedCallsPage() {
           </span>
         </div>
 
+        {!OPT_IN_PROMPT_REAL_SENDS_ENABLED && (
+          <div className="rounded-sm border border-violet/50 bg-violet/10 p-3">
+            <div className="text-[10px] uppercase tracking-widest text-violet">
+              Opt-in prompt on hold
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{OPT_IN_PROMPT_HOLD_REASON}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{OPT_IN_PROMPT_ENGAGEMENT_RULE}</p>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-3">
+
           <button
             type="button"
             onClick={exportCsv}
