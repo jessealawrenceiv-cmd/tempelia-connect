@@ -239,7 +239,11 @@ function HomePage() {
   })();
 
   const attentionCount =
-    (attention?.sent.length ?? 0) + (attention?.intakes.length ?? 0) + (attention?.declined.length ?? 0);
+    (attention?.sent.length ?? 0) +
+    (attention?.intakes.length ?? 0) +
+    (attention?.declined.length ?? 0) +
+    (attention?.accepted.length ?? 0);
+
 
   return (
     <div>
