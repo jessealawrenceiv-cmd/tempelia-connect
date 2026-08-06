@@ -32,6 +32,9 @@ function SettingsPage() {
   const [tab, setTab] = useState<"settings" | "advanced">("settings");
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(15);
+
 
   const { data: profile, refetch: refetchProfile, dataUpdatedAt: profileUpdatedAt } = useQuery({
     queryKey: ["profile"],
@@ -244,10 +247,15 @@ function SettingsPage() {
 
 
   useEffect(() => {
-    if (profile) setOwnerPhone(profile.owner_phone ?? "");
+    if (profile) {
+      setOwnerPhone(profile.owner_phone ?? "");
+      setAutoRefreshEnabled(profile.auto_refresh_enabled ?? false);
+      setAutoRefreshInterval(profile.auto_refresh_interval_minutes ?? 15);
+    }
   }, [profile]);
 
   const save = useMutation({
+
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
@@ -306,8 +314,28 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateAutoRefresh = useMutation({
+    mutationFn: async (values: { enabled: boolean; intervalMinutes: number }) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({
+          auto_refresh_enabled: values.enabled,
+          auto_refresh_interval_minutes: values.intervalMinutes,
+        })
+        .eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auto-refresh settings saved.");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const declineMode = (profile?.decline_followup_mode ?? "off") as "off" | "manual" | "auto";
+
   const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
   const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
 
@@ -361,6 +389,8 @@ function SettingsPage() {
   };
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
+
+
   useEffect(() => {
     if (!refreshError || isRefreshingStatuses || isInCooldown) return;
     const id = window.requestAnimationFrame(() => {
@@ -437,7 +467,7 @@ function SettingsPage() {
   // Start of the window this refresh covers (previous re-check, else last 24h).
   const lastRefreshAtRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-  // Dispatch-style activity entry for each manual status re-check.
+  // Dispatch-style activity entry for each status re-check.
   const logStatusRefresh = async (
     status: "already_current" | "updated" | "failed",
     detail: Record<string, unknown>,
@@ -447,7 +477,7 @@ function SettingsPage() {
       if (!u.user) return;
       const windowStart = lastRefreshAtRef.current;
       const affected = status === "failed" ? [] : await collectAffected(windowStart);
-      await supabase.from("logs").insert({
+      const { error } = await supabase.from("logs").insert({
         user_id: u.user.id,
         action_type: "status_refresh",
         status,
@@ -459,6 +489,7 @@ function SettingsPage() {
           ...detail,
         }),
       });
+      if (error) throw error;
       if (status !== "failed") lastRefreshAtRef.current = new Date().toISOString();
       void qc.invalidateQueries({ queryKey: ["logs"] });
     } catch {
@@ -466,7 +497,7 @@ function SettingsPage() {
     }
   };
 
-  const refreshStatuses = async () => {
+  const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
     setIsRefreshingStatuses(true);
     setRefreshError(null);
     const before = statusSnapshot(profile);
@@ -488,15 +519,22 @@ function SettingsPage() {
       });
       const changed = before !== after;
       void logStatusRefresh(changed ? "updated" : "already_current", {
+        trigger,
         outcome: changed ? "Statuses updated" : "Statuses already current",
         duration_ms: Date.now() - startedAt,
         checked_at_local: checkedAt,
       });
-      if (!changed) {
-        toast.success("Statuses already current", {
-          description: `No changes since the last check · re-checked at ${checkedAt}.`,
-        });
-      } else {
+      if (trigger === "manual") {
+        if (!changed) {
+          toast.success("Statuses already current", {
+            description: `No changes since the last check · re-checked at ${checkedAt}.`,
+          });
+        } else {
+          toast.success("Statuses updated", {
+            description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
+          });
+        }
+      } else if (changed) {
         toast.success("Statuses updated", {
           description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
         });
@@ -513,6 +551,7 @@ function SettingsPage() {
         setCooldownMs(duration);
       }
       void logStatusRefresh("failed", {
+        trigger,
         outcome: "Refresh failed",
         error: message,
         error_code: code,
@@ -524,10 +563,43 @@ function SettingsPage() {
     }
   };
 
+  // Optional auto-refresh: re-evaluate statuses on a configurable interval while
+  // this Settings page is visible. Skips ticks when hidden, already refreshing,
+  // or in a failure cooldown.
+  const autoRefreshTickRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    autoRefreshTickRef.current = () => {
+      if (isRefreshingStatuses || isInCooldown) return;
+      if (document.visibilityState !== "visible") return;
+      void refreshStatuses("auto");
+    };
+  }, [isRefreshingStatuses, isInCooldown, refreshStatuses]);
 
+  useEffect(() => {
+    const enabled = profile?.auto_refresh_enabled ?? false;
+    if (!enabled) return;
+    const intervalMs = Math.max(60_000, (profile?.auto_refresh_interval_minutes ?? 15) * 60_000);
+
+    const id = window.setInterval(() => {
+      autoRefreshTickRef.current?.();
+    }, intervalMs);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        autoRefreshTickRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [profile?.auto_refresh_enabled, profile?.auto_refresh_interval_minutes]);
 
 
   const highlightTimersRef = useRef<Map<HTMLElement, number[]>>(new Map());
+
   useEffect(() => {
     const timers = highlightTimersRef.current;
     return () => {
@@ -622,10 +694,11 @@ function SettingsPage() {
         <button
           type="button"
           disabled={isRefreshingStatuses || isInCooldown}
-          onClick={() => {
-            if (isRefreshingStatuses || isInCooldown) return;
-            refreshStatuses();
-          }}
+                onClick={() => {
+                  if (isRefreshingStatuses || isInCooldown) return;
+                  refreshStatuses("manual");
+                }}
+
           aria-disabled={isRefreshingStatuses || isInCooldown}
           aria-busy={isRefreshingStatuses}
           aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
@@ -652,8 +725,9 @@ function SettingsPage() {
                 disabled={isRefreshingStatuses || isInCooldown}
                 onClick={() => {
                   if (isRefreshingStatuses || isInCooldown) return;
-                  refreshStatuses();
+                  refreshStatuses("manual");
                 }}
+
                 aria-disabled={isRefreshingStatuses || isInCooldown}
                 aria-busy={isRefreshingStatuses}
                 aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
@@ -900,8 +974,9 @@ function SettingsPage() {
                 type="button"
                 onClick={() => {
                   if (isRefreshingStatuses || isInCooldown) return;
-                  refreshStatuses();
+                  refreshStatuses("manual");
                 }}
+
                 aria-disabled={isRefreshingStatuses || isInCooldown}
                 aria-busy={isRefreshingStatuses}
                 aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
@@ -965,7 +1040,68 @@ function SettingsPage() {
 
       {tab === "advanced" && (
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
+        <div className="panel p-6 md:col-span-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="label-eyebrow">Automation</div>
+              <h2 className="mt-1 text-xl">Auto-refresh statuses</h2>
+            </div>
+            <AutomationBadge state={profile?.auto_refresh_enabled ? "active" : "off"} />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Automatically re-check automation statuses while this Settings page is open. Manual refresh and failure cooldown always take precedence.
+          </p>
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-primary"
+                checked={autoRefreshEnabled}
+                disabled={updateAutoRefresh.isPending}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setAutoRefreshEnabled(enabled);
+                  updateAutoRefresh.mutate({ enabled, intervalMinutes: autoRefreshInterval });
+                }}
+              />
+              {autoRefreshEnabled ? "Enabled" : "Disabled"}
+            </label>
+            <label className="flex flex-1 items-center gap-2">
+              <span className="label-eyebrow whitespace-nowrap">Every</span>
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={autoRefreshInterval}
+                disabled={updateAutoRefresh.isPending}
+                onChange={(e) => {
+                  const raw = parseInt(e.target.value, 10);
+                  const intervalMinutes = Number.isNaN(raw) ? 1 : Math.max(1, Math.min(120, raw));
+                  setAutoRefreshInterval(intervalMinutes);
+                }}
+                onBlur={() => {
+                  if (profile?.auto_refresh_enabled) {
+                    updateAutoRefresh.mutate({ enabled: autoRefreshEnabled, intervalMinutes: autoRefreshInterval });
+                  }
+                }}
+                className="mono w-20 rounded-sm border border-border bg-background px-3 py-2 text-sm"
+              />
+              <span className="text-xs text-muted-foreground">minutes (1–120)</span>
+            </label>
+          </div>
+          {profile?.auto_refresh_enabled ? (
+            <p className="mono mt-3 text-[10px] uppercase tracking-widest text-moss">
+              Active · next refresh in {profile.auto_refresh_interval_minutes ?? 15} minutes while this page is visible
+            </p>
+          ) : (
+            <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+              Off · enable above to schedule automatic re-checks
+            </p>
+          )}
+        </div>
+
         <div id="adv-opt-in-prompt" className="scroll-mt-24 rounded-sm transition md:col-span-2">
+
           <OptInPromptSettingsPanel
             businessName={profile?.business_name}
             template={profile?.opt_in_prompt_template}
