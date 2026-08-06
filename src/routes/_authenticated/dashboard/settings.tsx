@@ -135,7 +135,9 @@ function SettingsPage() {
     setIsRefreshingStatuses(true);
     try {
       await refetchProfile();
-      setEvaluatedAt(new Date());
+      const nowDate = new Date();
+      setNow(nowDate);
+      setEvaluatedAt(nowDate);
       toast.success("Automation statuses refreshed.");
     } catch (e) {
       toast.error((e as Error).message ?? "Refresh failed.");
