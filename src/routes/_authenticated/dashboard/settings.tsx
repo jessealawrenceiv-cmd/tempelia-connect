@@ -164,23 +164,28 @@ function SettingsPage() {
 
   const advancedTooltip = (
     <div className="space-y-1">
-      <div className="text-foreground">Advanced automations</div>
-      {advancedAutomations.map((a) => (
-        <button
-          key={a.name}
-          type="button"
-          onClick={() => jumpToAdvanced(a.anchorId)}
-          className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground"
-        >
-          <span className="underline decoration-dotted underline-offset-2">{a.name}</span>
-          <span className="text-foreground">{a.mode}</span>
-        </button>
-      ))}
+      <div className="text-foreground" id="adv-automations-heading">Advanced automations</div>
+      <ul className="space-y-1" aria-labelledby="adv-automations-heading">
+        {advancedAutomations.map((a) => (
+          <li key={a.name}>
+            <button
+              type="button"
+              onClick={() => jumpToAdvanced(a.anchorId)}
+              aria-label={`${a.name}, mode ${a.mode}. Open in Advanced tab`}
+              className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+            >
+              <span className="underline decoration-dotted underline-offset-2">{a.name}</span>
+              <span className="text-foreground">{a.mode}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
       <div className="border-t border-border pt-1">
         Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
       </div>
     </div>
   );
+
 
 
 
