@@ -157,6 +157,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       const haystack = `${LABEL[row.action_type] ?? row.action_type} ${describe(row)}`.toLowerCase();
       if (!searchTerms.every((term) => haystack.includes(term))) return false;
     }
+    if (hasRange) {
+      const t = new Date(row.created_at).getTime();
+      if (fromISO && t < new Date(fromISO).getTime()) return false;
+      if (toISO && t > new Date(toISO).getTime()) return false;
+    }
     return true;
   });
 
