@@ -696,6 +696,31 @@ function SettingsPage() {
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
                 {isRefreshingStatuses ? "Checking…" : "Refresh statuses"}
               </button>
+              <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    realtimeState === "live"
+                      ? "bg-moss"
+                      : realtimeState === "reconnecting"
+                        ? "animate-pulse bg-orange"
+                        : "animate-pulse bg-muted-foreground"
+                  }`}
+                />
+                <span className={realtimeState === "live" ? "text-muted-foreground" : "text-orange"}>
+                  {realtimeState === "live"
+                    ? "Live"
+                    : realtimeState === "reconnecting"
+                      ? `Reconnecting${realtimeAttempt > 1 ? ` (try ${realtimeAttempt})` : ""}…`
+                      : "Connecting…"}
+                </span>
+              </div>
+
             </div>
           </div>
           <div className="mt-4 space-y-2">
