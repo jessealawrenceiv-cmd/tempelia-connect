@@ -2,7 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { endOfDay, startOfDay } from "date-fns";
 import { Filter, Search } from "lucide-react";
+import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
@@ -87,6 +89,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [scope, setScope] = useState<"live" | "archive">("live");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
@@ -100,15 +103,23 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     [searchQuery],
   );
 
+  const fromISO = dateRange?.from ? startOfDay(dateRange.from).toISOString() : undefined;
+  const toISO = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
+  const hasRange = Boolean(fromISO && toISO);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["logs", scope, limit],
+    queryKey: ["logs", scope, limit, fromISO, toISO],
     queryFn: async () => {
       if (scope === "archive") {
-        const { data } = await supabase
+        let q = supabase
           .from("logs_archive")
           .select("id, action_type, message_sent, original_created_at, status, customer_id")
-          .order("original_created_at", { ascending: false })
-          .limit(limit);
+          .order("original_created_at", { ascending: false });
+        if (fromISO) q = q.gte("original_created_at", fromISO);
+        if (toISO) q = q.lte("original_created_at", toISO);
+        if (!hasRange) q = q.limit(limit);
+        else q = q.limit(500);
+        const { data } = await q;
         return (data ?? []).map((r) => ({
           id: r.id,
           action_type: r.action_type,
@@ -118,11 +129,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           customer_id: r.customer_id,
         }));
       }
-      const { data } = await supabase
+      let q = supabase
         .from("logs")
         .select("id, action_type, message_sent, created_at, status, customer_id")
-        .order("created_at", { ascending: false })
-        .limit(limit);
+        .order("created_at", { ascending: false });
+      if (fromISO) q = q.gte("created_at", fromISO);
+      if (toISO) q = q.lte("created_at", toISO);
+      if (!hasRange) q = q.limit(limit);
+      else q = q.limit(500);
+      const { data } = await q;
       return data ?? [];
     },
   });
@@ -141,6 +156,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     if (searchTerms.length > 0) {
       const haystack = `${LABEL[row.action_type] ?? row.action_type} ${describe(row)}`.toLowerCase();
       if (!searchTerms.every((term) => haystack.includes(term))) return false;
+    }
+    if (hasRange) {
+      const t = new Date(row.created_at).getTime();
+      if (fromISO && t < new Date(fromISO).getTime()) return false;
+      if (toISO && t > new Date(toISO).getTime()) return false;
     }
     return true;
   });
@@ -229,6 +249,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             )}
           </div>
 
+          <DateRangePicker
+            value={dateRange}
+            onChange={(next) => {
+              setDateRange(next);
+            }}
+            placeholder="Date range"
+          />
+
           <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
             <input
               type="checkbox"
@@ -297,7 +325,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         {!isLoading && filtered.length === 0 && (
           <li className="p-5 text-muted-foreground">
             {data?.length !== 0
-              ? "No entries match the selected filters."
+              ? hasRange
+                ? "No entries in the selected date range. Try widening the range or clearing filters."
+                : "No entries match the selected filters."
               : scope === "archive"
                 ? "Nothing archived yet. Entries older than 90 days move here automatically."
                 : "No dispatches yet. Actions will appear here in real time."}
