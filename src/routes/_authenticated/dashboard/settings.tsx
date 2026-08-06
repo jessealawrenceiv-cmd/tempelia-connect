@@ -604,9 +604,16 @@ function AutomationBadge({
   const hide = (e?: React.SyntheticEvent) => {
     const next = "relatedTarget" in (e ?? {}) ? ((e as React.FocusEvent).relatedTarget as Node | null) : null;
     if (!next || !containerRef.current?.contains(next)) {
+      const blurredFromContent =
+        !!e && e.target instanceof Node && e.target !== triggerRef.current;
       setOpen(false);
+      if (blurredFromContent && !next) {
+        // outside click / focus loss from tooltip content: hand focus back to the badge
+        window.setTimeout(() => triggerRef.current?.focus(), 0);
+      }
     }
   };
+
 
   return (
     <span ref={containerRef} className="relative shrink-0">
