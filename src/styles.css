@@ -192,3 +192,24 @@
     }
   }
 }
+
+/* Reduced-motion: strip every animation/transition so tooltip open/close and
+   refresh-state changes are instantaneous. Transitions that run while focus is
+   being handed back can otherwise delay hit-testing, fire spurious mouseleave,
+   or leave a control non-interactive mid-keyboard-navigation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Keep focus rings crisp and immediate. */
+  .kb-focus:focus-visible {
+    transition: none !important;
+  }
+}
