@@ -86,6 +86,7 @@ function SettingsPage() {
   // Auto-reconnects with backoff and surfaces a live/reconnecting indicator.
   const [realtimeState, setRealtimeState] = useState<"connecting" | "live" | "reconnecting">("connecting");
   const [realtimeAttempt, setRealtimeAttempt] = useState(0);
+  const [statusAnnouncement, setStatusAnnouncement] = useState("");
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
