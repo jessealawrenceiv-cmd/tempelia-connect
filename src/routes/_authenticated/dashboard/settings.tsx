@@ -1248,13 +1248,16 @@ const AutomationBadge = forwardRef<
   useImperativeHandle(ref, () => ({
     contains: (el: Node | null) => containerRef.current?.contains(el ?? null) ?? false,
     restoreFocus: (el: HTMLElement | null) => {
+      console.log("[restoreFocus] called with", el?.getAttribute("aria-label"), "isConnected=", el?.isConnected, "disabled=", (el as HTMLButtonElement | null)?.disabled);
       if (!el || !el.isConnected) return;
       // Reopen the tooltip if it closed, then hand focus back to the element.
       setOpen(true);
       window.setTimeout(() => {
+        console.log("[restoreFocus] focusing", el.getAttribute("aria-label"), "disabled=", (el as HTMLButtonElement | null)?.disabled);
         window.requestAnimationFrame(() => el.focus());
       }, 50);
     },
+
   }));
 
   useEffect(() => {
