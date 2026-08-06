@@ -13,6 +13,7 @@ const NAV = [
   { to: "/dashboard/missed-calls", label: "Missed Calls", icon: PhoneMissed, ownerOnly: false },
   { to: "/dashboard/contacts", label: "Contacts", icon: Users, ownerOnly: false },
   { to: "/dashboard/quotes", label: "Quotes", icon: FileText, ownerOnly: false },
+  { to: "/dashboard/invoices", label: "Invoices", icon: Receipt, ownerOnly: false },
   { to: "/dashboard/schedule", label: "Schedule", icon: CalendarDays, ownerOnly: false },
   { to: "/dashboard/reviews", label: "Reviews", icon: Star, ownerOnly: false },
   { to: "/dashboard/dead-leads", label: "Win Back", icon: Snowflake, ownerOnly: false },
