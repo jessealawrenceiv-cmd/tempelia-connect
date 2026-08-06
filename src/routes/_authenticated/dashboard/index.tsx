@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { CalendarDays, Check, ChevronDown, ChevronRight, Clock, MapPin } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ChevronRight, Clock, ExternalLink, MapPin } from "lucide-react";
 import { DispatchLog } from "@/components/DispatchLog";
 import { LastRefreshedStatus } from "@/components/LastRefreshedStatus";
 import { HomeGreetingWeather } from "@/components/HomeGreetingWeather";
@@ -328,7 +328,8 @@ function HomePage() {
                     to="/dashboard/intakes"
                     search={{ intakeId: i.id }}
                     hash={`intake-${i.id}`}
-                    className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
+                    title="Open this request in Intakes"
+                    className="mono kb-focus flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
                   >
                     <span className="mono text-[10px] uppercase tracking-widest text-orange">New request</span>
                     <span className="font-medium text-foreground">
@@ -337,6 +338,9 @@ function HomePage() {
                     <span className="text-muted-foreground">wants a quote</span>
                     <span className="mono text-[10px] uppercase tracking-widest text-moss">
                       {relativeTime(i.submitted_at)}
+                    </span>
+                    <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
+                      <ChevronRight size={12} /> open request
                     </span>
                   </Link>
                   <button
@@ -352,7 +356,14 @@ function HomePage() {
               ))}
               {attention!.sent.map((q) => (
                 <li key={`s-${q.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
-                  <Link to="/dashboard/quotes" className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline">
+                  <Link
+                    to="/quote/$quoteId"
+                    params={{ quoteId: q.id }}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Open the customer's quote page in a new tab"
+                    className="mono kb-focus flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
+                  >
                     <span className="mono text-[10px] uppercase tracking-widest text-steel">Waiting on customer</span>
                     <span className="font-medium text-foreground">
                       {q.customer_first_name} {q.customer_last_name ?? ""}
@@ -360,6 +371,9 @@ function HomePage() {
                     <span className="text-muted-foreground">quote for {money(Number(q.total_amount ?? 0))}</span>
                     <span className="mono text-[10px] uppercase tracking-widest text-moss">
                       {relativeTime(q.last_sms_sent_at ?? q.created_at)}
+                    </span>
+                    <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
+                      <ExternalLink size={11} /> open quote
                     </span>
                   </Link>
                   <button
@@ -375,7 +389,14 @@ function HomePage() {
               ))}
               {attention!.accepted.map((q) => (
                 <li key={`a-${q.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
-                  <Link to="/dashboard/quotes" className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline">
+                  <Link
+                    to="/quote/$quoteId"
+                    params={{ quoteId: q.id }}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Open the customer's quote page in a new tab"
+                    className="mono kb-focus flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
+                  >
                     <span className="mono text-[10px] uppercase tracking-widest text-orange">Accepted · book it</span>
                     <span className="font-medium text-foreground">
                       {q.customer_first_name} {q.customer_last_name ?? ""}
@@ -383,6 +404,9 @@ function HomePage() {
                     <span className="text-muted-foreground">quote for {money(Number(q.total_amount ?? 0))}</span>
                     <span className="mono text-[10px] uppercase tracking-widest text-moss">
                       {relativeTime(q.responded_at ?? q.created_at)}
+                    </span>
+                    <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
+                      <ExternalLink size={11} /> open quote
                     </span>
                   </Link>
                   <button
@@ -398,7 +422,14 @@ function HomePage() {
               ))}
               {attention!.declined.map((q) => (
                 <li key={`d-${q.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
-                  <Link to="/dashboard/quotes" className="flex flex-1 flex-wrap items-baseline gap-2 hover:underline">
+                  <Link
+                    to="/quote/$quoteId"
+                    params={{ quoteId: q.id }}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Open the customer's quote page in a new tab"
+                    className="mono kb-focus flex flex-1 flex-wrap items-baseline gap-2 hover:underline"
+                  >
                     <span className="mono text-[10px] uppercase tracking-widest text-moss">Declined · review</span>
                     <span className="font-medium text-foreground">
                       {q.customer_first_name} {q.customer_last_name ?? ""}
@@ -408,6 +439,9 @@ function HomePage() {
                     </span>
                     <span className="mono text-[10px] uppercase tracking-widest text-moss">
                       {relativeTime(q.responded_at ?? q.created_at)}
+                    </span>
+                    <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
+                      <ExternalLink size={11} /> open quote
                     </span>
                   </Link>
                   <button
