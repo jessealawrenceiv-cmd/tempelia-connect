@@ -196,6 +196,68 @@ test.describe("Settings · ACTIVE tooltip live region · refresh outcomes", () =
     await expect(refresh).toBeFocused();
   });
 
+  test("the \"Refresh already running\" notice is announced politely without stealing focus", async ({
+    page,
+  }) => {
+    const { tooltip, live, refresh } = await openTooltip(page);
+
+    // Force the server-side single-run lock to report contention.
+    await page.route("**/_serverFn/**", async (route) => {
+      if (route.request().url().includes(STATUS_REFRESH_FN)) {
+        await new Promise((r) => setTimeout(r, 200));
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            result: { ran: false, skipped: "in_progress", evaluatedAt: new Date().toISOString() },
+          }),
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    const pageLive = page.getByTestId("settings-status-live");
+
+    // The notice region is polite, atomic, announced as status, and never a tab stop.
+    await expect(pageLive).toHaveAttribute("aria-live", "polite");
+    await expect(pageLive).toHaveAttribute("aria-atomic", "true");
+    await expect(pageLive).toHaveAttribute("role", "status");
+    expect(await pageLive.getAttribute("tabindex")).toBeNull();
+    expect(
+      await pageLive.evaluate((el) => el.querySelectorAll("a,button,input,select,textarea,[tabindex]").length),
+      "a live region must contain no focusable content",
+    ).toBe(0);
+
+    await refresh.focus();
+    const focusBefore = await focusSignature(page);
+    const tooltipTextBefore = (await live.textContent())?.trim() ?? "";
+
+    await refresh.click();
+
+    // The contention notice is announced in the polite region.
+    await expect
+      .poll(async () => (await pageLive.textContent())?.trim() ?? "", {
+        message: '"Refresh already running" should be announced politely',
+        timeout: 20_000,
+      })
+      .toMatch(/A refresh is already running/i);
+
+    // Focus never moved and the region itself never took focus.
+    expect(await focusSignature(page), "focus moved while announcing the already-running notice").toBe(
+      focusBefore,
+    );
+    await expect(refresh).toBeFocused();
+    await expect(pageLive).not.toBeFocused();
+    expect(
+      await tooltip.evaluate((el) => !!document.activeElement && el.contains(document.activeElement)),
+      "focus escaped the tooltip during the announcement",
+    ).toBe(true);
+
+    // No false success claim in the tooltip region.
+    expect((await live.textContent())?.trim() ?? "").toBe(tooltipTextBefore);
+  });
+
   test("recovery after a failure announces the new successful outcome", async ({ page }) => {
     const { live, refresh } = await openTooltip(page);
     await failRefreshFn(page, "Transient refresh failure");
