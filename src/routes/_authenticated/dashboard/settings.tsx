@@ -715,16 +715,19 @@ function SettingsPage() {
 
         <button
           type="button"
-          disabled={isRefreshingStatuses || isInCooldown}
-                onClick={() => {
-                  if (isRefreshingStatuses || isInCooldown) return;
-                  refreshStatuses("manual");
-                }}
-
           aria-disabled={isRefreshingStatuses || isInCooldown}
           aria-busy={isRefreshingStatuses}
           aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
-          className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
+          onClick={() => {
+            if (isRefreshingStatuses || isInCooldown) return;
+            refreshStatuses("manual");
+          }}
+          onKeyDown={(e) => {
+            if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+              e.preventDefault();
+            }
+          }}
+          className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
         >
           <span className="flex items-center gap-1.5">
             {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
@@ -752,16 +755,19 @@ function SettingsPage() {
               <button
                 ref={retryButtonRef}
                 type="button"
-                disabled={isRefreshingStatuses || isInCooldown}
+                aria-disabled={isRefreshingStatuses || isInCooldown}
+                aria-busy={isRefreshingStatuses}
+                aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
                 onClick={() => {
                   if (isRefreshingStatuses || isInCooldown) return;
                   refreshStatuses("manual");
                 }}
-
-                aria-disabled={isRefreshingStatuses || isInCooldown}
-                aria-busy={isRefreshingStatuses}
-                aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
-                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+                    e.preventDefault();
+                  }
+                }}
+                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
               >
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
                 {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
@@ -1250,6 +1256,8 @@ const AutomationBadge = forwardRef<
     contains: (el: Node | null) => containerRef.current?.contains(el ?? null) ?? false,
     restoreFocus: (el: HTMLElement | null) => {
       if (!el || !el.isConnected) return;
+      // If focus never left, don't force it back — avoids screen-reader re-announcement.
+      if (document.activeElement === el) return;
       // Reopen the tooltip if it closed, then hand focus back to the element.
       // Wait a tick so any re-render that re-enables the control has finished.
       setOpen(true);
