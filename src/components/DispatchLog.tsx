@@ -6,13 +6,16 @@ const DOT: Record<string, string> = {
   review_request: "bg-steel",
   reactivation_text: "bg-moss",
   status_refresh: "bg-orange",
+  automation_status_change: "bg-primary",
 };
 const LABEL: Record<string, string> = {
   missed_call_text: "MISSED_CALL_TEXT",
   review_request: "REVIEW_REQUEST",
   reactivation_text: "REACTIVATION_TEXT",
   status_refresh: "STATUS_REFRESH",
+  automation_status_change: "STATUS_CHANGE",
 };
+
 
 
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
