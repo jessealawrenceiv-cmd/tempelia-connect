@@ -299,20 +299,23 @@ function IntakesPage() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      ref={(el) => { toggleRefs.current[r.id] = el; }}
                       aria-expanded={isOpen}
                       aria-controls={panelId}
-                      onClick={() =>
-                        setCollapsedIds((prev) => {
-                          const next = { ...prev };
-                          if (next[r.id]) delete next[r.id];
-                          else next[r.id] = true;
-                          return next;
-                        })
-                      }
+                      onClick={() => {
+                        if (isOpen) collapseCard(r.id);
+                        else
+                          setCollapsedIds((prev) => {
+                            const next = { ...prev };
+                            delete next[r.id];
+                            return next;
+                          });
+                      }}
                       className="mono min-h-8 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-paper focus-visible:ring-2 focus-visible:ring-violet"
                     >
                       {isOpen ? "hide details" : "show details"}
                     </button>
+
                     <button
                       type="button"
                       onClick={async () => {
