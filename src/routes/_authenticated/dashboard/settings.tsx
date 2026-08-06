@@ -724,8 +724,9 @@ function SettingsPage() {
                 disabled={isRefreshingStatuses || isInCooldown}
                 onClick={() => {
                   if (isRefreshingStatuses || isInCooldown) return;
-                  refreshStatuses();
+                  refreshStatuses("manual");
                 }}
+
                 aria-disabled={isRefreshingStatuses || isInCooldown}
                 aria-busy={isRefreshingStatuses}
                 aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
@@ -972,8 +973,9 @@ function SettingsPage() {
                 type="button"
                 onClick={() => {
                   if (isRefreshingStatuses || isInCooldown) return;
-                  refreshStatuses();
+                  refreshStatuses("manual");
                 }}
+
                 aria-disabled={isRefreshingStatuses || isInCooldown}
                 aria-busy={isRefreshingStatuses}
                 aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
