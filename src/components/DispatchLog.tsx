@@ -6,7 +6,7 @@ const DOT: Record<string, string> = {
   review_request: "bg-steel",
   reactivation_text: "bg-moss",
   status_refresh: "bg-orange",
-  automation_status_change: "bg-violet",
+  automation_status_change: "bg-primary",
 };
 const LABEL: Record<string, string> = {
   missed_call_text: "MISSED_CALL_TEXT",
