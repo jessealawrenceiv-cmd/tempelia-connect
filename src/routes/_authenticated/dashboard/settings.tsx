@@ -116,12 +116,19 @@ function SettingsPage() {
   const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
 
   const [evaluatedAt, setEvaluatedAt] = useState<Date | null>(null);
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     if (profile !== undefined) setEvaluatedAt(new Date());
   }, [profile]);
+  useEffect(() => {
+    setNow(new Date());
+    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const evaluatedLabel = evaluatedAt
     ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "—";
+  const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const jumpToAdvanced = (anchorId: string) => {
     setTab("advanced");
