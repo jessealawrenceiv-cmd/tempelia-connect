@@ -110,7 +110,7 @@ function ReviewsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Feature 02" title="Review booster" />
+      <PageHeader eyebrow="Feature 02" title="Reviews" />
       <div className="grid gap-5 p-5 md:grid-cols-[1.1fr_1fr] md:p-8">
         <div className="panel p-5">
           <div className="label-eyebrow">Mark a job complete</div>
