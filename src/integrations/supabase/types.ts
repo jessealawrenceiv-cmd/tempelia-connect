@@ -538,6 +538,33 @@ export type Database = {
           },
         ]
       }
+      log_retention_runs: {
+        Row: {
+          archived_age_count: number
+          archived_cap_count: number
+          created_at: string
+          id: string
+          purged_archive_count: number
+          ran_at: string
+        }
+        Insert: {
+          archived_age_count?: number
+          archived_cap_count?: number
+          created_at?: string
+          id?: string
+          purged_archive_count?: number
+          ran_at?: string
+        }
+        Update: {
+          archived_age_count?: number
+          archived_cap_count?: number
+          created_at?: string
+          id?: string
+          purged_archive_count?: number
+          ran_at?: string
+        }
+        Relationships: []
+      }
       logs: {
         Row: {
           action_type: string
@@ -599,6 +626,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      logs_archive: {
+        Row: {
+          action_type: string
+          archive_reason: string
+          archived_at: string
+          call_sid: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          message_sent: string | null
+          original_created_at: string
+          prompt_cooldown_minutes: number | null
+          prompt_template: string | null
+          prompt_template_hash: string | null
+          recipient_phone: string | null
+          recording_sid: string | null
+          status: string
+          twilio_message_sid: string | null
+          user_id: string
+          voicemail_url: string | null
+        }
+        Insert: {
+          action_type: string
+          archive_reason?: string
+          archived_at?: string
+          call_sid?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id: string
+          message_sent?: string | null
+          original_created_at: string
+          prompt_cooldown_minutes?: number | null
+          prompt_template?: string | null
+          prompt_template_hash?: string | null
+          recipient_phone?: string | null
+          recording_sid?: string | null
+          status: string
+          twilio_message_sid?: string | null
+          user_id: string
+          voicemail_url?: string | null
+        }
+        Update: {
+          action_type?: string
+          archive_reason?: string
+          archived_at?: string
+          call_sid?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          message_sent?: string | null
+          original_created_at?: string
+          prompt_cooldown_minutes?: number | null
+          prompt_template?: string | null
+          prompt_template_hash?: string | null
+          recipient_phone?: string | null
+          recording_sid?: string | null
+          status?: string
+          twilio_message_sid?: string | null
+          user_id?: string
+          voicemail_url?: string | null
+        }
+        Relationships: []
       }
       mcp_rate_limits: {
         Row: {
@@ -1096,6 +1186,14 @@ export type Database = {
     }
     Functions: {
       admin_access_log_prune: { Args: never; Returns: undefined }
+      archive_old_logs: {
+        Args: {
+          _archive_max_age?: string
+          _keep_per_user?: number
+          _max_age?: string
+        }
+        Returns: number
+      }
       claim_team_invite: { Args: { _invite_id: string }; Returns: boolean }
       claim_team_invites: { Args: never; Returns: number }
       cleanup_deposit_jump_debug_events: {

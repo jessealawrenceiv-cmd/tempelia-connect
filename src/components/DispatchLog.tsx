@@ -85,12 +85,28 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
+  const [scope, setScope] = useState<"live" | "archive">("live");
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["logs", limit],
+    queryKey: ["logs", scope, limit],
     queryFn: async () => {
+      if (scope === "archive") {
+        const { data } = await supabase
+          .from("logs_archive")
+          .select("id, action_type, message_sent, original_created_at, status, customer_id")
+          .order("original_created_at", { ascending: false })
+          .limit(limit);
+        return (data ?? []).map((r) => ({
+          id: r.id,
+          action_type: r.action_type,
+          message_sent: r.message_sent,
+          created_at: r.original_created_at,
+          status: r.status,
+          customer_id: r.customer_id,
+        }));
+      }
       const { data } = await supabase
         .from("logs")
         .select("id, action_type, message_sent, created_at, status, customer_id")
@@ -116,6 +132,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
 
   useEffect(() => {
+    if (scope !== "live") return;
     const latest = filtered[0];
     if (!latest || latest.id === lastAnnouncedIdRef.current) return;
     lastAnnouncedIdRef.current = latest.id;
@@ -124,7 +141,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       minute: "2-digit",
     });
     setAnnouncement(`New activity: ${LABEL[latest.action_type] ?? latest.action_type} at ${time}`);
-  }, [filtered]);
+  }, [filtered, scope]);
 
   return (
     <div className="panel">
@@ -135,13 +152,39 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       >
         {announcement}
       </div>
-      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
         <div className="label-eyebrow">Activity</div>
-        <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-moss" />
-          Live
-        </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {(["live", "archive"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={scope === key}
+                onClick={() => setScope(key)}
+                className={`kb-focus rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                  scope === key
+                    ? "bg-primary text-paper"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                }`}
+              >
+                {key === "live" ? "Recent" : "Archive"}
+              </button>
+            ))}
+          </div>
+          {scope === "live" ? (
+            <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-moss" />
+              Live
+            </span>
+          ) : (
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Archived
+            </span>
+          )}
+        </div>
       </div>
+
       <div className="border-b border-border px-5 py-3">
         <div className="flex flex-wrap items-center gap-4">
           <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -215,11 +258,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
         {!isLoading && filtered.length === 0 && (
           <li className="p-5 text-muted-foreground">
-            {data?.length === 0
-              ? "No dispatches yet. Actions will appear here in real time."
-              : "No entries match the selected filters."}
+            {data?.length !== 0
+              ? "No entries match the selected filters."
+              : scope === "archive"
+                ? "Nothing archived yet. Entries older than 90 days move here automatically."
+                : "No dispatches yet. Actions will appear here in real time."}
           </li>
         )}
+
         {filtered.map((row) => {
           const affected = parseAffected(row);
           return (
