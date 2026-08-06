@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { Filter } from "lucide-react";
+
 
 const DOT: Record<string, string> = {
   missed_call_text: "bg-orange",
