@@ -504,14 +504,11 @@ function SettingsPage() {
     }
   }, [collectAffected, qc]);
 
-  const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
+  const refreshStatuses = useCallback(async (trigger: "manual" | "auto" = "manual") => {
     // Remember the exact element that had focus inside the ACTIVE tooltip so we
     // can hand focus back to it after the refresh button flips from disabled.
     const focusBefore = document.activeElement as HTMLElement | null;
     const focusWasInTooltip = focusBefore ? advancedBadgeRef.current?.contains(focusBefore) ?? false : false;
-
-
-
 
     setIsRefreshingStatuses(true);
     setRefreshError(null);
@@ -586,7 +583,7 @@ function SettingsPage() {
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
-  };
+  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts]);
 
   // Optional auto-refresh: re-evaluate statuses on a configurable interval while
   // this Settings page is visible. Skips ticks when hidden, already refreshing,
