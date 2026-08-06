@@ -165,13 +165,53 @@ function HomePage() {
     },
   });
 
-  const markIntakeContacted = useMutation({
+  // Last dismissal from this session, so an accidental "Mark complete" can be
+  // reversed from the panel header even after the toast disappears.
+  const [lastDismissed, setLastDismissed] = useState<
+    | { kind: "intake"; id: string; label: string }
+    | { kind: "quote"; id: string; label: string }
+    | null
+  >(null);
+
+  const undoIntake = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("intake_submissions").update({ status: "contacted" }).eq("id", id);
+      const { error } = await supabase.from("intake_submissions").update({ status: "new" }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success("Marked contacted");
+    onSuccess: (_d, id) => {
+      toast.success("Brought back — this request is waiting on you again");
+      setLastDismissed((prev) => (prev?.kind === "intake" && prev.id === id ? null : prev));
+      qc.invalidateQueries({ queryKey: ["home", "attention"] });
+      qc.invalidateQueries({ queryKey: ["intakes"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const undoHideQuote = useMutation({
+    mutationFn: async (quoteId: string) => {
+      const { error } = await supabase.from("home_quote_dismissals").delete().eq("quote_id", quoteId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, quoteId) => {
+      toast.success("Brought back to Home");
+      setLastDismissed((prev) => (prev?.kind === "quote" && prev.id === quoteId ? null : prev));
+      qc.invalidateQueries({ queryKey: ["home", "attention"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const markIntakeContacted = useMutation({
+    mutationFn: async (item: { id: string; label: string }) => {
+      const { error } = await supabase.from("intake_submissions").update({ status: "contacted" }).eq("id", item.id);
+      if (error) throw error;
+      return item;
+    },
+    onSuccess: (item) => {
+      setLastDismissed({ kind: "intake", id: item.id, label: item.label });
+      toast.success("Marked contacted", {
+        action: { label: "Undo", onClick: () => undoIntake.mutate(item.id) },
+        duration: 10000,
+      });
       qc.invalidateQueries({ queryKey: ["home", "attention"] });
       qc.invalidateQueries({ queryKey: ["intakes"] });
     },
@@ -179,7 +219,13 @@ function HomePage() {
   });
 
   const hideQuote = useMutation({
-    mutationFn: async (q: { id: string; user_id: string; status: string; decline_reason?: string | null }) => {
+    mutationFn: async (q: {
+      id: string;
+      user_id: string;
+      status: string;
+      decline_reason?: string | null;
+      label: string;
+    }) => {
       const { data: u } = await supabase.auth.getUser();
       const { error } = await supabase.from("home_quote_dismissals").upsert(
         {
@@ -193,13 +239,27 @@ function HomePage() {
         { onConflict: "quote_id" },
       );
       if (error) throw error;
+      return q;
     },
-    onSuccess: () => {
-      toast.success("Hidden from Home — the quote itself is untouched and still live");
+    onSuccess: (q) => {
+      setLastDismissed({ kind: "quote", id: q.id, label: q.label });
+      toast.success("Hidden from Home — the quote itself is untouched and still live", {
+        action: { label: "Undo", onClick: () => undoHideQuote.mutate(q.id) },
+        duration: 10000,
+      });
       qc.invalidateQueries({ queryKey: ["home", "attention"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const undoing = undoIntake.isPending || undoHideQuote.isPending;
+
+  function undoLast() {
+    if (!lastDismissed) return;
+    if (lastDismissed.kind === "intake") undoIntake.mutate(lastDismissed.id);
+    else undoHideQuote.mutate(lastDismissed.id);
+  }
+
 
 
   const { data: money7 } = useQuery({
