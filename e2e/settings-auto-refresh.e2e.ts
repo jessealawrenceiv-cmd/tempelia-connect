@@ -134,7 +134,7 @@ test.describe("Settings · auto-refresh interval", () => {
     // Verify the Activity log received a status_refresh row triggered by auto.
     const row = await latestStatusRefresh(api!);
     expect(row).not.toBeNull();
-    expect(new Date(row!.created_at).toISOString()).toBeGreaterThan(beforeIso);
+    expect(new Date(row!.created_at).getTime()).toBeGreaterThan(new Date(beforeIso).getTime());
     const payload = JSON.parse(row!.message_sent) as Record<string, unknown>;
     expect(payload["trigger"]).toBe("auto");
     expect(row!.status).toMatch(/^(updated|already_current)$/);
