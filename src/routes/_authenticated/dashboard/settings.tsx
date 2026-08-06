@@ -339,6 +339,17 @@ function SettingsPage() {
   const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshAttempts, setRefreshAttempts] = useState(0);
+  // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
+  const retryButtonRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (!refreshError || isRefreshingStatuses) return;
+    const id = window.requestAnimationFrame(() => {
+      const el = retryButtonRef.current;
+      if (el && el.isConnected) el.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [refreshError, isRefreshingStatuses]);
+
 
   // Snapshot of the fields that drive the automation status badges, so the
   // refresh toast can say whether anything actually changed.
