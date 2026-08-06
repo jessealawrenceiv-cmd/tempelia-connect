@@ -408,10 +408,12 @@ function AutomationBadge({
   state,
   label,
   activeCount,
+  tooltip,
 }: {
   state: "active" | "manual" | "hold" | "off";
   label?: string;
   activeCount?: number;
+  tooltip?: React.ReactNode;
 }) {
   const styles: Record<string, string> = {
     active: "border-moss/60 bg-moss/15 text-moss",
@@ -421,11 +423,12 @@ function AutomationBadge({
   };
   const defaults: Record<string, string> = {
     active: activeCount ? `${activeCount} active` : "Active",
+    homeless: "",
     manual: "Manual",
     hold: "On hold",
     off: "Off",
   };
-  return (
+  const badge = (
     <span
       className={`mono shrink-0 rounded-sm border px-2 py-1 text-[10px] uppercase tracking-widest ${styles[state]}`}
     >
@@ -435,7 +438,24 @@ function AutomationBadge({
       {label ?? defaults[state]}
     </span>
   );
+
+  if (!tooltip) return badge;
+
+  return (
+    <span className="group relative shrink-0">
+      <span tabIndex={0} className="cursor-help outline-none">
+        {badge}
+      </span>
+      <span
+        role="tooltip"
+        className="mono pointer-events-none absolute right-0 top-full z-20 mt-2 hidden w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg group-hover:block group-focus-within:block"
+      >
+        {tooltip}
+      </span>
+    </span>
+  );
 }
+
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
 
