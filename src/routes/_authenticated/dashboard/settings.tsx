@@ -53,6 +53,17 @@ function SettingsPage() {
     if (intg) setReviewUrl(intg.google_review_url ?? "");
   }, [intg]);
 
+  // Snapshot of the status-relevant profile fields, so realtime updates can be described.
+  const statusSnapshotRef = useRef<{ voicemail: boolean; decline: string } | null>(null);
+  useEffect(() => {
+    if (profile) {
+      statusSnapshotRef.current = {
+        voicemail: !!profile.voicemail_enabled,
+        decline: profile.decline_followup_mode ?? "off",
+      };
+    }
+  }, [profile]);
+
   // Live status: refresh the ACTIVE badge/tooltip the moment the profile row changes.
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -65,8 +76,28 @@ function SettingsPage() {
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${u.user.id}` },
-          () => {
+          (payload) => {
             void qc.invalidateQueries({ queryKey: ["profile"] });
+
+            const next = payload.new as Record<string, unknown> | null;
+            const prev = statusSnapshotRef.current;
+            if (!next || !prev) return;
+
+            const nextVoicemail = !!next["voicemail_enabled"];
+            const nextDecline = (next["decline_followup_mode"] as string) ?? "off";
+            const changes: string[] = [];
+            if (nextVoicemail !== prev.voicemail) {
+              changes.push(`Voicemail ${nextVoicemail ? "ACTIVE" : "OFF"}`);
+            }
+            if (nextDecline !== prev.decline) {
+              changes.push(`Declined-quote follow-up ${nextDecline.toUpperCase()}`);
+            }
+            if (changes.length === 0) return;
+
+            statusSnapshotRef.current = { voicemail: nextVoicemail, decline: nextDecline };
+            toast.success("Automation status updated", {
+              description: `${changes.join(" · ")} — live at ${new Date().toLocaleTimeString()}`,
+            });
           },
         )
         .subscribe();
@@ -76,6 +107,7 @@ function SettingsPage() {
       if (channel) void supabase.removeChannel(channel);
     };
   }, [qc]);
+
 
 
   useEffect(() => {
