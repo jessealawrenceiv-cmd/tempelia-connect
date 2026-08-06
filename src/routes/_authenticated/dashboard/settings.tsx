@@ -108,6 +108,7 @@ function SettingsPage() {
   const [statusAnnouncement, setStatusAnnouncement] = useState("");
   const [realtimeToasts, setRealtimeToasts] = useState(true);
   const realtimeToastsRef = useRef(true);
+  const [reconnectSignal, setReconnectSignal] = useState(0);
 
   // Toast preference persists per browser; the aria-live announcement always fires.
   useEffect(() => {
@@ -123,6 +124,15 @@ function SettingsPage() {
     setRealtimeToasts(on);
     realtimeToastsRef.current = on;
     window.localStorage.setItem("temaro:realtime-toasts", on ? "1" : "0");
+  }, []);
+
+  const manualReconnect = useCallback(() => {
+    setRealtimeState("connecting");
+    setStatusAnnouncement("Reconnecting manually…");
+    if (realtimeToastsRef.current) {
+      toast.info("Reconnecting now", { description: "Forcing a fresh Realtime connection." });
+    }
+    setReconnectSignal((n) => n + 1);
   }, []);
 
   // Announce (and optionally toast) every connection-state transition.
