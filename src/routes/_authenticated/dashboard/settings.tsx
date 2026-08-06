@@ -1018,6 +1018,19 @@ function SettingsPage() {
             </div>
             <AutomationBadge
               state={declineMode === "auto" ? "active" : declineMode === "manual" ? "manual" : "off"}
+              tooltip={
+                <div className="space-y-2 normal-case tracking-normal">
+                  <div className="text-foreground">Declined-quote follow-up</div>
+                  <p className="text-muted-foreground">
+                    {declineMode === "auto"
+                      ? "Automatically texts the customer asking why they declined, then captures their reply on the quote."
+                      : declineMode === "manual"
+                        ? "Shows an Ask why button in the dashboard so you can request feedback manually."
+                        : "No follow-up is sent when a quote is declined."}
+                  </p>
+                  <TooltipCloseButton />
+                </div>
+              }
             />
 
           </div>
@@ -1099,11 +1112,36 @@ function SettingsPage() {
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
               <span className="text-xs text-muted-foreground">Opt-in prompt & cooldown</span>
-              <AutomationBadge state={optInPromptActive ? "active" : "hold"} />
+              <AutomationBadge
+                state={optInPromptActive ? "active" : "hold"}
+                tooltip={
+                  <div className="space-y-2 normal-case tracking-normal">
+                    <div className="text-foreground">Opt-in prompt & cooldown</div>
+                    <p className="text-muted-foreground">
+                      {optInPromptActive
+                        ? "Prompts can be sent to contacts with a genuine prior inbound engagement. A cooldown prevents duplicate prompts."
+                        : "Real sends to customer numbers are paused. You can still edit the template and send test messages to your own number."}
+                    </p>
+                    <TooltipCloseButton />
+                  </div>
+                }
+              />
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs text-muted-foreground">Inbound webhook diagnostics</span>
-              <AutomationBadge state="off" label="Manual tool" />
+              <AutomationBadge
+                state="off"
+                label="Manual tool"
+                tooltip={
+                  <div className="space-y-2 normal-case tracking-normal">
+                    <div className="text-foreground">Inbound webhook diagnostics</div>
+                    <p className="text-muted-foreground">
+                      A manual diagnostic tool for checking Twilio webhook connectivity and recent payload history. It does not run automatically.
+                    </p>
+                    <TooltipCloseButton />
+                  </div>
+                }
+              />
             </div>
           </div>
           <button
@@ -1130,7 +1168,20 @@ function SettingsPage() {
               <div className="label-eyebrow">Automation</div>
               <h2 className="mt-1 text-xl">Auto-refresh statuses</h2>
             </div>
-            <AutomationBadge state={profile?.auto_refresh_enabled ? "active" : "off"} />
+            <AutomationBadge
+              state={profile?.auto_refresh_enabled ? "active" : "off"}
+              tooltip={
+                <div className="space-y-2 normal-case tracking-normal">
+                  <div className="text-foreground">Auto-refresh statuses</div>
+                  <p className="text-muted-foreground">
+                    {profile?.auto_refresh_enabled
+                      ? "Periodically refreshes automation status badges while this page is open."
+                      : "Status badges only refresh when you open the page or click Refresh statuses."}
+                  </p>
+                  <TooltipCloseButton />
+                </div>
+              }
+            />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             Automatically re-check automation statuses while this Settings page is open. Manual refresh and failure cooldown always take precedence.
