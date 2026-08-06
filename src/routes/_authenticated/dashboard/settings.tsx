@@ -88,7 +88,12 @@ function SettingsPage() {
   };
 
   // Snapshot of the status-relevant profile fields, so realtime updates can be described.
-  const statusSnapshotRef = useRef<{ voicemail: boolean; decline: string } | null>(null);
+  const statusSnapshotRef = useRef<{
+    voicemail: boolean;
+    decline: string;
+    review: boolean;
+    intake: boolean;
+  } | null>(null);
   useEffect(() => {
     if (!profile) return;
     const prev = statusSnapshotRef.current;
@@ -102,6 +107,12 @@ function SettingsPage() {
         prev && hasPendingLocalEdit("decline_followup_mode")
           ? prev.decline
           : profile.decline_followup_mode ?? "off",
+      review:
+        prev && hasPendingLocalEdit("review_requests_enabled")
+          ? prev.review
+          : profile.review_requests_enabled !== false,
+      intake:
+        prev && hasPendingLocalEdit("intake_enabled") ? prev.intake : !!profile.intake_enabled,
     };
   }, [profile]);
   const [lastUpdate, setLastUpdate] = useState<
