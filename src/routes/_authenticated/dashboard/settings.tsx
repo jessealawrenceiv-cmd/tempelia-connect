@@ -477,7 +477,7 @@ function SettingsPage() {
       if (!u.user) return;
       const windowStart = lastRefreshAtRef.current;
       const affected = status === "failed" ? [] : await collectAffected(windowStart);
-      await supabase.from("logs").insert({
+      const { error } = await supabase.from("logs").insert({
         user_id: u.user.id,
         action_type: "status_refresh",
         status,
@@ -489,9 +489,11 @@ function SettingsPage() {
           ...detail,
         }),
       });
+      if (error) throw error;
       if (status !== "failed") lastRefreshAtRef.current = new Date().toISOString();
       void qc.invalidateQueries({ queryKey: ["logs"] });
-    } catch {
+    } catch (e) {
+      console.error("[logStatusRefresh] failed:", e);
       // logging must never block the refresh itself
     }
   };
