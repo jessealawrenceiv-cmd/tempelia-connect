@@ -1026,6 +1026,7 @@ function SettingsPage() {
       evaluatedAt,
       lastUpdate,
       tooltipStatusMessage,
+      refreshAttempts,
       jumpToAdvanced,
       refreshStatuses,
     ],
