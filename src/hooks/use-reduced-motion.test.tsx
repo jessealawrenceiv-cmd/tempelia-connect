@@ -196,10 +196,13 @@ describe("useReducedMotion", () => {
     expect(() => unmount()).not.toThrow();
   });
 
-  it("does not crash on browsers lacking addEventListener on MediaQueryList", () => {
+  it("documents the modern listener API requirement", () => {
+    // The hook uses addEventListener("change") only — supported by every
+    // browser this app targets. A MediaQueryList without it is not supported.
     installMatchMedia(true, { legacy: true });
-    expect(() => renderHook(() => useReducedMotion())).not.toThrow();
+    expect(() => renderHook(() => useReducedMotion())).toThrow(/addEventListener/);
   });
+
 });
 
 describe("prefersReducedMotion", () => {
