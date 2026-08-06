@@ -823,7 +823,15 @@ function AutomationBadge({
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            setOpen((o) => !o);
+            const nextOpen = !open;
+            setOpen(nextOpen);
+            if (nextOpen) {
+              window.setTimeout(() => {
+                containerRef.current
+                  ?.querySelector<HTMLButtonElement>(`#${CSS.escape(tooltipId)} button`)
+                  ?.focus();
+              }, 0);
+            }
           }
           if (e.key === "ArrowDown") {
             e.preventDefault();
