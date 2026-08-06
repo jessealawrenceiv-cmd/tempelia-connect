@@ -611,7 +611,10 @@ function SettingsPage() {
               </button>
             </div>
             {refreshAttempts > 1 ? (
-              <div className="text-muted-foreground">{refreshAttempts} failed attempts in a row.</div>
+              <div className="text-muted-foreground">
+                {refreshAttempts} failed attempts in a row.
+                {isInCooldown ? ` Retry disabled for ${formatCooldown(cooldownMs)}.` : null}
+              </div>
             ) : null}
           </div>
         ) : null}
