@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getIsAdmin } from "@/lib/admin.functions";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import {
-  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText, CalendarDays,
+  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText, CalendarDays, Receipt,
 } from "lucide-react";
 
 const NAV = [
