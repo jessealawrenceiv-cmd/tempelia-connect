@@ -1602,6 +1602,13 @@ const AutomationBadge = memo(forwardRef<
     const trigger = triggerRef.current;
     if (!trigger || !trigger.isConnected || document.activeElement === trigger) return;
     suppressReopenRef.current = true;
+    // With reduced motion there is no transition to wait out — hand focus back
+    // synchronously so keyboard users never land on <body> in between.
+    if (prefersReducedMotion()) {
+      trigger.focus();
+      suppressReopenRef.current = false;
+      return;
+    }
     window.setTimeout(() => {
       trigger.focus();
       window.setTimeout(() => {
@@ -1619,13 +1626,20 @@ const AutomationBadge = memo(forwardRef<
       // If focus never left, don't force it back — avoids screen-reader re-announcement.
       if (document.activeElement === el) return;
       // Reopen the tooltip if it closed, then hand focus back to the element.
-      // Wait a tick so any re-render that re-enables the control has finished.
       setOpen(true);
+      const hand = () => {
+        if ((el as HTMLButtonElement | null)?.disabled || !el.isConnected) return;
+        el.focus();
+      };
+      // Reduced motion: tooltip appears instantly, so refocus on the very next
+      // paint instead of waiting out the animation window.
+      if (prefersReducedMotion()) {
+        window.requestAnimationFrame(hand);
+        return;
+      }
+      // Wait a tick so any re-render that re-enables the control has finished.
       window.setTimeout(() => {
-        window.requestAnimationFrame(() => {
-          if ((el as HTMLButtonElement | null)?.disabled) return;
-          el.focus();
-        });
+        window.requestAnimationFrame(hand);
       }, 100);
     },
 
