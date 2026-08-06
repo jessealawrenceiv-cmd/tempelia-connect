@@ -267,8 +267,21 @@ function SettingsPage() {
         />
 
         <div className="panel p-6">
-          <div className="label-eyebrow">Automation</div>
-          <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="label-eyebrow">Automation</div>
+              <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
+            </div>
+            <AutomationBadge
+              state={
+                (profile?.decline_followup_mode ?? "off") === "auto"
+                  ? "active"
+                  : (profile?.decline_followup_mode ?? "off") === "manual"
+                    ? "manual"
+                    : "off"
+              }
+            />
+          </div>
           <div className="mt-4 flex items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">
               When a customer declines a quote: <span className="mono">off</span> = do nothing;
@@ -289,9 +302,37 @@ function SettingsPage() {
           </div>
         </div>
 
+        <div className="panel p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="label-eyebrow">Advanced</div>
+              <h2 className="mt-1 text-xl">Automations in Advanced</h2>
+            </div>
+            <AutomationBadge state={advancedActiveCount > 0 ? "active" : "off"} activeCount={advancedActiveCount} />
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
+              <span className="text-xs text-muted-foreground">Opt-in prompt & cooldown</span>
+              <AutomationBadge state={optInPromptActive ? "active" : "hold"} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-muted-foreground">Inbound webhook diagnostics</span>
+              <AutomationBadge state="off" label="Manual tool" />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTab("advanced")}
+            className="mono mt-4 rounded-sm border border-border px-3 py-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          >
+            Open advanced
+          </button>
+        </div>
+
         <ExcludedNumbersPanel />
 
         <TeamMembersPanel tier={profile?.subscription_tier} />
+
       </div>
       )}
 
