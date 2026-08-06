@@ -86,6 +86,7 @@ function SettingsPage() {
   // Auto-reconnects with backoff and surfaces a live/reconnecting indicator.
   const [realtimeState, setRealtimeState] = useState<"connecting" | "live" | "reconnecting">("connecting");
   const [realtimeAttempt, setRealtimeAttempt] = useState(0);
+  const [statusAnnouncement, setStatusAnnouncement] = useState("");
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -500,6 +501,7 @@ function SettingsPage() {
   const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
     setIsRefreshingStatuses(true);
     setRefreshError(null);
+    setStatusAnnouncement("Refreshing automation statuses. Please wait.");
     const before = statusSnapshot(profile);
     const startedAt = Date.now();
     try {
@@ -526,18 +528,23 @@ function SettingsPage() {
       });
       if (trigger === "manual") {
         if (!changed) {
+          setStatusAnnouncement(`Statuses already current. Re-checked at ${checkedAt}.`);
           toast.success("Statuses already current", {
             description: `No changes since the last check · re-checked at ${checkedAt}.`,
           });
         } else {
+          setStatusAnnouncement(`Statuses updated. Automation statuses changed and refreshed at ${checkedAt}.`);
           toast.success("Statuses updated", {
             description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
           });
         }
       } else if (changed) {
+        setStatusAnnouncement(`Statuses updated automatically at ${checkedAt}.`);
         toast.success("Statuses updated", {
           description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
         });
+      } else {
+        setStatusAnnouncement(`Automation statuses re-checked at ${checkedAt}. No changes.`);
       }
     } catch (e) {
       const message = (e as Error)?.message || "Could not re-check automation statuses.";
@@ -557,6 +564,7 @@ function SettingsPage() {
         error_code: code,
         duration_ms: Date.now() - startedAt,
       });
+      setStatusAnnouncement(`Refresh failed. ${message}`);
       toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
@@ -784,6 +792,14 @@ function SettingsPage() {
   return (
     <div>
       <PageHeader eyebrow="Config" title="Settings" />
+
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {statusAnnouncement}
+      </div>
 
       <div className="mono flex items-center gap-2 border-b border-border px-5 pt-5 text-[10px] uppercase tracking-widest md:px-8">
         {(["settings", "advanced"] as const).map((t) => (
