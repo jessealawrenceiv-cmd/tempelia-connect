@@ -472,7 +472,8 @@ function AutomationBadge({
       </span>
       <span
         role="tooltip"
-        className="mono pointer-events-none absolute right-0 top-full z-20 mt-2 hidden w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg group-hover:block group-focus-within:block"
+        className="mono absolute right-0 top-full z-20 mt-2 hidden w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg group-hover:block group-focus-within:block"
+
       >
         {tooltip}
       </span>
