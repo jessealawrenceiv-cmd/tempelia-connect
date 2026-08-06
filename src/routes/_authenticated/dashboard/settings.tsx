@@ -685,7 +685,9 @@ function SettingsPage() {
 
     setRefreshTrigger(trigger);
     setIsRefreshingStatuses(true);
-    setRefreshError(null);
+    // NOTE: the previous error is intentionally kept until we know the outcome.
+    // Clearing it here unmounted the error alert — and with it the Retry button
+    // the user had just focused — dropping focus to <body> on every retry.
     setStatusAnnouncement("Refreshing automation statuses. Please wait.");
     const before = statusSnapshot(profile);
     const startedAt = Date.now();
@@ -715,6 +717,7 @@ function SettingsPage() {
       const nowDate = new Date();
       setNow(nowDate);
       setEvaluatedAt(nowDate);
+      setRefreshError(null);
       setRefreshAttempts(0);
       setCooldownMs(0);
       const after = statusSnapshot(result?.data ?? profile);
