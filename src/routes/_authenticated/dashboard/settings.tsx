@@ -649,7 +649,7 @@ function SettingsPage() {
               <button
                 ref={retryButtonRef}
                 type="button"
-
+                disabled={isRefreshingStatuses || isInCooldown}
                 onClick={() => {
                   if (isRefreshingStatuses || isInCooldown) return;
                   refreshStatuses();
