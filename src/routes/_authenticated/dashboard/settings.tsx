@@ -13,6 +13,9 @@ import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 
 import { useTeamRole } from "@/hooks/useTeamRole";
 import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
+import { runStatusRefresh } from "@/lib/status-refresh.functions";
+import { useServerFn } from "@tanstack/react-start";
+
 
 import { createContext, forwardRef, memo, useCallback, useContext, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -44,6 +47,8 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
+  const runStatusRefreshFn = useServerFn(runStatusRefresh);
+
   const { isStaff } = useTeamRole();
   const [tab, setTab] = useState<"settings" | "advanced">("settings");
   const [reviewUrl, setReviewUrl] = useState("");
@@ -673,7 +678,26 @@ function SettingsPage() {
     const before = statusSnapshot(profile);
     const startedAt = Date.now();
     try {
+      // Server-side single-run lock: only one re-evaluation may execute at a
+      // time per business, no matter how many requests arrive.
+      const lock = await runStatusRefreshFn({ data: { trigger } });
+      if (!lock.ran) {
+        setStatusAnnouncement("A refresh is already running. Waiting for it to finish.");
+        if (trigger === "manual") {
+          toast.info("Refresh already running", {
+            description: "Another re-check is in progress — only one can run at a time.",
+          });
+        }
+        void logStatusRefresh("already_current", {
+          trigger,
+          outcome: "Skipped — another refresh was already running",
+          lock: "in_progress",
+          duration_ms: Date.now() - startedAt,
+        });
+        return;
+      }
       const result = await refetchProfile();
+
       // TanStack Query surfaces fetch failures on the result rather than throwing.
       if (result?.error) throw result.error as Error;
       const nowDate = new Date();
@@ -740,7 +764,7 @@ function SettingsPage() {
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
-  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts]);
+  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts, runStatusRefreshFn]);
 
   // Optional auto-refresh: re-evaluate statuses on a configurable interval while
   // this Settings page is visible. Skips ticks when hidden, already refreshing,
