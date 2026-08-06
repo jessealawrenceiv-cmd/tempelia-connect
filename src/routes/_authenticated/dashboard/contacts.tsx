@@ -91,6 +91,26 @@ function ContactsPage() {
   });
   const { copied, copy } = useCopy();
 
+  // Deep link from an Activity entry (?customerId=…): expand, scroll, highlight.
+  const { customerId: incomingCustomerId } = Route.useSearch();
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  useEffect(() => {
+    if (!incomingCustomerId) return;
+    setExpanded((prev) => new Set(prev).add(incomingCustomerId));
+    setHighlighted(incomingCustomerId);
+    const scroll = window.setTimeout(() => {
+      document
+        .getElementById(`contact-${incomingCustomerId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    const clear = window.setTimeout(() => setHighlighted(null), 3000);
+    return () => {
+      window.clearTimeout(scroll);
+      window.clearTimeout(clear);
+    };
+  }, [incomingCustomerId]);
+
+
 
   const { data: contacts, isLoading } = useQuery({
     queryKey: ["contacts"],
