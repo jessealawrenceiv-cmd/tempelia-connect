@@ -182,10 +182,31 @@ function SettingsPage() {
       opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
       optInPromptActive,
     });
+  // Dispatch-style activity entry for each manual status re-check.
+  const logStatusRefresh = async (
+    status: "already_current" | "updated" | "failed",
+    detail: Record<string, unknown>,
+  ) => {
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      await supabase.from("logs").insert({
+        user_id: u.user.id,
+        action_type: "status_refresh",
+        status,
+        message_sent: JSON.stringify({ source: "settings_active_badge", at: new Date().toISOString(), ...detail }),
+      });
+      void qc.invalidateQueries({ queryKey: ["logs"] });
+    } catch {
+      // logging must never block the refresh itself
+    }
+  };
+
   const refreshStatuses = async () => {
     setIsRefreshingStatuses(true);
     setRefreshError(null);
     const before = statusSnapshot(profile);
+    const startedAt = Date.now();
     try {
       const result = await refetchProfile();
       // TanStack Query surfaces fetch failures on the result rather than throwing.
@@ -200,7 +221,13 @@ function SettingsPage() {
         minute: "2-digit",
         second: "2-digit",
       });
-      if (before === after) {
+      const changed = before !== after;
+      void logStatusRefresh(changed ? "updated" : "already_current", {
+        outcome: changed ? "Statuses updated" : "Statuses already current",
+        duration_ms: Date.now() - startedAt,
+        checked_at_local: checkedAt,
+      });
+      if (!changed) {
         toast.success("Statuses already current", {
           description: `No changes since the last check · re-checked at ${checkedAt}.`,
         });
@@ -213,11 +240,17 @@ function SettingsPage() {
       const message = (e as Error)?.message || "Could not re-check automation statuses.";
       setRefreshError(message);
       setRefreshAttempts((n) => n + 1);
+      void logStatusRefresh("failed", {
+        outcome: "Refresh failed",
+        error: message,
+        duration_ms: Date.now() - startedAt,
+      });
       toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
     }
   };
+
 
 
 
