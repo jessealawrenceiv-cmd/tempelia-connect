@@ -65,48 +65,104 @@ function SettingsPage() {
   }, [profile]);
 
   // Live status: refresh the ACTIVE badge/tooltip the moment the profile row changes.
+  // Auto-reconnects with backoff and surfaces a live/reconnecting indicator.
+  const [realtimeState, setRealtimeState] = useState<"connecting" | "live" | "reconnecting">("connecting");
+  const [realtimeAttempt, setRealtimeAttempt] = useState(0);
+
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
-    (async () => {
+    let retryTimer: number | null = null;
+    let attempt = 0;
+
+    const handlePayload = (payload: { new: unknown }) => {
+      void qc.invalidateQueries({ queryKey: ["profile"] });
+
+      const next = payload.new as Record<string, unknown> | null;
+      const prev = statusSnapshotRef.current;
+      if (!next || !prev) return;
+
+      const nextVoicemail = !!next["voicemail_enabled"];
+      const nextDecline = (next["decline_followup_mode"] as string) ?? "off";
+      const changes: string[] = [];
+      if (nextVoicemail !== prev.voicemail) {
+        changes.push(`Voicemail ${nextVoicemail ? "ACTIVE" : "OFF"}`);
+      }
+      if (nextDecline !== prev.decline) {
+        changes.push(`Declined-quote follow-up ${nextDecline.toUpperCase()}`);
+      }
+      if (changes.length === 0) return;
+
+      statusSnapshotRef.current = { voicemail: nextVoicemail, decline: nextDecline };
+      toast.success("Automation status updated", {
+        description: `${changes.join(" · ")} — live at ${new Date().toLocaleTimeString()}`,
+      });
+    };
+
+    const scheduleReconnect = () => {
+      if (cancelled || retryTimer !== null) return;
+      attempt += 1;
+      setRealtimeAttempt(attempt);
+      setRealtimeState("reconnecting");
+      const delay = Math.min(30_000, 1000 * 2 ** (attempt - 1));
+      retryTimer = window.setTimeout(() => {
+        retryTimer = null;
+        void connect();
+      }, delay);
+    };
+
+    const connect = async () => {
+      if (cancelled) return;
       const { data: u } = await supabase.auth.getUser();
       if (cancelled || !u.user) return;
+
+      if (channel) {
+        const stale = channel;
+        channel = null;
+        await supabase.removeChannel(stale);
+      }
+      if (cancelled) return;
+
       channel = supabase
-        .channel(`settings-profile-${u.user.id}`)
+        .channel(`settings-profile-${u.user.id}-${Date.now()}`)
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${u.user.id}` },
-          (payload) => {
-            void qc.invalidateQueries({ queryKey: ["profile"] });
-
-            const next = payload.new as Record<string, unknown> | null;
-            const prev = statusSnapshotRef.current;
-            if (!next || !prev) return;
-
-            const nextVoicemail = !!next["voicemail_enabled"];
-            const nextDecline = (next["decline_followup_mode"] as string) ?? "off";
-            const changes: string[] = [];
-            if (nextVoicemail !== prev.voicemail) {
-              changes.push(`Voicemail ${nextVoicemail ? "ACTIVE" : "OFF"}`);
-            }
-            if (nextDecline !== prev.decline) {
-              changes.push(`Declined-quote follow-up ${nextDecline.toUpperCase()}`);
-            }
-            if (changes.length === 0) return;
-
-            statusSnapshotRef.current = { voicemail: nextVoicemail, decline: nextDecline };
-            toast.success("Automation status updated", {
-              description: `${changes.join(" · ")} — live at ${new Date().toLocaleTimeString()}`,
-            });
-          },
+          handlePayload,
         )
-        .subscribe();
-    })();
+        .subscribe((status) => {
+          if (cancelled) return;
+          if (status === "SUBSCRIBED") {
+            attempt = 0;
+            setRealtimeAttempt(0);
+            setRealtimeState("live");
+            // A gap in the stream may have hidden a change — resync on reconnect.
+            void qc.invalidateQueries({ queryKey: ["profile"] });
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            scheduleReconnect();
+          }
+        });
+    };
+
+    void connect();
+
+    const onOnline = () => {
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      void connect();
+    };
+    window.addEventListener("online", onOnline);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("online", onOnline);
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
       if (channel) void supabase.removeChannel(channel);
     };
   }, [qc]);
+
 
 
 
@@ -640,6 +696,31 @@ function SettingsPage() {
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
                 {isRefreshingStatuses ? "Checking…" : "Refresh statuses"}
               </button>
+              <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    realtimeState === "live"
+                      ? "bg-moss"
+                      : realtimeState === "reconnecting"
+                        ? "animate-pulse bg-orange"
+                        : "animate-pulse bg-muted-foreground"
+                  }`}
+                />
+                <span className={realtimeState === "live" ? "text-muted-foreground" : "text-orange"}>
+                  {realtimeState === "live"
+                    ? "Live"
+                    : realtimeState === "reconnecting"
+                      ? `Reconnecting${realtimeAttempt > 1 ? ` (try ${realtimeAttempt})` : ""}…`
+                      : "Connecting…"}
+                </span>
+              </div>
+
             </div>
           </div>
           <div className="mt-4 space-y-2">
