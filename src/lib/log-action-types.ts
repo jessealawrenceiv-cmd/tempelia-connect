@@ -53,13 +53,13 @@ type LogRowInput = { action_type: string; [key: string]: unknown };
  * Validating insert for public.logs. Accepts a single row or an array and
  * rejects the write locally when any action_type is not whitelisted.
  */
-export async function insertLog<
-  TClient extends {
-    from: (table: "logs") => { insert: (rows: unknown) => Promise<{ error: unknown }> };
-  },
->(client: TClient, rows: LogRowInput | LogRowInput[]) {
+export async function insertLog(
+  client: { from: (table: "logs") => { insert: (rows: never) => unknown } },
+  rows: LogRowInput | LogRowInput[],
+) {
   for (const row of Array.isArray(rows) ? rows : [rows]) {
     assertLogActionType(row?.action_type);
   }
-  return client.from("logs").insert(rows);
+  return (await client.from("logs").insert(rows as never)) as { error: { message: string } | null };
 }
+
