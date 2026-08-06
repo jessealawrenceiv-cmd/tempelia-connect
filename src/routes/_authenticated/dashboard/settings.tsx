@@ -130,7 +130,50 @@ function SettingsPage() {
       toast.success("Automation status updated", {
         description: `${changes.join(" · ")} — ${UPDATE_ORIGIN_LABEL[origin]} at ${new Date().toLocaleTimeString()}`,
       });
+      void logStatusChange({ changes, changedFields, origin, next: { voicemail_enabled: nextVoicemail, decline_followup_mode: nextDecline } });
     };
+
+    // Dispatch-style activity entry for every ACTIVE status change, with the
+    // time and what triggered it. De-duplicated across open tabs so one change
+    // does not produce one row per tab.
+    const logStatusChange = async (entry: {
+      changes: string[];
+      changedFields: string[];
+      origin: "this-device" | "other-device" | "backend";
+      next: Record<string, unknown>;
+    }) => {
+      try {
+        const signature = `${entry.changedFields.join(",")}|${JSON.stringify(entry.next)}`;
+        const guardKey = "temaro:status-change-log";
+        const nowMs = Date.now();
+        const raw = window.localStorage.getItem(guardKey);
+        if (raw) {
+          const prevGuard = JSON.parse(raw) as { signature: string; at: number };
+          if (prevGuard.signature === signature && nowMs - prevGuard.at < 10_000) return;
+        }
+        window.localStorage.setItem(guardKey, JSON.stringify({ signature, at: nowMs }));
+
+        const { data: u } = await supabase.auth.getUser();
+        if (!u.user) return;
+        await supabase.from("logs").insert({
+          user_id: u.user.id,
+          action_type: "automation_status_change",
+          status: entry.origin,
+          message_sent: JSON.stringify({
+            source: "settings_active_badge",
+            at: new Date().toISOString(),
+            trigger: UPDATE_ORIGIN_LABEL[entry.origin],
+            changes: entry.changes,
+            changed_fields: entry.changedFields,
+            new_values: entry.next,
+          }),
+        });
+        void qc.invalidateQueries({ queryKey: ["logs"] });
+      } catch {
+        // logging must never break the live status handling
+      }
+    };
+
 
 
     const scheduleReconnect = () => {
