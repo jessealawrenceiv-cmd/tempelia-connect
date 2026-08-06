@@ -18,6 +18,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 
 import { createContext, forwardRef, memo, useCallback, useContext, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { toast } from "sonner";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
