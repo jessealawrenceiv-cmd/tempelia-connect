@@ -407,15 +407,18 @@ function SettingsPage() {
 
   // Snapshot of the fields that drive the automation status badges, so the
   // refresh toast can say whether anything actually changed.
-  const statusSnapshot = (p: typeof profile) =>
-    JSON.stringify({
-      decline_followup_mode: p?.decline_followup_mode ?? "off",
-      voicemail_enabled: p?.voicemail_enabled ?? null,
-      review_auto_enabled: (p as Record<string, unknown> | null | undefined)?.["review_auto_enabled"] ?? null,
-      opt_in_prompt_template: p?.opt_in_prompt_template ?? null,
-      opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
-      optInPromptActive,
-    });
+  const statusSnapshot = useCallback(
+    (p: typeof profile) =>
+      JSON.stringify({
+        decline_followup_mode: p?.decline_followup_mode ?? "off",
+        voicemail_enabled: p?.voicemail_enabled ?? null,
+        review_auto_enabled: (p as Record<string, unknown> | null | undefined)?.["review_auto_enabled"] ?? null,
+        opt_in_prompt_template: p?.opt_in_prompt_template ?? null,
+        opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
+        optInPromptActive,
+      }),
+    [optInPromptActive],
+  );
   // Contacts / submissions that saw activity in the window covered by this
   // re-check, so the Activity entry can link straight to what changed.
   const collectAffected = useCallback(async (sinceIso: string) => {
