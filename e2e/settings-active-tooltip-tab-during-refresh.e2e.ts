@@ -35,7 +35,8 @@ async function openTooltip(page: Page) {
     tooltipId: tooltipId!,
     trigger,
     tooltip,
-    refresh: tooltip.getByRole("button", { name: /Refresh automation statuses now/i }),
+    // Label flips to "Refreshing automation statuses" while busy, so match both.
+    refresh: tooltip.locator('button[aria-label*="automation statuses"]').first(),
   };
 }
 
@@ -92,11 +93,11 @@ test.describe("Settings · ACTIVE tooltip · Tab during in-flight refresh", () =
 
     // Sanity: the refresh really is in flight while we press keys.
     await expect
-      .poll(async () => (await refresh.getAttribute("aria-busy")) ?? (await refresh.textContent()) ?? "", {
+      .poll(async () => (await refresh.getAttribute("aria-busy")) ?? "", {
         message: "refresh should report a busy state",
         timeout: 5_000,
       })
-      .toMatch(/true|refresh/i);
+      .toBe("true");
 
     const focusableCount = await tooltip.locator("button, [href], [tabindex]:not([tabindex='-1'])").count();
     expect(focusableCount, "tooltip must expose focusable controls").toBeGreaterThan(0);
