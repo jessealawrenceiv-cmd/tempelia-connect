@@ -377,7 +377,41 @@ function SettingsPage() {
 }
 
 
+function AutomationBadge({
+  state,
+  label,
+  activeCount,
+}: {
+  state: "active" | "manual" | "hold" | "off";
+  label?: string;
+  activeCount?: number;
+}) {
+  const styles: Record<string, string> = {
+    active: "border-moss/60 bg-moss/15 text-moss",
+    manual: "border-steel/60 bg-steel/15 text-steel",
+    hold: "border-orange/60 bg-orange/15 text-orange",
+    off: "border-border bg-muted/20 text-muted-foreground",
+  };
+  const defaults: Record<string, string> = {
+    active: activeCount ? `${activeCount} active` : "Active",
+    manual: "Manual",
+    hold: "On hold",
+    off: "Off",
+  };
+  return (
+    <span
+      className={`mono shrink-0 rounded-sm border px-2 py-1 text-[10px] uppercase tracking-widest ${styles[state]}`}
+    >
+      {state === "active" && (
+        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-moss align-middle" />
+      )}
+      {label ?? defaults[state]}
+    </span>
+  );
+}
+
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
+
   return (
     <div className="flex items-center justify-between border-b border-border pb-2">
       <span className="label-eyebrow">{k}</span>
