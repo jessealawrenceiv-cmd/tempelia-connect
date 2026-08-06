@@ -133,12 +133,21 @@ function IntakesPage() {
   const [collapsedIds, setCollapsedIds] = useState<Record<string, true>>({});
   const [jumpAnnouncement, setJumpAnnouncement] = useState("");
 
+  // True when the reader's focus already sits inside one of the intake cards —
+  // in that case nothing on this page is allowed to move focus for them.
+  const focusIsInsideCards = () => {
+    const active = document.activeElement;
+    if (!active || active === document.body) return false;
+    return Object.values(rowRefs.current).some((el) => !!el && el.contains(active));
+  };
+
   // Closing a details panel always hands focus back to the toggle that opened
   // it, so keyboard users landing here from a deep link never lose their place.
   const collapseCard = (id: string) => {
     setCollapsedIds((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
     requestAnimationFrame(() => toggleRefs.current[id]?.focus());
   };
+
 
 
   useEffect(() => {
