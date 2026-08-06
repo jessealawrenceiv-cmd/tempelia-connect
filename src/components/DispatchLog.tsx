@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef, useState } from "react";
-import { Filter } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Filter, Search } from "lucide-react";
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
@@ -86,8 +86,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [scope, setScope] = useState<"live" | "archive">("live");
+  const [searchQuery, setSearchQuery] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
+
+  const searchTerms = useMemo(
+    () =>
+      searchQuery
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((t) => t.length > 0),
+    [searchQuery],
+  );
 
   const { data, isLoading } = useQuery({
     queryKey: ["logs", scope, limit],
@@ -126,6 +137,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     if (failedOnly) {
       if (row.action_type !== "status_refresh") return false;
       if (row.status !== "failed") return false;
+    }
+    if (searchTerms.length > 0) {
+      const haystack = `${LABEL[row.action_type] ?? row.action_type} ${describe(row)}`.toLowerCase();
+      if (!searchTerms.every((term) => haystack.includes(term))) return false;
     }
     return true;
   });
@@ -191,6 +206,29 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <Filter size={12} />
             Filter
           </span>
+
+          <div className="relative flex items-center">
+            <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search messages…"
+              aria-label="Search activity messages"
+              className="kb-focus h-7 w-40 rounded-full border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearchQuery("")}
+                className="kb-focus absolute right-2 text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
           <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
             <input
               type="checkbox"
