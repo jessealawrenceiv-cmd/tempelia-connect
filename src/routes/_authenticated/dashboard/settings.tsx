@@ -351,9 +351,11 @@ function SettingsPage() {
                 type="button"
                 onClick={refreshStatuses}
                 disabled={isRefreshingStatuses}
+                aria-busy={isRefreshingStatuses}
                 aria-label="Retry refreshing automation statuses"
-                className="rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground hover:bg-orange/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground hover:bg-orange/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:cursor-not-allowed disabled:opacity-40"
               >
+                {isRefreshingStatuses ? <Spinner size={10} /> : null}
                 {isRefreshingStatuses ? "Retrying…" : "Retry"}
               </button>
               <button
