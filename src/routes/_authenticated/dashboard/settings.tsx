@@ -393,17 +393,24 @@ function SettingsPage() {
 
       {tab === "advanced" && (
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
-        <OptInPromptSettingsPanel
-          businessName={profile?.business_name}
-          template={profile?.opt_in_prompt_template}
-          cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
-          ownerPhone={profile?.owner_phone}
-          fromNumber={profile?.twilio_phone_number}
-          lastTestPhone={profile?.last_test_phone}
-        />
+        <div id="adv-opt-in-prompt" className="scroll-mt-24 rounded-sm transition md:col-span-2">
+          <OptInPromptSettingsPanel
+            businessName={profile?.business_name}
+            template={profile?.opt_in_prompt_template}
+            cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
+            ownerPhone={profile?.owner_phone}
+            fromNumber={profile?.twilio_phone_number}
+            lastTestPhone={profile?.last_test_phone}
+          />
+        </div>
 
-        {!isStaff && <WebhookCheckPanel />}
-        {!isStaff && <WebhookEventLogPanel />}
+        {!isStaff && (
+          <div id="adv-webhook-diagnostics" className="scroll-mt-24 space-y-5 rounded-sm transition md:col-span-2">
+            <WebhookCheckPanel />
+            <WebhookEventLogPanel />
+          </div>
+        )}
+
 
         <div className="panel p-6 md:col-span-2">
           <div className="label-eyebrow">Compliance</div>
