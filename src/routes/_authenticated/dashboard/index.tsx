@@ -7,7 +7,8 @@ import { DispatchLog } from "@/components/DispatchLog";
 import { LastRefreshedStatus } from "@/components/LastRefreshedStatus";
 import { HomeGreetingWeather } from "@/components/HomeGreetingWeather";
 import { toast } from "sonner";
-import { HOME_QUOTE_AUTOHIDE_DAYS, isOlderThanDays, relativeTime } from "@/lib/relative-time";
+import { HOME_QUOTE_AUTOHIDE_DAYS, isOlderThanDays } from "@/lib/relative-time";
+import { AttentionTimestamp } from "@/components/AttentionTimestamp";
 
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -413,9 +414,7 @@ function HomePage() {
                       {i.customer_first_name} {i.customer_last_name}
                     </span>
                     <span className="text-muted-foreground">wants a quote</span>
-                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
-                      {relativeTime(i.submitted_at)}
-                    </span>
+                    <AttentionTimestamp iso={i.submitted_at} label="Submitted" />
                     <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
                       <ChevronRight size={12} /> open request
                     </span>
@@ -451,9 +450,7 @@ function HomePage() {
                       {q.customer_first_name} {q.customer_last_name ?? ""}
                     </span>
                     <span className="text-muted-foreground">quote for {money(Number(q.total_amount ?? 0))}</span>
-                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
-                      {relativeTime(q.last_sms_sent_at ?? q.created_at)}
-                    </span>
+                    <AttentionTimestamp iso={q.last_sms_sent_at ?? q.created_at} label="Sent" />
                     <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
                       <ExternalLink size={11} /> open quote
                     </span>
@@ -489,9 +486,7 @@ function HomePage() {
                       {q.customer_first_name} {q.customer_last_name ?? ""}
                     </span>
                     <span className="text-muted-foreground">quote for {money(Number(q.total_amount ?? 0))}</span>
-                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
-                      {relativeTime(q.responded_at ?? q.created_at)}
-                    </span>
+                    <AttentionTimestamp iso={q.responded_at ?? q.created_at} label="Responded" />
                     <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
                       <ExternalLink size={11} /> open quote
                     </span>
@@ -529,9 +524,7 @@ function HomePage() {
                     <span className="text-muted-foreground">
                       {q.decline_reason ? `“${q.decline_reason}”` : "no reason given"}
                     </span>
-                    <span className="mono text-[10px] uppercase tracking-widest text-moss">
-                      {relativeTime(q.responded_at ?? q.created_at)}
-                    </span>
+                    <AttentionTimestamp iso={q.responded_at ?? q.created_at} label="Responded" />
                     <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-steel">
                       <ExternalLink size={11} /> open quote
                     </span>
