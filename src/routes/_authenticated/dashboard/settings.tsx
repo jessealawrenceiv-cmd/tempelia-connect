@@ -793,6 +793,14 @@ function SettingsPage() {
     <div>
       <PageHeader eyebrow="Config" title="Settings" />
 
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {statusAnnouncement}
+      </div>
+
       <div className="mono flex items-center gap-2 border-b border-border px-5 pt-5 text-[10px] uppercase tracking-widest md:px-8">
         {(["settings", "advanced"] as const).map((t) => (
           <button
