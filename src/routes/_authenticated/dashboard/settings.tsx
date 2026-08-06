@@ -103,6 +103,8 @@ function SettingsPage() {
     "connecting" | "live" | "reconnecting" | "disconnected"
   >("connecting");
   const [realtimeAttempt, setRealtimeAttempt] = useState(0);
+  // Timestamp of the last successful subscribe / live payload, shown under the ACTIVE indicator.
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [statusAnnouncement, setStatusAnnouncement] = useState("");
   const [realtimeToasts, setRealtimeToasts] = useState(true);
   const realtimeToastsRef = useRef(true);
