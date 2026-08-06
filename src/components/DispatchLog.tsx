@@ -258,11 +258,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
         {!isLoading && filtered.length === 0 && (
           <li className="p-5 text-muted-foreground">
-            {data?.length === 0
-              ? "No dispatches yet. Actions will appear here in real time."
-              : "No entries match the selected filters."}
+            {data?.length !== 0
+              ? "No entries match the selected filters."
+              : scope === "archive"
+                ? "Nothing archived yet. Entries older than 90 days move here automatically."
+                : "No dispatches yet. Actions will appear here in real time."}
           </li>
         )}
+
         {filtered.map((row) => {
           const affected = parseAffected(row);
           return (
