@@ -15,7 +15,7 @@ const NAV = [
   { to: "/dashboard/quotes", label: "Quotes", icon: FileText, ownerOnly: false },
   { to: "/dashboard/schedule", label: "Schedule", icon: CalendarDays, ownerOnly: false },
   { to: "/dashboard/reviews", label: "Reviews", icon: Star, ownerOnly: false },
-  { to: "/dashboard/dead-leads", label: "Dead Leads", icon: Snowflake, ownerOnly: false },
+  { to: "/dashboard/dead-leads", label: "Win Back", icon: Snowflake, ownerOnly: false },
   { to: "/dashboard/intakes", label: "Intakes", icon: ClipboardList, ownerOnly: false },
   { to: "/dashboard/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ] as const;
