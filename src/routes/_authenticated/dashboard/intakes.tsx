@@ -103,6 +103,7 @@ function IntakesPage() {
     (location.state as { key?: string } | undefined)?.key ??
     `${location.searchStr ?? ""}|${location.hash ?? ""}`;
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const toggleRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [jumpedId, setJumpedId] = useState<string | null>(null);
   const [jumpMiss, setJumpMiss] = useState<{ id: string; reason: IntakeJumpMissReason } | null>(null);
   const jumpMissHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -110,6 +111,14 @@ function IntakesPage() {
   // Cards are expanded by default; ids listed here are collapsed by the reader.
   const [collapsedIds, setCollapsedIds] = useState<Record<string, true>>({});
   const [jumpAnnouncement, setJumpAnnouncement] = useState("");
+
+  // Closing a details panel always hands focus back to the toggle that opened
+  // it, so keyboard users landing here from a deep link never lose their place.
+  const collapseCard = (id: string) => {
+    setCollapsedIds((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
+    requestAnimationFrame(() => toggleRefs.current[id]?.focus());
+  };
+
 
   useEffect(() => {
     if (isLoading || !rows) return;
@@ -264,10 +273,16 @@ function IntakesPage() {
                 role="group"
                 aria-labelledby={headingId}
                 data-jumped={jumpedId === r.id ? "true" : undefined}
+                onKeyDown={(e) => {
+                  if (e.key !== "Escape" || !isOpen) return;
+                  e.stopPropagation();
+                  collapseCard(r.id);
+                }}
                 className={`panel p-5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-violet ${
                   jumpedId === r.id ? "ring-2 ring-violet shadow-[0_0_0_4px_rgba(108,74,182,0.18)]" : ""
                 }`}
               >
+
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -284,20 +299,23 @@ function IntakesPage() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      ref={(el) => { toggleRefs.current[r.id] = el; }}
                       aria-expanded={isOpen}
                       aria-controls={panelId}
-                      onClick={() =>
-                        setCollapsedIds((prev) => {
-                          const next = { ...prev };
-                          if (next[r.id]) delete next[r.id];
-                          else next[r.id] = true;
-                          return next;
-                        })
-                      }
+                      onClick={() => {
+                        if (isOpen) collapseCard(r.id);
+                        else
+                          setCollapsedIds((prev) => {
+                            const next = { ...prev };
+                            delete next[r.id];
+                            return next;
+                          });
+                      }}
                       className="mono min-h-8 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-paper focus-visible:ring-2 focus-visible:ring-violet"
                     >
                       {isOpen ? "hide details" : "show details"}
                     </button>
+
                     <button
                       type="button"
                       onClick={async () => {
