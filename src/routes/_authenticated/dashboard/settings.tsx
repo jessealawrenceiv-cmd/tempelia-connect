@@ -673,7 +673,26 @@ function SettingsPage() {
     const before = statusSnapshot(profile);
     const startedAt = Date.now();
     try {
+      // Server-side single-run lock: only one re-evaluation may execute at a
+      // time per business, no matter how many requests arrive.
+      const lock = await runStatusRefreshFn({ data: { trigger } });
+      if (!lock.ran) {
+        setStatusAnnouncement("A refresh is already running. Waiting for it to finish.");
+        if (trigger === "manual") {
+          toast.info("Refresh already running", {
+            description: "Another re-check is in progress — only one can run at a time.",
+          });
+        }
+        void logStatusRefresh("already_current", {
+          trigger,
+          outcome: "Skipped — another refresh was already running",
+          lock: "in_progress",
+          duration_ms: Date.now() - startedAt,
+        });
+        return;
+      }
       const result = await refetchProfile();
+
       // TanStack Query surfaces fetch failures on the result rather than throwing.
       if (result?.error) throw result.error as Error;
       const nowDate = new Date();
