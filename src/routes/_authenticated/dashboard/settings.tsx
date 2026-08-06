@@ -1201,6 +1201,18 @@ function SettingsPage() {
 
               <button
                 type="button"
+                onClick={manualReconnect}
+                disabled={realtimeState === "connecting"}
+                aria-busy={realtimeState === "connecting"}
+                aria-label="Reconnect Realtime now"
+                className="mono kb-focus flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {realtimeState === "connecting" ? <Spinner size={10} /> : <span aria-hidden="true">↻</span>}
+                {realtimeState === "connecting" ? "Reconnecting…" : "Reconnect now"}
+              </button>
+
+              <button
+                type="button"
                 role="switch"
                 aria-checked={realtimeToasts}
                 aria-label="Toast me when live updates connect or drop"
