@@ -1210,7 +1210,7 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
 }
 
 
-const AutomationBadge = forwardRef<
+const AutomationBadge = memo(forwardRef<
   { contains: (el: Node | null) => boolean; restoreFocus: (el: HTMLElement | null) => void },
   {
     state: "active" | "manual" | "hold" | "off";
