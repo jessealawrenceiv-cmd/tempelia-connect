@@ -148,6 +148,12 @@ function SettingsPage() {
             }`}
           >
             {t === "settings" ? "Settings" : "Advanced"}
+            {t === "advanced" && advancedActiveCount > 0 && (
+              <span
+                className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-moss align-middle"
+                title={`${advancedActiveCount} automation(s) active`}
+              />
+            )}
           </button>
         ))}
       </div>
