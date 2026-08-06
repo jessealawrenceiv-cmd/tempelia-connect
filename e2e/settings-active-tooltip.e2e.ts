@@ -205,4 +205,36 @@ test.describe("Settings · automation status tooltip a11y", () => {
     const active = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
     expect(active).toMatch(/Refresh automation statuses/i);
   });
+
+  test("tooltip container stays mounted and visible throughout a refresh", async ({ page }) => {
+    const trigger = await openAdvancedTab(page);
+    const tooltipId = await trigger.getAttribute("aria-controls");
+    const tooltip = page.locator(`#${tooltipId}`);
+
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(tooltip).toBeVisible();
+
+    const refresh = tooltip.getByRole("button", { name: /Refresh automation statuses now/i });
+    await refresh.focus();
+    await expect(refresh).toBeFocused();
+
+    // Start the refresh and immediately verify the tooltip DOM node is still the
+    // same connected element — i.e. it has not been unmounted and recreated.
+    await refresh.click();
+    const stillConnected = await tooltip.evaluate((el) => el.isConnected);
+    expect(stillConnected).toBe(true);
+    await expect(tooltip).toBeVisible();
+    await expect(refresh).toBeFocused();
+
+    // Wait for the refresh to settle and confirm the tooltip never disappeared.
+    const lastRefreshed = tooltip.locator('[aria-live="polite"]', { hasText: /Last evaluated/i }).first();
+    await expect
+      .poll(async () => (await lastRefreshed.textContent())?.trim(), { timeout: 20_000 })
+      .toMatch(/Last evaluated/);
+    await expect(tooltip).toBeVisible();
+    await expect(refresh).toBeFocused();
+    const connectedAfter = await tooltip.evaluate((el) => el.isConnected);
+    expect(connectedAfter).toBe(true);
+  });
 });
