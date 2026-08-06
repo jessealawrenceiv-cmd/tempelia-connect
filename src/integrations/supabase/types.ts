@@ -624,6 +624,8 @@ export type Database = {
       profiles: {
         Row: {
           allow_deposit_override_per_quote: boolean
+          auto_refresh_enabled: boolean
+          auto_refresh_interval_minutes: number
           business_name: string
           created_at: string
           decline_followup_mode: string
@@ -653,6 +655,8 @@ export type Database = {
         }
         Insert: {
           allow_deposit_override_per_quote?: boolean
+          auto_refresh_enabled?: boolean
+          auto_refresh_interval_minutes?: number
           business_name?: string
           created_at?: string
           decline_followup_mode?: string
@@ -682,6 +686,8 @@ export type Database = {
         }
         Update: {
           allow_deposit_override_per_quote?: boolean
+          auto_refresh_enabled?: boolean
+          auto_refresh_interval_minutes?: number
           business_name?: string
           created_at?: string
           decline_followup_mode?: string
