@@ -84,36 +84,107 @@ function HomePage() {
   const { data: attention, isLoading: loadingAttention } = useQuery({
     queryKey: ["home", "attention"],
     queryFn: async () => {
-      const [sent, intakes, declined] = await Promise.all([
+      const [sent, intakes, declined, accepted, dismissals] = await Promise.all([
         supabase
           .from("quotes")
-          .select("id, customer_first_name, customer_last_name, total_amount, last_sms_sent_at, created_at")
+          .select("id, user_id, customer_first_name, customer_last_name, total_amount, status, decline_reason, last_sms_sent_at, created_at")
           .eq("status", "sent")
           .is("archived_at", null)
           .order("created_at", { ascending: false })
-          .limit(10),
+          .limit(25),
         supabase
           .from("intake_submissions")
           .select("id, customer_first_name, customer_last_name, submitted_at")
           .eq("status", "new")
           .order("submitted_at", { ascending: false })
-          .limit(10),
+          .limit(25),
         supabase
           .from("quotes")
-          .select("id, customer_first_name, customer_last_name, decline_reason, responded_at")
+          .select("id, user_id, customer_first_name, customer_last_name, status, decline_reason, responded_at, created_at")
           .eq("status", "declined")
-          .not("decline_reason", "is", null)
           .is("decline_followup_sent_at", null)
           .order("responded_at", { ascending: false })
-          .limit(10),
+          .limit(25),
+        supabase
+          .from("quotes")
+          .select("id, user_id, customer_first_name, customer_last_name, total_amount, status, decline_reason, responded_at, created_at")
+          .eq("status", "accepted")
+          .is("archived_at", null)
+          .order("responded_at", { ascending: false })
+          .limit(25),
+        supabase
+          .from("home_quote_dismissals")
+          .select("quote_id, dismissed_status, dismissed_decline_reason"),
       ]);
+
+      const hidden = new Map(
+        (dismissals.data ?? []).map((d) => [
+          d.quote_id,
+          { status: d.dismissed_status, reason: d.dismissed_decline_reason ?? null },
+        ]),
+      );
+
+      // A dismissal (manual or age-based) only holds while the quote sits in the
+      // exact status + decline reason it was hidden in. Real customer action
+      // (sent → accepted/declined, or a decline reason captured later) resurfaces it.
+      const visible = <
+        T extends { id: string; status: string; decline_reason?: string | null; created_at?: string | null },
+      >(
+        rows: T[] | null,
+        stamp: (r: T) => string | null,
+      ) =>
+        (rows ?? []).filter((r) => {
+          const h = hidden.get(r.id);
+          if (h && h.status === r.status && h.reason === (r.decline_reason ?? null)) return false;
+          return !isOlderThanDays(stamp(r) ?? r.created_at ?? null, HOME_QUOTE_AUTOHIDE_DAYS);
+        });
+
       return {
-        sent: sent.data ?? [],
+        sent: visible(sent.data, (r) => r.last_sms_sent_at ?? r.created_at),
+        // New, uncontacted requests never auto-hide — an untouched lead keeps showing.
         intakes: intakes.data ?? [],
-        declined: declined.data ?? [],
+        declined: visible(declined.data, (r) => r.responded_at ?? r.created_at),
+        accepted: visible(accepted.data, (r) => r.responded_at ?? r.created_at),
       };
     },
   });
+
+  const markIntakeContacted = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("intake_submissions").update({ status: "contacted" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Marked contacted");
+      qc.invalidateQueries({ queryKey: ["home", "attention"] });
+      qc.invalidateQueries({ queryKey: ["intakes"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const hideQuote = useMutation({
+    mutationFn: async (q: { id: string; user_id: string; status: string; decline_reason?: string | null }) => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("home_quote_dismissals").upsert(
+        {
+          quote_id: q.id,
+          business_owner_id: q.user_id,
+          dismissed_status: q.status,
+          dismissed_decline_reason: q.decline_reason ?? null,
+          dismissed_by: u.user?.id ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "quote_id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Hidden from Home — the quote itself is untouched and still live");
+      qc.invalidateQueries({ queryKey: ["home", "attention"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const { data: money7 } = useQuery({
     queryKey: ["home", "money", awaySince],
