@@ -270,6 +270,12 @@ function SettingsPage() {
         changes,
         changedFields,
         origin,
+        previous: {
+          voicemail_enabled: prev.voicemail,
+          decline_followup_mode: prev.decline,
+          review_requests_enabled: prev.review,
+          intake_enabled: prev.intake,
+        },
         next: {
           voicemail_enabled: nextVoicemail,
           decline_followup_mode: nextDecline,
@@ -286,6 +292,7 @@ function SettingsPage() {
       changes: string[];
       changedFields: string[];
       origin: "this-device" | "other-device" | "backend";
+      previous: Record<string, unknown>;
       next: Record<string, unknown>;
     }) => {
       try {
@@ -311,6 +318,7 @@ function SettingsPage() {
             trigger: UPDATE_ORIGIN_LABEL[entry.origin],
             changes: entry.changes,
             changed_fields: entry.changedFields,
+            previous_values: entry.previous,
             new_values: entry.next,
           }),
         });
