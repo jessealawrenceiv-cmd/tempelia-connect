@@ -45,7 +45,7 @@ function DeadLeadsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Feature 03" title="Dead leads" />
+      <PageHeader eyebrow="Feature 03" title="Win Back" />
       <div className="p-5 md:p-8">
         <div className="panel overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
