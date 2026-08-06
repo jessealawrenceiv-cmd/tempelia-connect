@@ -1471,7 +1471,9 @@ const AutomationBadge = memo(forwardRef<
         }}
 
       >
-        {tooltip}
+        <TooltipCloseContext.Provider value={() => setOpen(false)}>
+          {tooltip}
+        </TooltipCloseContext.Provider>
       </span>
     </span>
   );
