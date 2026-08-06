@@ -220,6 +220,8 @@ function SettingsPage() {
 
       const nextVoicemail = !!next["voicemail_enabled"];
       const nextDecline = (next["decline_followup_mode"] as string) ?? "off";
+      const nextReview = next["review_requests_enabled"] !== false;
+      const nextIntake = !!next["intake_enabled"];
       const changes: string[] = [];
       const changedFields: string[] = [];
       if (nextVoicemail !== prev.voicemail) {
@@ -229,6 +231,14 @@ function SettingsPage() {
       if (nextDecline !== prev.decline) {
         changes.push(`Declined-quote follow-up ${nextDecline.toUpperCase()}`);
         changedFields.push("decline_followup_mode");
+      }
+      if (nextReview !== prev.review) {
+        changes.push(`Reviews ${nextReview ? "ACTIVE" : "OFF"}`);
+        changedFields.push("review_requests_enabled");
+      }
+      if (nextIntake !== prev.intake) {
+        changes.push(`Intake form ${nextIntake ? "ACTIVE" : "OFF"}`);
+        changedFields.push("intake_enabled");
       }
       if (changes.length === 0) return;
 
@@ -247,11 +257,26 @@ function SettingsPage() {
       changedFields.forEach((f) => localEditsRef.current.delete(f));
       setLastUpdate({ origin, at: new Date() });
 
-      statusSnapshotRef.current = { voicemail: nextVoicemail, decline: nextDecline };
+      statusSnapshotRef.current = {
+        voicemail: nextVoicemail,
+        decline: nextDecline,
+        review: nextReview,
+        intake: nextIntake,
+      };
       toast.success("Automation status updated", {
         description: `${changes.join(" · ")} — ${UPDATE_ORIGIN_LABEL[origin]} at ${new Date().toLocaleTimeString()}`,
       });
-      void logStatusChange({ changes, changedFields, origin, next: { voicemail_enabled: nextVoicemail, decline_followup_mode: nextDecline } });
+      void logStatusChange({
+        changes,
+        changedFields,
+        origin,
+        next: {
+          voicemail_enabled: nextVoicemail,
+          decline_followup_mode: nextDecline,
+          review_requests_enabled: nextReview,
+          intake_enabled: nextIntake,
+        },
+      });
     };
 
     // Dispatch-style activity entry for every ACTIVE status change, with the
