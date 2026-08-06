@@ -7,7 +7,7 @@ const SETTINGS_PATH = "/dashboard/settings";
 function indicator(page: Page) {
   return page
     .locator('[role="status"][aria-live="polite"]')
-    .filter({ hasText: /Live|Reconnecting|Connecting/i })
+    .filter({ hasText: /Live|Reconnecting|Disconnected|Connecting/i })
     .first();
 }
 
