@@ -1,7 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Filter } from "lucide-react";
+
+type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
+
+function parseAffected(row: { action_type: string; message_sent: string | null }): AffectedRef[] {
+  if (row.action_type !== "status_refresh" || !row.message_sent) return [];
+  try {
+    const payload = JSON.parse(row.message_sent) as Record<string, unknown>;
+    const list = payload["affected"];
+    if (!Array.isArray(list)) return [];
+    return list.filter(
+      (a): a is AffectedRef =>
+        !!a &&
+        typeof a === "object" &&
+        typeof (a as AffectedRef).id === "string" &&
+        ((a as AffectedRef).type === "customer" || (a as AffectedRef).type === "intake"),
+    );
+  } catch {
+    return [];
+  }
+}
+
 
 
 const DOT: Record<string, string> = {
