@@ -492,8 +492,7 @@ function SettingsPage() {
       if (error) throw error;
       if (status !== "failed") lastRefreshAtRef.current = new Date().toISOString();
       void qc.invalidateQueries({ queryKey: ["logs"] });
-    } catch (e) {
-      console.error("[logStatusRefresh] failed:", e);
+    } catch {
       // logging must never block the refresh itself
     }
   };
