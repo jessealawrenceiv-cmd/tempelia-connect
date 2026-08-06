@@ -287,7 +287,10 @@ function ContactsPage() {
                 return (
                   <Fragment key={c.id}>
                     <tr
-                      className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                      id={`contact-${c.id}`}
+                      className={`border-b border-border/50 hover:bg-accent/30 cursor-pointer ${
+                        highlighted === c.id ? "ring-2 ring-primary ring-inset bg-primary/5" : ""
+                      }`}
                       onClick={() => toggleExpand(c.id)}
                     >
 
