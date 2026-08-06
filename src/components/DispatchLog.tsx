@@ -249,6 +249,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             )}
           </div>
 
+          <DateRangePicker
+            value={dateRange}
+            onChange={(next) => {
+              setDateRange(next);
+            }}
+            placeholder="Date range"
+          />
+
           <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
             <input
               type="checkbox"
