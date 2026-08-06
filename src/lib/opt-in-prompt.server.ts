@@ -1,12 +1,12 @@
 // Server-only helper shared by the single and bulk opt-in prompt server fns.
 import {
-import { insertLog } from "@/lib/log-action-types";
   OPT_IN_PROMPT_ACTION,
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   buildOptInPrompt,
   clampCooldownMinutes,
   promptVersionHash,
 } from "./opt-in-prompt";
+import { insertLog } from "@/lib/log-action-types";
 
 type Client = { from: (t: string) => any };
 

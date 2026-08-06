@@ -1,13 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-import { insertLog } from "@/lib/log-action-types";
   OPT_IN_PROMPT_ACTION,
   OPT_IN_PROMPT_COOLDOWN_MINUTES,
   buildOptInPrompt,
   clampCooldownMinutes,
   promptVersionHash,
 } from "./opt-in-prompt";
+import { insertLog } from "@/lib/log-action-types";
 
 function validate(data: unknown): { customerId: string } {
   const { customerId } = (data ?? {}) as { customerId?: unknown };
