@@ -234,6 +234,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             />
             <span>
               <span className="mr-2 font-semibold text-foreground">{LABEL[row.action_type] ?? row.action_type}</span>
+              {row.action_type === "automation_status_change" && row.status && row.status in ORIGIN_LABEL && (
+                <span className="mr-2 inline-flex items-center rounded bg-muted px-1 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}
+                </span>
+              )}
               <span className="text-foreground/80">{describe(row)}</span>
               {affected.length > 0 && (
                 <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
