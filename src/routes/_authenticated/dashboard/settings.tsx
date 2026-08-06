@@ -352,7 +352,7 @@ function SettingsPage() {
     if (cooldownMs <= 0) return;
     const id = window.setInterval(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
     return () => window.clearInterval(id);
-  }, [cooldownMs]);
+  }, [cooldownMs > 0]);
   const formatCooldown = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
