@@ -666,6 +666,7 @@ function SettingsPage() {
     const focusBefore = document.activeElement as HTMLElement | null;
     const focusWasInTooltip = focusBefore ? advancedBadgeRef.current?.contains(focusBefore) ?? false : false;
 
+    setRefreshTrigger(trigger);
     setIsRefreshingStatuses(true);
     setRefreshError(null);
     setStatusAnnouncement("Refreshing automation statuses. Please wait.");
