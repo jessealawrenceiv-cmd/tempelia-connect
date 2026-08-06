@@ -1233,6 +1233,7 @@ function AutomationBadge({
 
   useEffect(() => {
     if (!open) return;
+    focusWasInsideRef.current = false;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
@@ -1260,9 +1261,7 @@ function AutomationBadge({
   useEffect(() => {
     if (!open && focusWasInsideRef.current) {
       focusWasInsideRef.current = false;
-      if (!containerRef.current?.contains(document.activeElement as Node)) {
-        returnFocusToTrigger();
-      }
+      returnFocusToTrigger();
     }
   }, [open]);
 
