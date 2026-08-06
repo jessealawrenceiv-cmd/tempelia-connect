@@ -175,13 +175,21 @@ test.describe("Settings · live update source attribution", () => {
 
     // Edit locally first, let the attribution window lapse, then write remotely.
     await toggle.click();
-    await expect(attributionToast(page, /from this device/i)).toBeVisible({ timeout: 20_000 });
+    await expect(attributionToast(page, /Automation status updated/i)).toContainText(
+      /from this device/i,
+      { timeout: 20_000 },
+    );
     const current = await readProfile(api!);
     await page.waitForTimeout(16_000);
 
     await patchProfile(api!, original!.id, { voicemail_enabled: !current!.voicemail_enabled });
 
-    await expect(attributionToast(page, /from another device/i)).toBeVisible({ timeout: 20_000 });
+    await expect
+      .poll(
+        async () => (await attributionToast(page, /Automation status updated/i).innerText()).replace(/\s+/g, " "),
+        { timeout: 20_000 },
+      )
+      .toMatch(/from another device/i);
     const { panel } = await openTooltip(page);
     await expect(panel).toContainText(/Last live update from another device/i);
   });
