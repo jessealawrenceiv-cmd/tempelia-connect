@@ -252,14 +252,19 @@ function IntakesPage() {
         <div className="space-y-4">
           {rows?.map((r) => {
             const resp = (r.responses ?? {}) as Record<string, string>;
+            const isOpen = !collapsedIds[r.id];
+            const panelId = `intake-details-${r.id}`;
+            const headingId = `intake-heading-${r.id}`;
             return (
               <div
                 key={r.id}
                 id={`intake-${r.id}`}
                 ref={(el) => { rowRefs.current[r.id] = el; }}
                 tabIndex={-1}
+                role="group"
+                aria-labelledby={headingId}
                 data-jumped={jumpedId === r.id ? "true" : undefined}
-                className={`panel p-5 outline-none transition-shadow ${
+                className={`panel p-5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-violet ${
                   jumpedId === r.id ? "ring-2 ring-violet shadow-[0_0_0_4px_rgba(108,74,182,0.18)]" : ""
                 }`}
               >
@@ -268,7 +273,7 @@ function IntakesPage() {
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       {new Date(r.submitted_at).toLocaleString()}
                     </div>
-                    <h3 className="font-display text-xl uppercase mt-1">
+                    <h3 id={headingId} className="font-display text-xl uppercase mt-1">
                       {r.customer_first_name} {r.customer_last_name}
                     </h3>
                     <div className="mono text-xs text-muted-foreground mt-1">
@@ -277,6 +282,22 @@ function IntakesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      aria-controls={panelId}
+                      onClick={() =>
+                        setCollapsedIds((prev) => {
+                          const next = { ...prev };
+                          if (next[r.id]) delete next[r.id];
+                          else next[r.id] = true;
+                          return next;
+                        })
+                      }
+                      className="mono min-h-8 rounded-sm border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-paper focus-visible:ring-2 focus-visible:ring-violet"
+                    >
+                      {isOpen ? "hide details" : "show details"}
+                    </button>
                     <button
                       type="button"
                       onClick={async () => {
@@ -290,7 +311,7 @@ function IntakesPage() {
                         }
                       }}
                       title="Copy the deep link to this submission"
-                      className="mono rounded-sm border border-steel/60 px-2 py-1 text-[10px] uppercase tracking-wider text-steel hover:bg-steel hover:text-charcoal"
+                      className="mono min-h-8 rounded-sm border border-steel/60 px-2 py-1 text-[10px] uppercase tracking-wider text-steel hover:bg-steel hover:text-charcoal focus-visible:ring-2 focus-visible:ring-violet"
                     >
                       {copiedId === r.id ? "copied" : "copy link"}
                     </button>
@@ -304,11 +325,15 @@ function IntakesPage() {
                         phone: r.customer_phone,
                         title: `Site visit — ${r.customer_first_name} ${r.customer_last_name}`.trim(),
                       }}
-                      className="mono rounded-sm border border-moss/60 px-2 py-1 text-[10px] uppercase tracking-wider text-moss hover:bg-moss hover:text-charcoal"
+                      className="mono min-h-8 rounded-sm border border-moss/60 px-2 py-1 text-[10px] uppercase tracking-wider text-moss hover:bg-moss hover:text-charcoal"
                     >
                       schedule visit
                     </Link>
+                    <label className="sr-only" htmlFor={`intake-status-${r.id}`}>
+                      Status for {r.customer_first_name} {r.customer_last_name}
+                    </label>
                     <select
+                      id={`intake-status-${r.id}`}
                       value={r.status}
                       onChange={(e) => updateStatus.mutate({ id: r.id, status: e.target.value })}
                       className="rounded-sm border border-border bg-background px-2 py-1 text-xs uppercase tracking-wider mono"
@@ -318,31 +343,40 @@ function IntakesPage() {
                   </div>
                 </div>
 
-                <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm md:grid-cols-2">
-                  {Object.entries(resp).map(([k, v]) => (
-                    <div key={k}>
-                      <dt className="label-eyebrow text-[10px] uppercase tracking-wider text-muted-foreground">{k.replace(/_/g, " ")}</dt>
-                      <dd className="mono text-xs whitespace-pre-wrap">{String(v) || "—"}</dd>
-                    </div>
-                  ))}
-                </dl>
-
-                {(r.photo_urls?.length ?? 0) > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {r.photo_urls.map((p: string) => (
-                      <a key={p} href={signed?.[p]} target="_blank" rel="noreferrer" className="block">
-                        {signed?.[p] ? (
-                          <img src={signed[p]} alt="" className="h-24 w-24 rounded-sm border border-border object-cover" />
-                        ) : (
-                          <div className="h-24 w-24 rounded-sm border border-border bg-muted" />
-                        )}
-                      </a>
+                <div id={panelId} hidden={!isOpen}>
+                  <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm md:grid-cols-2">
+                    {Object.entries(resp).map(([k, v]) => (
+                      <div key={k}>
+                        <dt className="label-eyebrow text-[10px] uppercase tracking-wider text-muted-foreground">{k.replace(/_/g, " ")}</dt>
+                        <dd className="mono text-xs whitespace-pre-wrap">{String(v) || "—"}</dd>
+                      </div>
                     ))}
-                  </div>
-                )}
+                  </dl>
+
+                  {(r.photo_urls?.length ?? 0) > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {r.photo_urls.map((p: string) => (
+                        <a key={p} href={signed?.[p]} target="_blank" rel="noreferrer" className="block">
+                          {signed?.[p] ? (
+                            <img
+                              src={signed[p]}
+                              alt={`Photo from ${r.customer_first_name} ${r.customer_last_name}'s intake submission`}
+                              className="h-24 w-24 rounded-sm border border-border object-cover"
+                            />
+                          ) : (
+                            <div className="h-24 w-24 rounded-sm border border-border bg-muted" />
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
+        </div>
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {jumpAnnouncement}
         </div>
       </div>
     </div>
