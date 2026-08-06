@@ -97,22 +97,28 @@ test.describe("Settings · ACTIVE badge reacts to live row updates", () => {
     original = null;
   });
 
-  test("toggling voicemail_enabled in the database updates the badge without a reload", async ({ page }) => {
+  test("toggling voicemail_enabled in the database updates the status UI without a reload", async ({ page }) => {
     const trigger = await badgeTrigger(page);
-    const before = await trigger.getAttribute("aria-label");
+    // The panel badge stays a well-formed status while live updates arrive.
+    await expect(trigger).toHaveAttribute("aria-label", /Automation status: .+/i);
+
+    const voicemailSwitch = page.getByRole("switch").first();
+    const before = await voicemailSwitch.getAttribute("aria-checked");
 
     await patchProfile(api!, original!.id, { voicemail_enabled: !original!.voicemail_enabled });
 
-    // Badge label re-renders from the live payload — no navigation, no reload.
+    // Voicemail state re-renders from the live payload — no navigation, no reload.
     await expect
-      .poll(async () => trigger.getAttribute("aria-label"), { timeout: 20_000 })
+      .poll(async () => voicemailSwitch.getAttribute("aria-checked"), { timeout: 20_000 })
       .not.toBe(before);
-    await expect(trigger).toHaveAttribute("aria-label", /Automation status: (ACTIVE|OFF|PARTIAL|HOLD)/i);
 
     // A toast describes the change and when it happened.
     await expect(page.getByText(/Automation status updated/i).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Voicemail (ACTIVE|OFF)/i).first()).toBeVisible();
+    await expect(page.getByText(/\d{1,2}:\d{2}:\d{2}/).first()).toBeVisible();
+    await expect(trigger).toHaveAttribute("aria-label", /Automation status: .+/i);
   });
+
 
   test("the tooltip's live-update line reports the change and its timestamp", async ({ page }) => {
     const trigger = await badgeTrigger(page);
