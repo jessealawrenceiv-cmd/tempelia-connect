@@ -456,7 +456,7 @@ function AutomationBadge({
   };
   const defaults: Record<string, string> = {
     active: activeCount ? `${activeCount} active` : "Active",
-    
+
     manual: "Manual",
     hold: "On hold",
     off: "Off",
@@ -474,15 +474,52 @@ function AutomationBadge({
 
   if (!tooltip) return badge;
 
-  return (
-    <span className="group relative shrink-0">
-      <span tabIndex={0} className="cursor-help outline-none">
-        {badge}
-      </span>
-      <span
-        role="tooltip"
-        className="mono absolute right-0 top-full z-20 mt-2 hidden w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg group-hover:block group-focus-within:block"
+  const tooltipId = useId();
+  const triggerId = useId();
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  const show = () => setOpen(true);
+  const hide = (e?: React.SyntheticEvent) => {
+    const next = "relatedTarget" in (e ?? {}) ? ((e as React.FocusEvent).relatedTarget as Node | null) : null;
+    if (!next || !containerRef.current?.contains(next)) {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <span ref={containerRef} className="relative shrink-0">
+      <button
+        id={triggerId}
+        type="button"
+        aria-expanded={open}
+        aria-controls={tooltipId}
+        aria-haspopup="true"
+        className="cursor-help outline-none focus-visible:ring-1 focus-visible:ring-orange focus-visible:ring-offset-1"
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+      >
+        {badge}
+      </button>
+      <span
+        id={tooltipId}
+        role="group"
+        aria-hidden={!open}
+        aria-labelledby={triggerId}
+        className={`mono absolute right-0 top-full z-20 mt-2 w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg ${open ? "block" : "hidden"}`}
+        onMouseEnter={show}
+        onMouseLeave={hide}
       >
         {tooltip}
       </span>
