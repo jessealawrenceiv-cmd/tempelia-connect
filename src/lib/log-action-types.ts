@@ -1,37 +1,27 @@
 /**
  * Single source of truth for public.logs.action_type.
  *
- * The database keeps an explicit CHECK whitelist (logs_action_type_check); this
- * module mirrors it so server code validates the value BEFORE any insert is
- * attempted, instead of relying on a Postgres 23514 error after the fact.
+ * The allowed values are GENERATED from the database CHECK constraint
+ * (logs_action_type_check) into ./log-action-types.generated.ts by
+ * `node scripts/generate-log-action-types.mjs`. Never hand-edit that list: add
+ * values with a migration first, then regenerate.
  *
- * Keep this list byte-identical to the database constraint. Adding a value here
- * without a migration (or vice-versa) is a bug.
+ * This module wraps the generated enum with validation helpers so server code
+ * rejects arbitrary strings BEFORE any insert is attempted, instead of relying
+ * on a Postgres 23514 error after the fact.
  */
 
-export const LOG_ACTION_TYPES = [
-  "missed_call_text",
-  "missed_call_autotext",
-  "missed_call_excluded",
-  "voicemail_notify",
-  "review_request",
-  "reactivation_text",
-  "customer_email_updated",
-  "quote_sms",
-  "quote_decline_followup",
-  "quote_decline_reason_captured",
-  "sms_inbound",
-  "customer_consent_preserved",
-  "quote_deposit_status",
-  "status_refresh",
-  "automation_status_change",
-  "invoice_balance_status",
-  "invoice_sms",
-] as const;
+import {
+  LOG_ACTION_TYPES,
+  LogAction,
+  type LogActionType,
+} from "./log-action-types.generated";
 
-export type LogActionType = (typeof LOG_ACTION_TYPES)[number];
+export { LOG_ACTION_TYPES, LogAction };
+export type { LogActionType };
 
 const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
+
 
 export function isLogActionType(value: unknown): value is LogActionType {
   return typeof value === "string" && ALLOWED.has(value);
