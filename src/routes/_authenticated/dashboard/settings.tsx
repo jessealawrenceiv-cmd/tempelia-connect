@@ -22,6 +22,21 @@ const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", st
   backend: "from the backend",
 };
 
+const TooltipCloseContext = createContext<() => void>(() => {});
+
+function TooltipCloseButton({ children = "Close" }: { children?: React.ReactNode }) {
+  const close = useContext(TooltipCloseContext);
+  return (
+    <button
+      type="button"
+      onClick={close}
+      className="mt-2 rounded-sm border border-border px-2 py-1 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+    >
+      {children}
+    </button>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/dashboard/settings")({
   component: SettingsPage,
 });
