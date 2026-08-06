@@ -1692,6 +1692,11 @@ const AutomationBadge = memo(forwardRef<
     setOpen(true);
   };
   const hide = (e?: React.SyntheticEvent) => {
+    // Keep the tooltip open while focus lives inside it. Without this, inserting
+    // the refresh-error alert shifts the layout out from under the pointer, the
+    // browser fires mouseleave, and the Retry button the user was just given
+    // focus on disappears mid-interaction.
+    if (containerRef.current?.contains(document.activeElement)) return;
     const next = "relatedTarget" in (e ?? {}) ? ((e as React.FocusEvent).relatedTarget as Node | null) : null;
     if (!next || !containerRef.current?.contains(next)) {
       setOpen(false);
