@@ -141,25 +141,29 @@ test.describe("Settings · ACTIVE badge reacts to live row updates", () => {
     await expect(tooltip).toBeVisible();
   });
 
-  test("changing decline_followup_mode in the database updates the Advanced entry live", async ({ page }) => {
+  test("changing decline_followup_mode in the database updates the control and toast live", async ({ page }) => {
     const trigger = await badgeTrigger(page);
     const tooltipId = await trigger.getAttribute("aria-controls");
     const tooltip = page.locator(`#${tooltipId}`);
 
-    await trigger.focus();
-    await page.keyboard.press("Enter");
-    await expect(tooltip).toBeVisible();
-
-    const entry = tooltip.getByRole("button", { name: /Declined-quote follow-up/i }).first();
-    const before = await entry.getAttribute("aria-label");
+    const select = page.locator("select").filter({ hasText: "Manual" }).first();
+    await expect(select).toBeVisible();
 
     const nextMode = original!.decline_followup_mode === "off" ? "auto" : "off";
     await patchProfile(api!, original!.id, { decline_followup_mode: nextMode });
 
-    await expect
-      .poll(async () => entry.getAttribute("aria-label"), { timeout: 20_000 })
-      .not.toBe(before);
-    await expect(entry).toContainText(new RegExp(nextMode, "i"));
-    await expect(page.getByText(/Declined-quote follow-up/i).first()).toBeVisible();
+    // The select reflects the new row value straight from the live payload.
+    await expect.poll(async () => select.inputValue(), { timeout: 20_000 }).toBe(nextMode);
+
+    await expect(page.getByText(/Declined-quote follow-up/i).first()).toBeVisible({ timeout: 20_000 });
+
+    // And the tooltip's live-update line records the change with its timestamp.
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(tooltip).toBeVisible();
+    const liveLine = tooltip.locator('[aria-live="polite"]', { hasText: /live update/i }).first();
+    await expect(liveLine).toContainText(/Last live update/i);
+    await expect(liveLine).toContainText(/\d{1,2}:\d{2}:\d{2}/);
   });
 });
+
