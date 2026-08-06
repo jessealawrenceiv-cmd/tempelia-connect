@@ -314,8 +314,28 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateAutoRefresh = useMutation({
+    mutationFn: async (values: { enabled: boolean; intervalMinutes: number }) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles")
+        .update({
+          auto_refresh_enabled: values.enabled,
+          auto_refresh_interval_minutes: values.intervalMinutes,
+        })
+        .eq("id", u.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auto-refresh settings saved.");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const declineMode = (profile?.decline_followup_mode ?? "off") as "off" | "manual" | "auto";
+
   const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
   const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
 
