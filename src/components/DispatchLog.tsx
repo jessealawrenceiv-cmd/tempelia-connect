@@ -16,6 +16,38 @@ const LABEL: Record<string, string> = {
   automation_status_change: "STATUS_CHANGE",
 };
 
+// Refresh-attempt audit rows store structured JSON; render them as readable
+// dispatch lines instead of dumping raw payloads.
+const REFRESH_OUTCOME: Record<string, { text: string; dot: string }> = {
+  updated: { text: "statuses updated", dot: "bg-primary" },
+  already_current: { text: "already current", dot: "bg-steel" },
+  failed: { text: "refresh failed", dot: "bg-orange" },
+};
+
+function describe(row: { action_type: string; status: string | null; message_sent: string | null }) {
+  if (row.action_type !== "status_refresh" && row.action_type !== "automation_status_change") {
+    return row.message_sent ?? "—";
+  }
+  let payload: Record<string, unknown> = {};
+  try {
+    payload = row.message_sent ? (JSON.parse(row.message_sent) as Record<string, unknown>) : {};
+  } catch {
+    return row.message_sent ?? "—";
+  }
+  const parts: string[] = [];
+  if (row.action_type === "status_refresh") {
+    parts.push(REFRESH_OUTCOME[row.status ?? ""]?.text ?? row.status ?? "refresh");
+    if (typeof payload["error_code"] === "string") parts.push(String(payload["error_code"]));
+    if (typeof payload["error"] === "string") parts.push(String(payload["error"]));
+    if (typeof payload["duration_ms"] === "number") parts.push(`${payload["duration_ms"]}ms`);
+  } else {
+    const changes = payload["changes"];
+    if (Array.isArray(changes) && changes.length > 0) parts.push(changes.join(" · "));
+    if (typeof payload["trigger"] === "string") parts.push(String(payload["trigger"]));
+  }
+  return parts.length > 0 ? parts.join(" — ") : (row.message_sent ?? "—");
+}
+
 
 
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
@@ -50,10 +82,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <span className="text-muted-foreground">
               {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
-            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${DOT[row.action_type] ?? "bg-muted"}`} />
+            <span
+              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                (row.action_type === "status_refresh" ? REFRESH_OUTCOME[row.status ?? ""]?.dot : undefined) ??
+                DOT[row.action_type] ??
+                "bg-muted"
+              }`}
+            />
             <span>
               <span className="mr-2 font-semibold text-foreground">{LABEL[row.action_type] ?? row.action_type}</span>
-              <span className="text-foreground/80">{row.message_sent ?? "—"}</span>
+              <span className="text-foreground/80">{describe(row)}</span>
+
             </span>
           </li>
         ))}
