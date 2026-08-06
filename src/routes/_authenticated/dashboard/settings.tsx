@@ -337,7 +337,11 @@ function SettingsPage() {
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<{
+    message: string;
+    code?: string;
+    at: Date;
+  } | null>(null);
   const [refreshAttempts, setRefreshAttempts] = useState(0);
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -418,11 +422,14 @@ function SettingsPage() {
       }
     } catch (e) {
       const message = (e as Error)?.message || "Could not re-check automation statuses.";
-      setRefreshError(message);
+      const code = (e as { code?: string })?.code || (e as { error_code?: string })?.error_code;
+      const at = new Date();
+      setRefreshError({ message, code, at });
       setRefreshAttempts((n) => n + 1);
       void logStatusRefresh("failed", {
         outcome: "Refresh failed",
         error: message,
+        error_code: code,
         duration_ms: Date.now() - startedAt,
       });
       toast.error("Refresh failed", { description: message });
@@ -501,6 +508,22 @@ function SettingsPage() {
         ))}
       </ul>
       <div className="border-t border-border pt-1">
+        {refreshError ? (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mb-1 space-y-0.5 rounded-sm border border-orange/60 bg-orange/10 px-1.5 py-1 normal-case tracking-normal"
+          >
+            <div className="text-foreground">Refresh failed</div>
+            <div className="break-words text-muted-foreground">
+              {refreshError.code ? `${refreshError.code}: ` : null}
+              {refreshError.message}
+            </div>
+            <div className="text-muted-foreground">
+              {refreshError.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </div>
+          </div>
+        ) : null}
         <div aria-live="polite" aria-atomic="true">
           Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
         </div>
@@ -534,7 +557,7 @@ function SettingsPage() {
             className="mt-1 space-y-1 rounded-sm border border-orange/60 bg-orange/10 px-2 py-1 normal-case tracking-normal"
           >
             <div className="text-foreground">Couldn’t refresh statuses</div>
-            <div className="text-muted-foreground break-words">{refreshError}</div>
+            <div className="text-muted-foreground break-words">{refreshError.message}</div>
             <div className="flex items-center justify-between gap-2">
               <button
                 ref={retryButtonRef}
