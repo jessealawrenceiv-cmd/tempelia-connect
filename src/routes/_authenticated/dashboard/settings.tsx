@@ -7,6 +7,7 @@ import { TeamMembersPanel } from "@/components/TeamMembersPanel";
 import { OptInPromptSettingsPanel } from "@/components/OptInPromptSettingsPanel";
 import { WebhookCheckPanel } from "@/components/WebhookCheckPanel";
 import { WebhookEventLogPanel } from "@/components/WebhookEventLogPanel";
+import { ActiveChangeAuditPanel } from "@/components/ActiveChangeAuditPanel";
 import { DepositDefaultsPanel } from "@/components/DepositDefaultsPanel";
 import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 
@@ -88,7 +89,12 @@ function SettingsPage() {
   };
 
   // Snapshot of the status-relevant profile fields, so realtime updates can be described.
-  const statusSnapshotRef = useRef<{ voicemail: boolean; decline: string } | null>(null);
+  const statusSnapshotRef = useRef<{
+    voicemail: boolean;
+    decline: string;
+    review: boolean;
+    intake: boolean;
+  } | null>(null);
   useEffect(() => {
     if (!profile) return;
     const prev = statusSnapshotRef.current;
@@ -102,6 +108,12 @@ function SettingsPage() {
         prev && hasPendingLocalEdit("decline_followup_mode")
           ? prev.decline
           : profile.decline_followup_mode ?? "off",
+      review:
+        prev && hasPendingLocalEdit("review_requests_enabled")
+          ? prev.review
+          : profile.review_requests_enabled !== false,
+      intake:
+        prev && hasPendingLocalEdit("intake_enabled") ? prev.intake : !!profile.intake_enabled,
     };
   }, [profile]);
   const [lastUpdate, setLastUpdate] = useState<
@@ -209,6 +221,8 @@ function SettingsPage() {
 
       const nextVoicemail = !!next["voicemail_enabled"];
       const nextDecline = (next["decline_followup_mode"] as string) ?? "off";
+      const nextReview = next["review_requests_enabled"] !== false;
+      const nextIntake = !!next["intake_enabled"];
       const changes: string[] = [];
       const changedFields: string[] = [];
       if (nextVoicemail !== prev.voicemail) {
@@ -218,6 +232,14 @@ function SettingsPage() {
       if (nextDecline !== prev.decline) {
         changes.push(`Declined-quote follow-up ${nextDecline.toUpperCase()}`);
         changedFields.push("decline_followup_mode");
+      }
+      if (nextReview !== prev.review) {
+        changes.push(`Reviews ${nextReview ? "ACTIVE" : "OFF"}`);
+        changedFields.push("review_requests_enabled");
+      }
+      if (nextIntake !== prev.intake) {
+        changes.push(`Intake form ${nextIntake ? "ACTIVE" : "OFF"}`);
+        changedFields.push("intake_enabled");
       }
       if (changes.length === 0) return;
 
@@ -236,11 +258,32 @@ function SettingsPage() {
       changedFields.forEach((f) => localEditsRef.current.delete(f));
       setLastUpdate({ origin, at: new Date() });
 
-      statusSnapshotRef.current = { voicemail: nextVoicemail, decline: nextDecline };
+      statusSnapshotRef.current = {
+        voicemail: nextVoicemail,
+        decline: nextDecline,
+        review: nextReview,
+        intake: nextIntake,
+      };
       toast.success("Automation status updated", {
         description: `${changes.join(" · ")} — ${UPDATE_ORIGIN_LABEL[origin]} at ${new Date().toLocaleTimeString()}`,
       });
-      void logStatusChange({ changes, changedFields, origin, next: { voicemail_enabled: nextVoicemail, decline_followup_mode: nextDecline } });
+      void logStatusChange({
+        changes,
+        changedFields,
+        origin,
+        previous: {
+          voicemail_enabled: prev.voicemail,
+          decline_followup_mode: prev.decline,
+          review_requests_enabled: prev.review,
+          intake_enabled: prev.intake,
+        },
+        next: {
+          voicemail_enabled: nextVoicemail,
+          decline_followup_mode: nextDecline,
+          review_requests_enabled: nextReview,
+          intake_enabled: nextIntake,
+        },
+      });
     };
 
     // Dispatch-style activity entry for every ACTIVE status change, with the
@@ -250,6 +293,7 @@ function SettingsPage() {
       changes: string[];
       changedFields: string[];
       origin: "this-device" | "other-device" | "backend";
+      previous: Record<string, unknown>;
       next: Record<string, unknown>;
     }) => {
       try {
@@ -275,6 +319,7 @@ function SettingsPage() {
             trigger: UPDATE_ORIGIN_LABEL[entry.origin],
             changes: entry.changes,
             changed_fields: entry.changedFields,
+            previous_values: entry.previous,
             new_values: entry.next,
           }),
         });
@@ -1385,6 +1430,10 @@ function SettingsPage() {
           </div>
         )}
 
+
+        <div id="adv-active-audit" className="scroll-mt-24 md:col-span-2">
+          <ActiveChangeAuditPanel />
+        </div>
 
         <div className="panel p-6 md:col-span-2">
           <div className="label-eyebrow">Compliance</div>
