@@ -86,8 +86,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [scope, setScope] = useState<"live" | "archive">("live");
+  const [searchQuery, setSearchQuery] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
+
+  const searchTerms = useMemo(
+    () =>
+      searchQuery
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((t) => t.length > 0),
+    [searchQuery],
+  );
 
   const { data, isLoading } = useQuery({
     queryKey: ["logs", scope, limit],
