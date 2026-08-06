@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { to: "/dashboard", label: "Overview", icon: LayoutDashboard, ownerOnly: false },
+  { to: "/dashboard", label: "Home", icon: LayoutDashboard, ownerOnly: false },
   { to: "/dashboard/missed-calls", label: "Missed Calls", icon: PhoneMissed, ownerOnly: false },
   { to: "/dashboard/contacts", label: "Contacts", icon: Users, ownerOnly: false },
   { to: "/dashboard/quotes", label: "Quotes", icon: FileText, ownerOnly: false },

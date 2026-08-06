@@ -1,21 +1,47 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { PhoneMissed, Star, ThumbsUp, Snowflake } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronRight, Clock, MapPin } from "lucide-react";
 import { DispatchLog } from "@/components/DispatchLog";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
-  component: OverviewPage,
+  component: HomePage,
 });
 
-function OverviewPage() {
+const AWAY_KEY = "temaro.lastHomeVisit";
+
+function money(n: number) {
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function fmtTime(t: string | null) {
+  if (!t) return "All day";
+  const [h, m] = t.split(":");
+  const d = new Date();
+  d.setHours(Number(h), Number(m), 0, 0);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function HomePage() {
   const qc = useQueryClient();
   const backfilled = useRef(false);
   const provisionFn = useServerFn(provisionTenantNumber);
+  const [logOpen, setLogOpen] = useState(false);
+  const [awaySince] = useState(() => {
+    if (typeof window === "undefined") return new Date(Date.now() - 86400000).toISOString();
+    const prev = window.localStorage.getItem(AWAY_KEY);
+    window.localStorage.setItem(AWAY_KEY, new Date().toISOString());
+    return prev ?? new Date(Date.now() - 86400000).toISOString();
+  });
 
   // Silent safety-net: if a tenant reached the dashboard without a number
   // (skipped onboarding, older account), buy one in the background.
@@ -36,15 +62,86 @@ function OverviewPage() {
     })();
   }, [provisionFn]);
 
-  const { data: stats } = useQuery({
-    queryKey: ["stats"],
+  void qc;
+
+  const { data: today, isLoading: loadingToday } = useQuery({
+    queryKey: ["home", "today-appointments"],
     queryFn: async () => {
-      const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
-      const iso = start.toISOString();
+      const { data } = await supabase
+        .from("appointments")
+        .select("id, title, time, notes, customer_id, customers(first_name, last_name, phone_number)")
+        .eq("date", todayISO())
+        .order("time", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const { data: attention, isLoading: loadingAttention } = useQuery({
+    queryKey: ["home", "attention"],
+    queryFn: async () => {
+      const [sent, intakes, declined] = await Promise.all([
+        supabase
+          .from("quotes")
+          .select("id, customer_first_name, customer_last_name, total_amount, last_sms_sent_at, created_at")
+          .eq("status", "sent")
+          .is("archived_at", null)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("intake_submissions")
+          .select("id, customer_first_name, customer_last_name, submitted_at")
+          .eq("status", "new")
+          .order("submitted_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("quotes")
+          .select("id, customer_first_name, customer_last_name, decline_reason, responded_at")
+          .eq("status", "declined")
+          .not("decline_reason", "is", null)
+          .is("decline_followup_sent_at", null)
+          .order("responded_at", { ascending: false })
+          .limit(10),
+      ]);
+      return {
+        sent: sent.data ?? [],
+        intakes: intakes.data ?? [],
+        declined: declined.data ?? [],
+      };
+    },
+  });
+
+  const { data: money7 } = useQuery({
+    queryKey: ["home", "money", awaySince],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 7 * 86400000).toISOString();
+      const [paid, open] = await Promise.all([
+        supabase
+          .from("quotes")
+          .select("id, deposit_amount, deposit_paid_at, customer_first_name")
+          .eq("deposit_paid", true)
+          .gte("deposit_paid_at", since),
+        supabase
+          .from("quotes")
+          .select("id, total_amount, deposit_amount, deposit_paid")
+          .in("status", ["sent", "accepted"])
+          .is("archived_at", null),
+      ]);
+      const depositsPaid = (paid.data ?? []).reduce((s, r) => s + Number(r.deposit_amount ?? 0), 0);
+      const owed = (open.data ?? []).reduce(
+        (s, r) => s + Math.max(0, Number(r.total_amount ?? 0) - (r.deposit_paid ? Number(r.deposit_amount ?? 0) : 0)),
+        0,
+      );
+      return { depositsPaid, depositsCount: (paid.data ?? []).length, owed, openCount: (open.data ?? []).length };
+    },
+  });
+
+  const { data: away } = useQuery({
+    queryKey: ["home", "away", awaySince],
+    queryFn: async () => {
       const { data } = await supabase
         .from("logs")
         .select("action_type")
-        .gte("created_at", iso);
+        .gte("created_at", awaySince);
       const rows = data ?? [];
       return {
         calls: rows.filter((r) => r.action_type === "missed_call_text").length,
@@ -54,37 +151,160 @@ function OverviewPage() {
     },
   });
 
-  void qc;
+  const awayLine = (() => {
+    if (!away) return "Checking what happened while you were away…";
+    const parts: string[] = [];
+    if (away.calls) parts.push(`answered ${away.calls} missed call${away.calls === 1 ? "" : "s"}`);
+    if (away.reviews) parts.push(`sent ${away.reviews} review request${away.reviews === 1 ? "" : "s"}`);
+    if (away.reactivations) parts.push(`sent ${away.reactivations} win-back text${away.reactivations === 1 ? "" : "s"}`);
+    if (parts.length === 0) return "Nothing needed answering while you were away — your line stayed quiet.";
+    const joined = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+    return `Temaro ${joined} while you were away.`;
+  })();
+
+  const attentionCount =
+    (attention?.sent.length ?? 0) + (attention?.intakes.length ?? 0) + (attention?.declined.length ?? 0);
 
   return (
     <div>
-      <PageHeader eyebrow="Today" title="Overview" />
+      <PageHeader eyebrow="Today" title="Home" />
 
-      <div className="grid gap-4 p-5 md:grid-cols-4 md:p-8">
-        <StatCard tone="orange" icon={<PhoneMissed size={18} />} label="Calls captured" value={stats?.calls ?? 0} />
-        <StatCard tone="steel" icon={<Star size={18} />} label="Reviews sent" value={stats?.reviews ?? 0} />
-        <StatCard tone="moss" icon={<ThumbsUp size={18} />} label="5-star reviews" value={0} note="Live count coming with Google integration" />
-        <StatCard tone="charcoal" icon={<Snowflake size={18} />} label="Leads reactivated" value={stats?.reactivations ?? 0} />
-      </div>
+      <div className="space-y-4 p-5 md:p-8">
+        {/* Today's Schedule */}
+        <section className="panel">
+          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <div className="label-eyebrow">Today’s Schedule</div>
+            <Link to="/dashboard/schedule" className="mono text-[10px] uppercase tracking-widest text-moss hover:text-foreground">
+              Schedule <ChevronRight size={12} className="inline" />
+            </Link>
+          </div>
+          {loadingToday ? (
+            <div className="p-5 text-sm text-muted-foreground">Loading…</div>
+          ) : (today?.length ?? 0) === 0 ? (
+            <div className="flex items-center gap-2 p-5 text-sm text-muted-foreground">
+              <CalendarDays size={16} /> Nothing on the books today.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {today!.map((a) => {
+                const c = (a as { customers?: { first_name: string; last_name: string | null } | null }).customers;
+                const who = c ? `${c.first_name}${c.last_name ? ` ${c.last_name}` : ""}` : a.title;
+                return (
+                  <li key={a.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-5 py-3">
+                    <span className="mono text-sm text-foreground">
+                      <Clock size={12} className="mr-1.5 inline" />
+                      {fmtTime(a.time)}
+                    </span>
+                    <span className="text-sm font-medium text-foreground">{who}</span>
+                    <span className="text-sm text-muted-foreground">{a.title}</span>
+                    {a.notes ? (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin size={12} /> {a.notes}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
-      <div className="px-5 pb-10 md:px-8">
-        <DispatchLog />
-      </div>
-    </div>
-  );
-}
+        {/* Needs your attention */}
+        <section className="panel">
+          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <div className="label-eyebrow">Needs your attention</div>
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{attentionCount}</span>
+          </div>
+          {loadingAttention ? (
+            <div className="p-5 text-sm text-muted-foreground">Loading…</div>
+          ) : attentionCount === 0 ? (
+            <div className="p-5 text-sm text-muted-foreground">Nothing waiting on you right now.</div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {attention!.intakes.map((i) => (
+                <li key={`i-${i.id}`} className="px-5 py-3 text-sm">
+                  <Link to="/dashboard/intakes" className="flex flex-wrap items-baseline gap-2 hover:underline">
+                    <span className="mono text-[10px] uppercase tracking-widest text-orange">New request</span>
+                    <span className="font-medium text-foreground">
+                      {i.customer_first_name} {i.customer_last_name}
+                    </span>
+                    <span className="text-muted-foreground">wants a quote</span>
+                  </Link>
+                </li>
+              ))}
+              {attention!.sent.map((q) => (
+                <li key={`s-${q.id}`} className="px-5 py-3 text-sm">
+                  <Link to="/dashboard/quotes" className="flex flex-wrap items-baseline gap-2 hover:underline">
+                    <span className="mono text-[10px] uppercase tracking-widest text-steel">Waiting on customer</span>
+                    <span className="font-medium text-foreground">
+                      {q.customer_first_name} {q.customer_last_name ?? ""}
+                    </span>
+                    <span className="text-muted-foreground">quote for {money(Number(q.total_amount ?? 0))}</span>
+                  </Link>
+                </li>
+              ))}
+              {attention!.declined.map((q) => (
+                <li key={`d-${q.id}`} className="px-5 py-3 text-sm">
+                  <Link to="/dashboard/quotes" className="flex flex-wrap items-baseline gap-2 hover:underline">
+                    <span className="mono text-[10px] uppercase tracking-widest text-moss">Declined · review</span>
+                    <span className="font-medium text-foreground">
+                      {q.customer_first_name} {q.customer_last_name ?? ""}
+                    </span>
+                    <span className="text-muted-foreground">“{q.decline_reason}”</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-function StatCard({ tone, icon, label, value, note }: { tone: "orange" | "steel" | "moss" | "charcoal"; icon: React.ReactNode; label: string; value: number; note?: string }) {
-  const bar = { orange: "bg-orange", steel: "bg-steel", moss: "bg-moss", charcoal: "bg-charcoal" }[tone];
-  return (
-    <div className="panel relative overflow-hidden p-5">
-      <div className={`absolute inset-x-0 top-0 h-1 ${bar}`} />
-      <div className="flex items-center justify-between">
-        <div className="label-eyebrow">{label}</div>
-        <span className="text-muted-foreground">{icon}</span>
+        {/* Money */}
+        <section className="panel">
+          <div className="border-b border-border px-5 py-3">
+            <div className="label-eyebrow">Money</div>
+          </div>
+          <div className="grid gap-px bg-border sm:grid-cols-2">
+            <div className="bg-card p-5">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Deposits paid · last 7 days</div>
+              <div className="stat-num mt-2 text-foreground">{money(money7?.depositsPaid ?? 0)}</div>
+              <div className="mono mt-1 text-[10px] uppercase tracking-widest text-moss">
+                {money7?.depositsCount ?? 0} deposit{(money7?.depositsCount ?? 0) === 1 ? "" : "s"}
+              </div>
+            </div>
+            <div className="bg-card p-5">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Still owed · open quotes</div>
+              <div className="stat-num mt-2 text-foreground">{money(money7?.owed ?? 0)}</div>
+              <div className="mono mt-1 text-[10px] uppercase tracking-widest text-moss">
+                across {money7?.openCount ?? 0} open quote{(money7?.openCount ?? 0) === 1 ? "" : "s"}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* While you were away */}
+        <section className="panel p-5">
+          <div className="label-eyebrow">While you were away</div>
+          <p className="mt-2 text-base text-foreground">{awayLine}</p>
+        </section>
+
+        {/* Activity log — secondary, collapsed by default */}
+        <section>
+          <button
+            type="button"
+            onClick={() => setLogOpen((v) => !v)}
+            aria-expanded={logOpen}
+            className="panel flex w-full items-center justify-between px-5 py-3 text-left hover:bg-accent"
+          >
+            <span className="label-eyebrow">Activity log</span>
+            <ChevronDown size={16} className={`text-muted-foreground transition-transform ${logOpen ? "rotate-180" : ""}`} />
+          </button>
+          {logOpen ? (
+            <div className="mt-3">
+              <DispatchLog />
+            </div>
+          ) : null}
+        </section>
       </div>
-      <div className="stat-num mt-3 text-foreground">{value}</div>
-      {note ? <div className="mono mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">{note}</div> : null}
     </div>
   );
 }
