@@ -124,10 +124,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
       <ul className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
         {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
-        {!isLoading && data?.length === 0 && (
-          <li className="p-5 text-muted-foreground">No dispatches yet. Actions will appear here in real time.</li>
+        {!isLoading && filtered.length === 0 && (
+          <li className="p-5 text-muted-foreground">
+            {data?.length === 0
+              ? "No dispatches yet. Actions will appear here in real time."
+              : "No entries match the selected filters."}
+          </li>
         )}
-        {data?.map((row) => (
+        {filtered.map((row) => (
+
           <li key={row.id} className="grid grid-cols-[auto_auto_1fr] items-start gap-3 px-5 py-3">
             <span className="text-muted-foreground">
               {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
