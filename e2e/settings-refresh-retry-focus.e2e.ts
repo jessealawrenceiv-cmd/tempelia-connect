@@ -104,30 +104,10 @@ test.describe("Settings · Retry focus after a failed refresh", () => {
   test("clicking Retry keeps focus pinned to the Retry button throughout", async ({ page }) => {
     const { tooltip, refresh, retry } = await openTooltip(page);
 
-    page.on("console", (m) => console.log("PAGE", m.type(), m.text().slice(0, 200)));
-    page.on("requestfailed", (r) => console.log("REQFAIL", r.url().slice(0, 80)));
-    page.on("response", (r) => { if (r.url().includes("_serverFn")) console.log("RESP", r.status(), r.url().slice(30, 60)); });
-    await page.evaluate((tid) => {
-      const w = window as any; w.__ev = []; const t0 = performance.now(); const st = () => Math.round(performance.now() - t0);
-      const d = (el: any) => (el ? el.getAttribute?.("aria-label") ?? el.tagName : "null");
-      const tip = document.getElementById(tid)!;
-      document.addEventListener("focusin", (e) => w.__ev.push(`${st()} focusin ${d(e.target)}`), true);
-      document.addEventListener("focusout", (e: any) => w.__ev.push(`${st()} focusout ${d(e.target)} -> ${d(e.relatedTarget)}`), true);
-      document.addEventListener("pointerdown", (e: any) => w.__ev.push(`${st()} pointerdown inTip=${tip.contains(e.target)} ${(e.target.textContent || "").trim().slice(0, 20)}`), true);
-      new MutationObserver((ms) => ms.forEach((m) => w.__ev.push(`${st()} hidden=${(tip as HTMLElement).hidden}`))).observe(tip, { attributes: true, attributeFilter: ["hidden"] });
-    }, (await tooltip.getAttribute("id")) as string);
-
     // 1. Provoke the failure from Refresh now.
     await refresh.focus();
     await refresh.click();
 
-    await page.waitForTimeout(4000);
-    console.log("EV", JSON.stringify(await page.evaluate(() => (window as any).__ev)));
-    console.log("DBG", JSON.stringify(await page.evaluate(() => ({
-      active: document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.tagName,
-      tips: [...document.querySelectorAll('[role="group"]')].map((el) => ({ id: el.id, hidden: (el as HTMLElement).hidden })),
-      err: document.body.innerText.includes("Couldn’t refresh statuses"),
-    }))));
     // 2. The error surfaces and focus lands on Retry automatically.
     await expect(tooltip.getByText(/Couldn’t refresh statuses/i)).toBeVisible();
     await expect(retry).toBeVisible();
