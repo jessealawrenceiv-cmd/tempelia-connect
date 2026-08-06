@@ -919,6 +919,7 @@ export type Database = {
           twilio_provisioned_at: string | null
           updated_at: string
           voicemail_enabled: boolean
+          zip_code: string | null
         }
         Insert: {
           allow_deposit_override_per_quote?: boolean
@@ -950,6 +951,7 @@ export type Database = {
           twilio_provisioned_at?: string | null
           updated_at?: string
           voicemail_enabled?: boolean
+          zip_code?: string | null
         }
         Update: {
           allow_deposit_override_per_quote?: boolean
@@ -981,6 +983,7 @@ export type Database = {
           twilio_provisioned_at?: string | null
           updated_at?: string
           voicemail_enabled?: boolean
+          zip_code?: string | null
         }
         Relationships: []
       }
