@@ -78,6 +78,8 @@ function describe(row: { action_type: string; status: string | null; message_sen
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const lastAnnouncedIdRef = useRef<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["logs", limit],
