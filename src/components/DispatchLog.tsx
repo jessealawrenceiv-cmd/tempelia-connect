@@ -82,10 +82,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <span className="text-muted-foreground">
               {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
-            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${DOT[row.action_type] ?? "bg-muted"}`} />
+            <span
+              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                (row.action_type === "status_refresh" ? REFRESH_OUTCOME[row.status ?? ""]?.dot : undefined) ??
+                DOT[row.action_type] ??
+                "bg-muted"
+              }`}
+            />
             <span>
               <span className="mr-2 font-semibold text-foreground">{LABEL[row.action_type] ?? row.action_type}</span>
-              <span className="text-foreground/80">{row.message_sent ?? "—"}</span>
+              <span className="text-foreground/80">{describe(row)}</span>
+
             </span>
           </li>
         ))}
