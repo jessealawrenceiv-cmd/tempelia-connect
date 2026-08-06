@@ -1141,6 +1141,25 @@ function SettingsPage() {
                 className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
               />
             </label>
+            <label className="block">
+              <span className="label-eyebrow">ZIP code (weather only)</span>
+              <input
+                value={zipCode}
+                onChange={(e) => setZipCode(sanitizeZipInput(e.target.value))}
+                inputMode="numeric"
+                maxLength={5}
+                placeholder="72201"
+                aria-label="ZIP code for weather"
+                data-testid="settings-zip-input"
+                className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+              />
+              {zipCode !== "" && !isValidZip(zipCode) && (
+                <p className="mt-1 text-xs text-orange">Enter all 5 digits to see the forecast.</p>
+              )}
+              <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
+                Used only for today’s weather on Home. Press Save to store.
+              </p>
+            </label>
             <button
               onClick={() => save.mutate()}
               disabled={save.isPending}
@@ -1163,25 +1182,6 @@ function SettingsPage() {
                   onChange={(e) => toggleReviews.mutate(e.target.checked)}
                 />
                 {profile?.review_requests_enabled === false ? "Off" : "On"}
-              </label>
-              <label className="mt-3 block">
-                <span className="label-eyebrow">ZIP code (weather only)</span>
-                <input
-                  value={zipCode}
-                  onChange={(e) => setZipCode(sanitizeZipInput(e.target.value))}
-                  inputMode="numeric"
-                  maxLength={5}
-                  placeholder="72201"
-                  aria-label="ZIP code for weather"
-                  data-testid="settings-zip-input"
-                  className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
-                />
-                {zipCode !== "" && !isValidZip(zipCode) && (
-                  <p className="mt-1 text-xs text-orange">Enter all 5 digits to see the forecast.</p>
-                )}
-                <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
-                  Used only for today's weather on Home. Press Save to store.
-                </p>
               </label>
             </div>
 
