@@ -48,6 +48,10 @@
   --color-steel-foreground: var(--steel-blue-foreground);
   --color-moss: var(--moss-green);
   --color-moss-foreground: var(--moss-green-foreground);
+  /* AA-contrast text variants for tinted status chips on the app surface */
+  --color-moss-ink: var(--moss-green-ink);
+  --color-steel-ink: var(--steel-blue-ink);
+  --color-orange-ink: var(--industrial-violet-ink);
   --color-rule: var(--rule);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
