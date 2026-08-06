@@ -108,6 +108,12 @@ test.describe("Settings · Retry focus after a failed refresh", () => {
     await refresh.focus();
     await refresh.click();
 
+    await page.waitForTimeout(4000);
+    console.log("DBG", JSON.stringify(await page.evaluate(() => ({
+      active: document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.tagName,
+      tips: [...document.querySelectorAll('[role="group"]')].map((el) => ({ id: el.id, hidden: (el as HTMLElement).hidden })),
+      err: document.body.innerText.includes("Couldn’t refresh statuses"),
+    }))));
     // 2. The error surfaces and focus lands on Retry automatically.
     await expect(tooltip.getByText(/Couldn’t refresh statuses/i)).toBeVisible();
     await expect(retry).toBeVisible();
