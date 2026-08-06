@@ -506,14 +506,7 @@ function SettingsPage() {
     // can hand focus back to it after the refresh button flips from disabled.
     const focusBefore = document.activeElement as HTMLElement | null;
     const focusWasInTooltip = focusBefore ? advancedBadgeRef.current?.contains(focusBefore) ?? false : false;
-    if (typeof window !== "undefined") {
-      (window as unknown as Record<string, unknown>).__refreshStatusesVersion = "v2-with-focus-restore";
-      (window as unknown as Record<string, unknown>).__refreshStatusesMeta = {
-        focusLabel: focusBefore?.getAttribute("aria-label"),
-        inTooltip: focusWasInTooltip,
-        hasRef: !!advancedBadgeRef.current,
-      };
-    }
+
 
 
 
