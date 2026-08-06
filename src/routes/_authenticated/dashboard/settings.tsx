@@ -1025,7 +1025,7 @@ function SettingsPage() {
       cooldownMs,
       evaluatedAt,
       lastUpdate,
-      refreshAttempts,
+      tooltipStatusMessage,
       jumpToAdvanced,
       refreshStatuses,
     ],
