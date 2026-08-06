@@ -115,6 +115,33 @@ function SettingsPage() {
   const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
   const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
 
+  const [evaluatedAt, setEvaluatedAt] = useState<Date | null>(null);
+  useEffect(() => {
+    if (profile !== undefined) setEvaluatedAt(new Date());
+  }, [profile]);
+  const evaluatedLabel = evaluatedAt
+    ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "—";
+
+  const advancedAutomations: { name: string; mode: string }[] = [
+    { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD" },
+    { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL" },
+  ];
+
+  const advancedTooltip = (
+    <div className="space-y-1">
+      <div className="text-foreground">Advanced automations</div>
+      {advancedAutomations.map((a) => (
+        <div key={a.name} className="flex items-center justify-between gap-3">
+          <span>{a.name}</span>
+          <span className="text-foreground">{a.mode}</span>
+        </div>
+      ))}
+      <div className="border-t border-border pt-1">Last evaluated {evaluatedLabel}</div>
+    </div>
+  );
+
+
   if (isStaff) {
     return (
       <div>
@@ -314,7 +341,12 @@ function SettingsPage() {
               <div className="label-eyebrow">Advanced</div>
               <h2 className="mt-1 text-xl">Automations in Advanced</h2>
             </div>
-            <AutomationBadge state={advancedActiveCount > 0 ? "active" : "off"} activeCount={advancedActiveCount} />
+            <AutomationBadge
+              state={advancedActiveCount > 0 ? "active" : "off"}
+              activeCount={advancedActiveCount}
+              tooltip={advancedTooltip}
+            />
+
           </div>
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
@@ -376,10 +408,12 @@ function AutomationBadge({
   state,
   label,
   activeCount,
+  tooltip,
 }: {
   state: "active" | "manual" | "hold" | "off";
   label?: string;
   activeCount?: number;
+  tooltip?: React.ReactNode;
 }) {
   const styles: Record<string, string> = {
     active: "border-moss/60 bg-moss/15 text-moss",
@@ -389,11 +423,12 @@ function AutomationBadge({
   };
   const defaults: Record<string, string> = {
     active: activeCount ? `${activeCount} active` : "Active",
+    
     manual: "Manual",
     hold: "On hold",
     off: "Off",
   };
-  return (
+  const badge = (
     <span
       className={`mono shrink-0 rounded-sm border px-2 py-1 text-[10px] uppercase tracking-widest ${styles[state]}`}
     >
@@ -403,7 +438,24 @@ function AutomationBadge({
       {label ?? defaults[state]}
     </span>
   );
+
+  if (!tooltip) return badge;
+
+  return (
+    <span className="group relative shrink-0">
+      <span tabIndex={0} className="cursor-help outline-none">
+        {badge}
+      </span>
+      <span
+        role="tooltip"
+        className="mono pointer-events-none absolute right-0 top-full z-20 mt-2 hidden w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg group-hover:block group-focus-within:block"
+      >
+        {tooltip}
+      </span>
+    </span>
+  );
 }
+
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
 
