@@ -915,6 +915,17 @@ function SettingsPage() {
               ? `Last live update ${UPDATE_ORIGIN_LABEL[lastUpdate.origin]} · ${lastUpdate.at.toLocaleTimeString()}`
               : "No live update since this page opened"}
           </div>
+          {/* Tooltip-local live region: announces the automation status result of
+              each completed refresh. Never focused, so focus stays put. */}
+          <div
+            data-testid="adv-tooltip-status-live"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only"
+          >
+            {tooltipStatusMessage}
+          </div>
 
           <button
             key="refresh-now-btn"
