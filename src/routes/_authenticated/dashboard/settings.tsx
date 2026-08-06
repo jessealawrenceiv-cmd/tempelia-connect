@@ -537,7 +537,9 @@ function SettingsPage() {
             <div className="text-muted-foreground break-words">{refreshError}</div>
             <div className="flex items-center justify-between gap-2">
               <button
+                ref={retryButtonRef}
                 type="button"
+
                 onClick={() => {
                   if (isRefreshingStatuses) return;
                   refreshStatuses();
