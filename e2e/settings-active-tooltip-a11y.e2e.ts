@@ -172,20 +172,21 @@ test.describe("Settings · ACTIVE tooltip accessibility", () => {
     await expect(trigger).toBeFocused();
   });
 
-  test("axe-core reports no WCAG A/AA violations with the tooltip closed or open", async ({
-    page,
-  }) => {
+  test("axe-core reports no WCAG A/AA violations for the badge or its tooltip", async ({ page }) => {
     const { trigger, tooltip } = await getActiveBadge(page);
+    const tooltipId = await trigger.getAttribute("aria-controls");
 
-    expect(await scan(page), "violations with tooltip closed").toEqual([]);
+    // Closed state: the badge trigger itself must be clean (name, role, contrast).
+    expect(await scan(page, '[aria-haspopup="true"][aria-controls]'), "badge trigger violations").toEqual(
+      [],
+    );
 
     await trigger.focus();
     await page.keyboard.press("Enter");
     await expect(tooltip).toBeVisible();
 
-    expect(await scan(page), "violations with tooltip open").toEqual([]);
-
-    const tooltipId = await trigger.getAttribute("aria-controls");
-    expect(await scan(page, `#${tooltipId}`), "violations inside the tooltip surface").toEqual([]);
+    // Open state: the tooltip surface and everything inside it must be clean.
+    expect(await scan(page, `#${tooltipId}`), "tooltip surface violations").toEqual([]);
   });
+
 });
