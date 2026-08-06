@@ -418,7 +418,7 @@ function SettingsPage() {
     });
   // Contacts / submissions that saw activity in the window covered by this
   // re-check, so the Activity entry can link straight to what changed.
-  const collectAffected = async (sinceIso: string) => {
+  const collectAffected = useCallback(async (sinceIso: string) => {
     const affected: Array<{ type: "customer" | "intake"; id: string; label: string }> = [];
     try {
       const [{ data: logRows }, { data: intakeRows }] = await Promise.all([
@@ -466,7 +466,7 @@ function SettingsPage() {
       // linking is best-effort; never block the refresh audit
     }
     return affected;
-  };
+  }, []);
 
   // Start of the window this refresh covers (previous re-check, else last 24h).
   const lastRefreshAtRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
