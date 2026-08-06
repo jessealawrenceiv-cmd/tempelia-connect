@@ -143,7 +143,7 @@ test.describe("Settings · ACTIVE tooltip live region under reduced motion", () 
     // Each refresh produced a genuinely new announcement (no silent repeats,
     // which a screen reader would not read out).
     const log = await announcements(page);
-    expect(log.length, `expected 3 fresh announcements, got: ${JSON.stringify(log)}`).toBeGreaterThanOrEqual(4);
+    expect(log.length, `expected 3 fresh announcements, got: ${JSON.stringify(log)}`).toBeGreaterThanOrEqual(3);
     for (let i = 1; i < log.length; i += 1) {
       expect(log[i], "consecutive announcements must differ").not.toBe(log[i - 1]);
     }
