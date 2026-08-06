@@ -343,16 +343,32 @@ function SettingsPage() {
     at: Date;
   } | null>(null);
   const [refreshAttempts, setRefreshAttempts] = useState(0);
+  // Cooldown after repeated failures to prevent hammering the status endpoint.
+  const COOLDOWN_BASE_MS = 30_000; // 30s after the 3rd consecutive failure
+  const COOLDOWN_MAX_MS = 300_000; // cap at 5 minutes
+  const [cooldownMs, setCooldownMs] = useState(0);
+  const isInCooldown = cooldownMs > 0;
+  useEffect(() => {
+    if (cooldownMs <= 0) return;
+    const id = window.setInterval(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
+    return () => window.clearInterval(id);
+  }, [cooldownMs]);
+  const formatCooldown = (ms: number) => {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  };
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
-    if (!refreshError || isRefreshingStatuses) return;
+    if (!refreshError || isRefreshingStatuses || isInCooldown) return;
     const id = window.requestAnimationFrame(() => {
       const el = retryButtonRef.current;
       if (el && el.isConnected) el.focus();
     });
     return () => window.cancelAnimationFrame(id);
-  }, [refreshError, isRefreshingStatuses]);
+  }, [refreshError, isRefreshingStatuses, isInCooldown]);
 
 
   // Snapshot of the fields that drive the automation status badges, so the
