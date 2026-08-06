@@ -339,7 +339,7 @@ function SettingsPage() {
       if (retryTimer !== null) window.clearTimeout(retryTimer);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [qc]);
+  }, [qc, reconnectSignal]);
 
 
 
