@@ -89,6 +89,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [scope, setScope] = useState<"live" | "archive">("live");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
