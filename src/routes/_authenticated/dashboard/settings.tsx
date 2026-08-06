@@ -168,20 +168,49 @@ function SettingsPage() {
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
+  // Snapshot of the fields that drive the automation status badges, so the
+  // refresh toast can say whether anything actually changed.
+  const statusSnapshot = (p: typeof profile) =>
+    JSON.stringify({
+      decline_followup_mode: p?.decline_followup_mode ?? "off",
+      voicemail_enabled: p?.voicemail_enabled ?? null,
+      review_auto_enabled: (p as Record<string, unknown> | null | undefined)?.["review_auto_enabled"] ?? null,
+      opt_in_prompt_template: p?.opt_in_prompt_template ?? null,
+      opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
+      optInPromptActive,
+    });
   const refreshStatuses = async () => {
     setIsRefreshingStatuses(true);
+    const before = statusSnapshot(profile);
     try {
-      await refetchProfile();
+      const result = await refetchProfile();
       const nowDate = new Date();
       setNow(nowDate);
       setEvaluatedAt(nowDate);
-      toast.success("Automation statuses refreshed.");
+      const after = statusSnapshot(result?.data ?? profile);
+      const checkedAt = nowDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      if (before === after) {
+        toast.success("Statuses already current", {
+          description: `No changes since the last check · re-checked at ${checkedAt}.`,
+        });
+      } else {
+        toast.success("Statuses updated", {
+          description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
+        });
+      }
     } catch (e) {
-      toast.error((e as Error).message ?? "Refresh failed.");
+      toast.error("Refresh failed", {
+        description: (e as Error).message ?? "Could not re-check automation statuses.",
+      });
     } finally {
       setIsRefreshingStatuses(false);
     }
   };
+
 
   const highlightTimersRef = useRef<Map<HTMLElement, number[]>>(new Map());
   useEffect(() => {
