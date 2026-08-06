@@ -27,7 +27,7 @@ function SettingsPage() {
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
-  const { data: profile } = useQuery({
+  const { data: profile, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -129,6 +129,22 @@ function SettingsPage() {
     ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "—";
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
+
+  const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
+  const refreshStatuses = async () => {
+    setIsRefreshingStatuses(true);
+    try {
+      await refetchProfile();
+      const nowDate = new Date();
+      setNow(nowDate);
+      setEvaluatedAt(nowDate);
+      toast.success("Automation statuses refreshed.");
+    } catch (e) {
+      toast.error((e as Error).message ?? "Refresh failed.");
+    } finally {
+      setIsRefreshingStatuses(false);
+    }
+  };
 
   const jumpToAdvanced = (anchorId: string) => {
     setTab("advanced");
@@ -367,12 +383,21 @@ function SettingsPage() {
               <div className="label-eyebrow">Advanced</div>
               <h2 className="mt-1 text-xl">Automations in Advanced</h2>
             </div>
-            <AutomationBadge
-              state={advancedActiveCount > 0 ? "active" : "off"}
-              activeCount={advancedActiveCount}
-              tooltip={advancedTooltip}
-            />
-
+            <div className="flex flex-col items-end gap-1">
+              <AutomationBadge
+                state={advancedActiveCount > 0 ? "active" : "off"}
+                activeCount={advancedActiveCount}
+                tooltip={advancedTooltip}
+              />
+              <button
+                type="button"
+                onClick={refreshStatuses}
+                disabled={isRefreshingStatuses}
+                className="mono text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground disabled:opacity-50"
+              >
+                {isRefreshingStatuses ? "Checking…" : "Refresh statuses"}
+              </button>
+            </div>
           </div>
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
