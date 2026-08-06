@@ -181,8 +181,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">ACTIVE source</span>
-            {(["all", "this-device", "other-device", "backend"] as const).map((key) => {
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">ACTIVE changes</span>
+            {(["all", "active", "this-device", "other-device", "backend"] as const).map((key) => {
               const active = originFilter === key;
               return (
                 <button
@@ -202,10 +202,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                       : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                   }`}
                 >
-                  {key === "all" ? "All" : ORIGIN_LABEL[key]}
+                  {key === "all" ? "All activity" : key === "active" ? "ACTIVE only" : ORIGIN_LABEL[key]}
                 </button>
               );
             })}
+          </div>
+
           </div>
         </div>
       </div>
