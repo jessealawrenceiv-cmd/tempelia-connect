@@ -149,4 +149,43 @@ test.describe("Settings · Realtime disconnect, backoff reconnect, and status in
     dropConnections = false;
     await expect(status).toContainText(/Live/i, { timeout: 40_000 });
   });
+
+  test("transitions are announced via aria-live and toasted, and toasts can be turned off", async ({ page }) => {
+    const status = indicator(page);
+    await expect(status).toContainText(/Live/i, { timeout: 20_000 });
+
+    const announcer = page.locator('.sr-only[aria-live="polite"]').first();
+    const toggle = page.getByRole("switch", { name: /Toast me when live updates/i });
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+
+    dropConnections = true;
+    openSockets.forEach((ws) => ws.close({ code: 1006, reason: "simulated outage" }));
+
+    await expect(announcer).toContainText(/Live updates interrupted/i, { timeout: 20_000 });
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /Live updates interrupted/i }).first(),
+    ).toBeVisible({ timeout: 20_000 });
+
+    dropConnections = false;
+    await expect(announcer).toContainText(/reconnected/i, { timeout: 40_000 });
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /Live updates reconnected/i }).first(),
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(status).toContainText(/Live/i);
+
+    // Turning toasts off keeps the announcement but stops the popups.
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await page.locator("[data-sonner-toast]").first().waitFor({ state: "hidden", timeout: 20_000 }).catch(() => {});
+
+    dropConnections = true;
+    openSockets.forEach((ws) => ws.close({ code: 1006, reason: "simulated outage" }));
+    await expect(announcer).toContainText(/Live updates interrupted/i, { timeout: 20_000 });
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /Live updates interrupted/i }),
+    ).toHaveCount(0);
+
+    dropConnections = false;
+    await expect(status).toContainText(/Live/i, { timeout: 40_000 });
+  });
 });
