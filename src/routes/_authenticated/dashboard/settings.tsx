@@ -258,10 +258,13 @@ function SettingsPage() {
           onClick={refreshStatuses}
           disabled={isRefreshingStatuses}
           aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : "Refresh automation statuses now"}
-          className="mt-1 flex w-full items-center justify-between rounded-sm px-1 py-0.5 text-left uppercase tracking-widest text-foreground hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:opacity-50"
+          className="mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:opacity-50"
         >
-          <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
-          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "↻"}</span>
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true" className={isRefreshingStatuses ? "animate-spin" : ""}>↻</span>
+            <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
+          </span>
+          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "Manual"}</span>
         </button>
       </div>
     </div>
