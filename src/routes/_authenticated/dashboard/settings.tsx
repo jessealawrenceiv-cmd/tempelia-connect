@@ -486,32 +486,40 @@ function AutomationBadge({
     hold: "On hold",
     off: "Off",
   };
-  const badge = (
-    <span
-      className={`mono shrink-0 rounded-sm border px-2 py-1 text-[10px] uppercase tracking-widest ${styles[state]}`}
-    >
-      {state === "active" && (
-        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-moss align-middle" />
-      )}
-      {label ?? defaults[state]}
-    </span>
-  );
-
-  if (!tooltip) return badge;
-
   const tooltipId = useId();
   const triggerId = useId();
   const containerRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open]);
+
+  const text = label ?? defaults[state];
+  const badge = (
+    <span
+      className={`mono shrink-0 rounded-sm border px-2 py-1 text-[10px] uppercase tracking-widest ${styles[state]}`}
+    >
+      {state === "active" && (
+        <span
+          aria-hidden="true"
+          className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-moss align-middle"
+        />
+      )}
+      {text}
+    </span>
+  );
+
+  if (!tooltip) return badge;
 
   const show = () => setOpen(true);
   const hide = (e?: React.SyntheticEvent) => {
@@ -525,32 +533,53 @@ function AutomationBadge({
     <span ref={containerRef} className="relative shrink-0">
       <button
         id={triggerId}
+        ref={triggerRef}
         type="button"
         aria-expanded={open}
         aria-controls={tooltipId}
         aria-haspopup="true"
-        className="cursor-help outline-none focus-visible:ring-1 focus-visible:ring-orange focus-visible:ring-offset-1"
+        aria-label={`Automation status: ${text}. Show details`}
+        className="cursor-help rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-orange focus-visible:ring-offset-1"
         onMouseEnter={show}
         onMouseLeave={hide}
         onFocus={show}
         onBlur={hide}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setOpen(true);
+            window.setTimeout(() => {
+              containerRef.current
+                ?.querySelector<HTMLButtonElement>(`#${CSS.escape(tooltipId)} button`)
+                ?.focus();
+            }, 0);
+          }
+        }}
       >
         {badge}
       </button>
       <span
         id={tooltipId}
         role="group"
-        aria-hidden={!open}
+        hidden={!open}
         aria-labelledby={triggerId}
+        aria-label="Advanced automation details"
         className={`mono absolute right-0 top-full z-20 mt-2 w-64 rounded-sm border border-border bg-card p-3 text-left text-[10px] uppercase tracking-widest text-muted-foreground shadow-lg ${open ? "block" : "hidden"}`}
         onMouseEnter={show}
         onMouseLeave={hide}
+        onBlur={hide}
       >
         {tooltip}
       </span>
     </span>
   );
 }
+
 
 
 function formatRelativeTime(past: Date, current: Date): string {
