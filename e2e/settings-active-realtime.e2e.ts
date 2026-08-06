@@ -117,10 +117,12 @@ test.describe("Settings · ACTIVE badge reacts to live row updates", () => {
 
 
     // A toast describes the change and when it happened.
-    await expect(page.getByText(/Automation status updated/i).first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(/Voicemail (ACTIVE|OFF)/i).first()).toBeVisible();
-    await expect(page.getByText(/\d{1,2}:\d{2}:\d{2}/).first()).toBeVisible();
+    const toast = page.locator("[data-sonner-toast]").filter({ hasText: /Automation status updated/i }).first();
+    await expect(toast).toBeVisible({ timeout: 20_000 });
+    await expect(toast).toContainText(/Voicemail (ACTIVE|OFF)/i);
+    await expect(toast).toContainText(/\d{1,2}:\d{2}:\d{2}/);
     await expect(trigger).toHaveAttribute("aria-label", /Automation status: .+/i);
+
   });
 
 
