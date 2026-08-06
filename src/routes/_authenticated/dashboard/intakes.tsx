@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/AppShell";
 import { signIntakePhotos } from "@/lib/intake.functions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  INTAKE_HASH_PREFIX,
   intakeDeepLinkHref,
   parseIntakeDeepLink,
   resolveIntakeJump,
@@ -24,6 +25,7 @@ const STATUSES = ["new", "contacted", "quoted", "closed"] as const;
 
 function IntakesPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const sign = useServerFn(signIntakePhotos);
   const [publicUrl, setPublicUrl] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
