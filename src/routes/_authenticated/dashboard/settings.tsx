@@ -27,7 +27,7 @@ function SettingsPage() {
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
-  const { data: profile, refetch: refetchProfile } = useQuery({
+  const { data: profile, refetch: refetchProfile, dataUpdatedAt: profileUpdatedAt } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -35,6 +35,8 @@ function SettingsPage() {
       const { data } = await supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle();
       return data;
     },
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: intg } = useQuery({
