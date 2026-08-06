@@ -199,7 +199,10 @@ function SettingsPage() {
           <li key={a.name}>
             <button
               type="button"
-              onClick={() => jumpToAdvanced(a.anchorId)}
+              onClick={() => {
+                jumpToAdvanced(a.anchorId);
+                toast.success(`Opened ${a.name} in Advanced.`);
+              }}
               aria-label={`${a.name}, mode ${a.mode}. Open in Advanced tab`}
               className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
             >
