@@ -13,7 +13,7 @@ import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 
-import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, memo, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
@@ -407,18 +407,21 @@ function SettingsPage() {
 
   // Snapshot of the fields that drive the automation status badges, so the
   // refresh toast can say whether anything actually changed.
-  const statusSnapshot = (p: typeof profile) =>
-    JSON.stringify({
-      decline_followup_mode: p?.decline_followup_mode ?? "off",
-      voicemail_enabled: p?.voicemail_enabled ?? null,
-      review_auto_enabled: (p as Record<string, unknown> | null | undefined)?.["review_auto_enabled"] ?? null,
-      opt_in_prompt_template: p?.opt_in_prompt_template ?? null,
-      opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
-      optInPromptActive,
-    });
+  const statusSnapshot = useCallback(
+    (p: typeof profile) =>
+      JSON.stringify({
+        decline_followup_mode: p?.decline_followup_mode ?? "off",
+        voicemail_enabled: p?.voicemail_enabled ?? null,
+        review_auto_enabled: (p as Record<string, unknown> | null | undefined)?.["review_auto_enabled"] ?? null,
+        opt_in_prompt_template: p?.opt_in_prompt_template ?? null,
+        opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
+        optInPromptActive,
+      }),
+    [optInPromptActive],
+  );
   // Contacts / submissions that saw activity in the window covered by this
   // re-check, so the Activity entry can link straight to what changed.
-  const collectAffected = async (sinceIso: string) => {
+  const collectAffected = useCallback(async (sinceIso: string) => {
     const affected: Array<{ type: "customer" | "intake"; id: string; label: string }> = [];
     try {
       const [{ data: logRows }, { data: intakeRows }] = await Promise.all([
@@ -466,13 +469,13 @@ function SettingsPage() {
       // linking is best-effort; never block the refresh audit
     }
     return affected;
-  };
+  }, []);
 
   // Start of the window this refresh covers (previous re-check, else last 24h).
   const lastRefreshAtRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
   // Dispatch-style activity entry for each status re-check.
-  const logStatusRefresh = async (
+  const logStatusRefresh = useCallback(async (
     status: "already_current" | "updated" | "failed",
     detail: Record<string, unknown>,
   ) => {
@@ -499,16 +502,13 @@ function SettingsPage() {
     } catch {
       // logging must never block the refresh itself
     }
-  };
+  }, [collectAffected, qc]);
 
-  const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
+  const refreshStatuses = useCallback(async (trigger: "manual" | "auto" = "manual") => {
     // Remember the exact element that had focus inside the ACTIVE tooltip so we
     // can hand focus back to it after the refresh button flips from disabled.
     const focusBefore = document.activeElement as HTMLElement | null;
     const focusWasInTooltip = focusBefore ? advancedBadgeRef.current?.contains(focusBefore) ?? false : false;
-
-
-
 
     setIsRefreshingStatuses(true);
     setRefreshError(null);
@@ -583,7 +583,7 @@ function SettingsPage() {
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
-  };
+  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts]);
 
   // Optional auto-refresh: re-evaluate statuses on a configurable interval while
   // this Settings page is visible. Skips ticks when hidden, already refreshing,
@@ -630,7 +630,7 @@ function SettingsPage() {
     };
   }, []);
 
-  const jumpToAdvanced = (anchorId: string) => {
+  const jumpToAdvanced = useCallback((anchorId: string) => {
     setTab("advanced");
     window.setTimeout(() => {
       const el = document.getElementById(anchorId);
@@ -658,144 +658,168 @@ function SettingsPage() {
 
       highlightTimersRef.current.set(el, [fadeId, cleanupId]);
     }, 60);
-  };
+  }, []);
 
 
-  const advancedAutomations: { name: string; mode: string; anchorId: string }[] = [
-    { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD", anchorId: "adv-opt-in-prompt" },
-    { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL", anchorId: "adv-webhook-diagnostics" },
-  ];
+  const advancedAutomations = useMemo(
+    () => [
+      { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD", anchorId: "adv-opt-in-prompt" },
+      { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL", anchorId: "adv-webhook-diagnostics" },
+    ],
+    [optInPromptActive],
+  );
 
-  const advancedTooltip = (
-    <div className="space-y-1">
-      <div className="text-foreground" id="adv-automations-heading">Advanced automations</div>
-      <ul className="space-y-1" aria-labelledby="adv-automations-heading">
-        {advancedAutomations.map((a) => (
-          <li key={a.name}>
-            <button
-              type="button"
-              onClick={() => {
-                jumpToAdvanced(a.anchorId);
-                toast.success(`Opened ${a.name} in Advanced.`);
-              }}
-              aria-label={`${a.name}, mode ${a.mode}. Open in Advanced tab`}
-              className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+  const advancedTooltip = useMemo(
+    () => (
+      <div className="space-y-1">
+        <div className="text-foreground" id="adv-automations-heading">Advanced automations</div>
+        <ul className="space-y-1" aria-labelledby="adv-automations-heading">
+          {advancedAutomations.map((a) => (
+            <li key={a.name}>
+              <button
+                type="button"
+                onClick={() => {
+                  jumpToAdvanced(a.anchorId);
+                  toast.success(`Opened ${a.name} in Advanced.`);
+                }}
+                aria-label={`${a.name}, mode ${a.mode}. Open in Advanced tab`}
+                className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+              >
+                <span className="underline decoration-dotted underline-offset-2">{a.name}</span>
+                <span className="text-foreground">{a.mode}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="border-t border-border pt-1">
+          {refreshError ? (
+            <div
+              key="refresh-error-summary"
+              role="alert"
+              aria-live="assertive"
+              className="mb-1 space-y-0.5 rounded-sm border border-orange/60 bg-orange/10 px-1.5 py-1 normal-case tracking-normal"
             >
-              <span className="underline decoration-dotted underline-offset-2">{a.name}</span>
-              <span className="text-foreground">{a.mode}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="border-t border-border pt-1">
-        {refreshError ? (
-          <div
-            role="alert"
-            aria-live="assertive"
-            className="mb-1 space-y-0.5 rounded-sm border border-orange/60 bg-orange/10 px-1.5 py-1 normal-case tracking-normal"
-          >
-            <div className="text-foreground">Refresh failed</div>
-            <div className="break-words text-muted-foreground">
-              {refreshError.code ? `${refreshError.code}: ` : null}
-              {refreshError.message}
-            </div>
-            <div className="text-muted-foreground">
-              {refreshError.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </div>
-          </div>
-        ) : null}
-        <div aria-live="polite" aria-atomic="true">
-          Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
-        </div>
-        <div aria-live="polite" aria-atomic="true" className="text-muted-foreground">
-          {lastUpdate
-            ? `Last live update ${UPDATE_ORIGIN_LABEL[lastUpdate.origin]} · ${lastUpdate.at.toLocaleTimeString()}`
-            : "No live update since this page opened"}
-        </div>
-
-        <button
-          type="button"
-          aria-disabled={isRefreshingStatuses || isInCooldown}
-          aria-busy={isRefreshingStatuses}
-          aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
-          onClick={() => {
-            if (isRefreshingStatuses || isInCooldown) return;
-            refreshStatuses("manual");
-          }}
-          onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
-              e.preventDefault();
-            }
-          }}
-          className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
-        >
-          <span className="flex items-center gap-1.5">
-            {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
-            <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
-          </span>
-          <span className="text-foreground">
-            {isRefreshingStatuses
-              ? "Checking…"
-              : isInCooldown
-                ? `${formatCooldown(cooldownMs)}`
-                : evaluatedAt
-                  ? `Last refreshed ${evaluatedLabel}`
-                  : "Not yet refreshed"}
-          </span>
-        </button>
-        {refreshError ? (
-          <div
-            role="alert"
-            aria-live="assertive"
-            className="mt-1 space-y-1 rounded-sm border border-orange/60 bg-orange/10 px-2 py-1 normal-case tracking-normal"
-          >
-            <div className="text-foreground">Couldn’t refresh statuses</div>
-            <div className="text-muted-foreground break-words">{refreshError.message}</div>
-            <div className="flex items-center justify-between gap-2">
-              <button
-                ref={retryButtonRef}
-                type="button"
-                aria-disabled={isRefreshingStatuses || isInCooldown}
-                aria-busy={isRefreshingStatuses}
-                aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
-                onClick={() => {
-                  if (isRefreshingStatuses || isInCooldown) return;
-                  refreshStatuses("manual");
-                }}
-                onKeyDown={(e) => {
-                  if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
-                    e.preventDefault();
-                  }
-                }}
-                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
-              >
-                {isRefreshingStatuses ? <Spinner size={10} /> : null}
-                {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setRefreshError(null);
-                  setRefreshAttempts(0);
-                  setCooldownMs(0);
-                }}
-                aria-label="Dismiss refresh error"
-                className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
-              >
-                Dismiss
-              </button>
-            </div>
-            {refreshAttempts > 1 ? (
-              <div className="text-muted-foreground">
-                {refreshAttempts} failed attempts in a row.
-                {isInCooldown ? ` Retry disabled for ${formatCooldown(cooldownMs)}.` : null}
+              <div className="text-foreground">Refresh failed</div>
+              <div className="break-words text-muted-foreground">
+                {refreshError.code ? `${refreshError.code}: ` : null}
+                {refreshError.message}
               </div>
-            ) : null}
+              <div className="text-muted-foreground">
+                {refreshError.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </div>
+            </div>
+          ) : null}
+          <div aria-live="polite" aria-atomic="true">
+            Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
           </div>
-        ) : null}
-      </div>
+          <div aria-live="polite" aria-atomic="true" className="text-muted-foreground">
+            {lastUpdate
+              ? `Last live update ${UPDATE_ORIGIN_LABEL[lastUpdate.origin]} · ${lastUpdate.at.toLocaleTimeString()}`
+              : "No live update since this page opened"}
+          </div>
 
-    </div>
+          <button
+            key="refresh-now-btn"
+            type="button"
+            aria-disabled={isRefreshingStatuses || isInCooldown}
+            aria-busy={isRefreshingStatuses}
+            aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
+            onClick={() => {
+              if (isRefreshingStatuses || isInCooldown) return;
+              refreshStatuses("manual");
+            }}
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+                e.preventDefault();
+              }
+            }}
+            className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
+          >
+            <span className="flex items-center gap-1.5">
+              {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
+              <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
+            </span>
+            <span className="text-foreground">
+              {isRefreshingStatuses
+                ? "Checking…"
+                : isInCooldown
+                  ? `${formatCooldown(cooldownMs)}`
+                  : evaluatedAt
+                    ? `Last refreshed ${evaluatedLabel}`
+                    : "Not yet refreshed"}
+            </span>
+          </button>
+          {refreshError ? (
+            <div
+              key="refresh-error-detail"
+              role="alert"
+              aria-live="assertive"
+              className="mt-1 space-y-1 rounded-sm border border-orange/60 bg-orange/10 px-2 py-1 normal-case tracking-normal"
+            >
+              <div className="text-foreground">Couldn’t refresh statuses</div>
+              <div className="text-muted-foreground break-words">{refreshError.message}</div>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  key="refresh-retry-btn"
+                  ref={retryButtonRef}
+                  type="button"
+                  aria-disabled={isRefreshingStatuses || isInCooldown}
+                  aria-busy={isRefreshingStatuses}
+                  aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
+                  onClick={() => {
+                    if (isRefreshingStatuses || isInCooldown) return;
+                    refreshStatuses("manual");
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
+                >
+                  {isRefreshingStatuses ? <Spinner size={10} /> : null}
+                  {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
+                </button>
+                <button
+                  key="refresh-dismiss-btn"
+                  type="button"
+                  onClick={() => {
+                    setRefreshError(null);
+                    setRefreshAttempts(0);
+                    setCooldownMs(0);
+                  }}
+                  aria-label="Dismiss refresh error"
+                  className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+                >
+                  Dismiss
+                </button>
+              </div>
+              {refreshAttempts > 1 ? (
+                <div className="text-muted-foreground">
+                  {refreshAttempts} failed attempts in a row.
+                  {isInCooldown ? ` Retry disabled for ${formatCooldown(cooldownMs)}.` : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+      </div>
+    ),
+    [
+      advancedAutomations,
+      refreshError,
+      relativeLabel,
+      evaluatedLabel,
+      isRefreshingStatuses,
+      isInCooldown,
+      cooldownMs,
+      evaluatedAt,
+      lastUpdate,
+      refreshAttempts,
+      jumpToAdvanced,
+      refreshStatuses,
+    ],
   );
 
 
@@ -1210,7 +1234,7 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
 }
 
 
-const AutomationBadge = forwardRef<
+const AutomationBadge = memo(forwardRef<
   { contains: (el: Node | null) => boolean; restoreFocus: (el: HTMLElement | null) => void },
   {
     state: "active" | "manual" | "hold" | "off";
@@ -1436,7 +1460,7 @@ const AutomationBadge = forwardRef<
       </span>
     </span>
   );
-});
+}));
 
 
 
