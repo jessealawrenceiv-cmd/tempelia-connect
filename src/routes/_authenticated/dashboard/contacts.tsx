@@ -238,7 +238,7 @@ function ContactsPage() {
         {isLoading && <div className="text-muted-foreground">Loading…</div>}
         {!isLoading && filtered.length === 0 && (
           <div className="panel p-6 text-sm text-muted-foreground">
-            No contacts match. New submissions from your public <Link to="/dashboard/intakes" className="text-primary underline">intake form</Link> land here automatically.
+            No contacts match. New submissions from your public <Link to="/dashboard/intakes" search={{ intakeId: undefined }} className="text-primary underline">intake form</Link> land here automatically.
           </div>
         )}
 
