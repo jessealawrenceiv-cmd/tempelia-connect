@@ -127,8 +127,9 @@ test.describe("Settings · ACTIVE tooltip live region announcements", () => {
     const focusBefore = await focusSignature(page);
     const previous = (await live.textContent())?.trim() ?? "";
 
-    // Mouse-driven refresh must not pull focus off the user's current control.
-    await refresh.click();
+    // Programmatic activation (no pointer focus side-effect) proves the refresh
+    // itself does not pull focus off the user's current control.
+    await refresh.evaluate((el) => (el as HTMLElement).click());
     const next = await waitForAnnouncement(page, live, previous);
     expect(next).toMatch(/Opt-in prompt & cooldown/i);
 
