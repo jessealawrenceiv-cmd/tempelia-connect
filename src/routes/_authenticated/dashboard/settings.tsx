@@ -1102,7 +1102,10 @@ function SettingsPage() {
       refreshAttempts,
       jumpToAdvanced,
       refreshStatuses,
+      refreshRunsStarted,
+      ignoredRefreshKeys,
     ],
+
   );
 
 
