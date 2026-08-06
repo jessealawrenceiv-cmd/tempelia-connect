@@ -570,23 +570,18 @@ function SettingsPage() {
   const autoRefreshTickRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     autoRefreshTickRef.current = () => {
-      console.log("[auto-refresh tick] isRefreshingStatuses:", isRefreshingStatuses, "isInCooldown:", isInCooldown, "visibility:", document.visibilityState);
       if (isRefreshingStatuses || isInCooldown) return;
       if (document.visibilityState !== "visible") return;
-      console.log("[auto-refresh tick] calling refreshStatuses(auto)");
       void refreshStatuses("auto");
     };
   }, [isRefreshingStatuses, isInCooldown, refreshStatuses]);
 
   useEffect(() => {
     const enabled = profile?.auto_refresh_enabled ?? false;
-    console.log("[auto-refresh effect] enabled:", enabled, "interval:", profile?.auto_refresh_interval_minutes);
     if (!enabled) return;
     const intervalMs = Math.max(60_000, (profile?.auto_refresh_interval_minutes ?? 15) * 60_000);
-    console.log("[auto-refresh effect] starting interval", intervalMs, "ms");
 
     const id = window.setInterval(() => {
-      console.log("[auto-refresh interval] firing");
       autoRefreshTickRef.current?.();
     }, intervalMs);
 
