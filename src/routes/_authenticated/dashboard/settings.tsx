@@ -684,16 +684,21 @@ function SettingsPage() {
     }
   }, [collectAffected, qc]);
 
+  // Synchronous in-flight flag + observable counters. The counters are exposed as
+  // data attributes on the Refresh now button so tests can prove that a keypress
+  // during busy/cooldown started no additional refresh run.
+  const refreshInFlightRef = useRef(false);
+  const [refreshRunsStarted, setRefreshRunsStarted] = useState(0);
+  const [ignoredRefreshKeys, setIgnoredRefreshKeys] = useState(0);
+
   const refreshStatuses = useCallback(async (trigger: "manual" | "auto" = "manual") => {
     // Hard, synchronous re-entrancy guard. React state (isRefreshingStatuses)
     // updates asynchronously, so two activations in the same tick could both
     // pass a state-only check and queue a second refresh. This ref cannot.
-    if (refreshInFlightRef.current) {
-      setRefreshRunsStarted((n) => n); // no-op: nothing queued, nothing started
-      return;
-    }
+    if (refreshInFlightRef.current) return;
     refreshInFlightRef.current = true;
     setRefreshRunsStarted((n) => n + 1);
+
 
     // Remember the exact element that had focus inside the ACTIVE tooltip so we
     // can hand focus back to it after the refresh button flips from disabled.
