@@ -161,4 +161,41 @@ test.describe("Settings · automation status tooltip a11y", () => {
     );
     expect(focusInside).toBe(true);
   });
+
+  test("repeated clicks keep focus on Refresh now without jumping", async ({ page }) => {
+    const trigger = await openAdvancedTab(page);
+    const tooltipId = await trigger.getAttribute("aria-controls");
+    const tooltip = page.locator(`#${tooltipId}`);
+
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(tooltip).toBeVisible();
+
+    const refresh = tooltip.getByRole("button", { name: /Refresh automation statuses now/i });
+    await refresh.focus();
+    await expect(refresh).toBeFocused();
+
+    // First click starts the refresh. The button stays focusable (aria-disabled, not disabled).
+    await refresh.click();
+    await expect(refresh).toBeFocused();
+    await expect(refresh).toHaveAttribute("aria-busy", "true");
+
+    // Click again while still busy — activation is blocked, but focus must not jump.
+    await refresh.click();
+    await expect(refresh).toBeFocused();
+    const busyDuring = await refresh.getAttribute("aria-busy");
+    expect(busyDuring).toBe("true");
+
+    // Wait for the refresh to finish and the button to return to idle.
+    await expect.poll(async () => refresh.getAttribute("aria-busy"), { timeout: 20_000 }).toBe("false");
+    await expect(refresh).toBeFocused();
+
+    // Click once more after completion; focus should remain on the same control.
+    await refresh.click();
+    await expect(refresh).toBeFocused();
+
+    // Focus never landed on <body> or anywhere outside the Refresh now button.
+    const active = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+    expect(active).toMatch(/Refresh automation statuses/i);
+  });
 });
