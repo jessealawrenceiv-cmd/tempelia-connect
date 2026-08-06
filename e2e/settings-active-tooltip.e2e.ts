@@ -245,4 +245,34 @@ test.describe("Settings · automation status tooltip a11y", () => {
     const connectedAfter = await tooltip.evaluate((el) => el.isConnected);
     expect(connectedAfter).toBe(true);
   });
+
+  test("other status badges open with Enter/Space and trap focus", async ({ page }) => {
+    const trigger = await openDeclinedQuoteBadge(page);
+    const tooltipId = await trigger.getAttribute("aria-controls");
+    const tooltip = page.locator(`#${tooltipId}`);
+
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(tooltip).toBeVisible();
+
+    // Focus lands on the Close button inside the tooltip.
+    const close = tooltip.getByRole("button", { name: "Close" });
+    await expect(close).toBeFocused();
+
+    // Tab wraps on the single focusable control.
+    await page.keyboard.press("Tab");
+    await expect(close).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(close).toBeFocused();
+
+    // Escape closes the tooltip and returns focus to the trigger.
+    await page.keyboard.press("Escape");
+    await expect(tooltip).toBeHidden();
+    await expect(trigger).toBeFocused();
+
+    // Space also opens the tooltip from the trigger.
+    await page.keyboard.press("Space");
+    await expect(tooltip).toBeVisible();
+    await expect(close).toBeFocused();
+  });
 });
