@@ -64,6 +64,15 @@ function SettingsPage() {
     }
   }, [profile]);
 
+  // Attribution for the most recent live status change.
+  const localEditsRef = useRef<Map<string, number>>(new Map());
+  const markLocalEdit = (field: string) => {
+    localEditsRef.current.set(field, Date.now());
+  };
+  const [lastUpdate, setLastUpdate] = useState<
+    { origin: "this-device" | "other-device" | "backend"; at: Date } | null
+  >(null);
+
   // Live status: refresh the ACTIVE badge/tooltip the moment the profile row changes.
   // Auto-reconnects with backoff and surfaces a live/reconnecting indicator.
   const [realtimeState, setRealtimeState] = useState<"connecting" | "live" | "reconnecting">("connecting");
@@ -85,19 +94,38 @@ function SettingsPage() {
       const nextVoicemail = !!next["voicemail_enabled"];
       const nextDecline = (next["decline_followup_mode"] as string) ?? "off";
       const changes: string[] = [];
+      const changedFields: string[] = [];
       if (nextVoicemail !== prev.voicemail) {
         changes.push(`Voicemail ${nextVoicemail ? "ACTIVE" : "OFF"}`);
+        changedFields.push("voicemail_enabled");
       }
       if (nextDecline !== prev.decline) {
         changes.push(`Declined-quote follow-up ${nextDecline.toUpperCase()}`);
+        changedFields.push("decline_followup_mode");
       }
       if (changes.length === 0) return;
 
+      // Attribute the change: a matching edit from this tab within the last 15s
+      // means we made it; otherwise it came from another signed-in device, or
+      // from server-side automation for fields the UI never writes.
+      const now = Date.now();
+      const isLocal = changedFields.some((f) => {
+        const at = localEditsRef.current.get(f);
+        return at !== undefined && now - at < 15_000;
+      });
+      const uiWritable = changedFields.every((f) =>
+        f === "voicemail_enabled" || f === "decline_followup_mode" || f === "review_requests_enabled",
+      );
+      const origin = isLocal ? "this-device" : uiWritable ? "other-device" : "backend";
+      changedFields.forEach((f) => localEditsRef.current.delete(f));
+      setLastUpdate({ origin, at: new Date() });
+
       statusSnapshotRef.current = { voicemail: nextVoicemail, decline: nextDecline };
       toast.success("Automation status updated", {
-        description: `${changes.join(" · ")} — live at ${new Date().toLocaleTimeString()}`,
+        description: `${changes.join(" · ")} — ${UPDATE_ORIGIN_LABEL[origin]} at ${new Date().toLocaleTimeString()}`,
       });
     };
+
 
     const scheduleReconnect = () => {
       if (cancelled || retryTimer !== null) return;
