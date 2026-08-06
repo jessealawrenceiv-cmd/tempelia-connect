@@ -108,6 +108,7 @@ function SettingsPage() {
   const [statusAnnouncement, setStatusAnnouncement] = useState("");
   const [realtimeToasts, setRealtimeToasts] = useState(true);
   const realtimeToastsRef = useRef(true);
+  const [reconnectSignal, setReconnectSignal] = useState(0);
 
   // Toast preference persists per browser; the aria-live announcement always fires.
   useEffect(() => {
@@ -123,6 +124,15 @@ function SettingsPage() {
     setRealtimeToasts(on);
     realtimeToastsRef.current = on;
     window.localStorage.setItem("temaro:realtime-toasts", on ? "1" : "0");
+  }, []);
+
+  const manualReconnect = useCallback(() => {
+    setRealtimeState("connecting");
+    setStatusAnnouncement("Reconnecting manually…");
+    if (realtimeToastsRef.current) {
+      toast.info("Reconnecting now", { description: "Forcing a fresh Realtime connection." });
+    }
+    setReconnectSignal((n) => n + 1);
   }, []);
 
   // Announce (and optionally toast) every connection-state transition.
@@ -329,7 +339,7 @@ function SettingsPage() {
       if (retryTimer !== null) window.clearTimeout(retryTimer);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [qc]);
+  }, [qc, reconnectSignal]);
 
 
 
@@ -1188,6 +1198,18 @@ function SettingsPage() {
                     : "· not yet synced"}
                 </span>
               </div>
+
+              <button
+                type="button"
+                onClick={manualReconnect}
+                disabled={realtimeState === "connecting"}
+                aria-busy={realtimeState === "connecting"}
+                aria-label="Reconnect Realtime now"
+                className="mono kb-focus flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {realtimeState === "connecting" ? <Spinner size={10} /> : <span aria-hidden="true">↻</span>}
+                {realtimeState === "connecting" ? "Reconnecting…" : "Reconnect now"}
+              </button>
 
               <button
                 type="button"
