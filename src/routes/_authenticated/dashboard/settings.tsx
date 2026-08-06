@@ -266,24 +266,7 @@ function SettingsPage() {
           allowOverride={profile?.allow_deposit_override_per_quote}
         />
 
-        <ExcludedNumbersPanel />
-
-        <TeamMembersPanel tier={profile?.subscription_tier} />
-      </div>
-      )}
-
-      {tab === "advanced" && (
-      <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
-        <OptInPromptSettingsPanel
-          businessName={profile?.business_name}
-          template={profile?.opt_in_prompt_template}
-          cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
-          ownerPhone={profile?.owner_phone}
-          fromNumber={profile?.twilio_phone_number}
-          lastTestPhone={profile?.last_test_phone}
-        />
-
-        <div className="panel p-6 md:col-span-2">
+        <div className="panel p-6">
           <div className="label-eyebrow">Automation</div>
           <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
           <div className="mt-4 flex items-center justify-between gap-4">
@@ -305,6 +288,23 @@ function SettingsPage() {
             </select>
           </div>
         </div>
+
+        <ExcludedNumbersPanel />
+
+        <TeamMembersPanel tier={profile?.subscription_tier} />
+      </div>
+      )}
+
+      {tab === "advanced" && (
+      <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
+        <OptInPromptSettingsPanel
+          businessName={profile?.business_name}
+          template={profile?.opt_in_prompt_template}
+          cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
+          ownerPhone={profile?.owner_phone}
+          fromNumber={profile?.twilio_phone_number}
+          lastTestPhone={profile?.last_test_phone}
+        />
 
         {!isStaff && <WebhookCheckPanel />}
         {!isStaff && <WebhookEventLogPanel />}
