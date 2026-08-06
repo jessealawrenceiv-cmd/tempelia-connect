@@ -1,14 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { CalendarDays, ChevronDown, ChevronRight, Clock, MapPin } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ChevronRight, Clock, MapPin } from "lucide-react";
 import { DispatchLog } from "@/components/DispatchLog";
 import { LastRefreshedStatus } from "@/components/LastRefreshedStatus";
+import { toast } from "sonner";
+import { HOME_QUOTE_AUTOHIDE_DAYS, isOlderThanDays, relativeTime } from "@/lib/relative-time";
 
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: HomePage,
