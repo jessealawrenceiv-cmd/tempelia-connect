@@ -103,6 +103,7 @@ function IntakesPage() {
     (location.state as { key?: string } | undefined)?.key ??
     `${location.searchStr ?? ""}|${location.hash ?? ""}`;
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const toggleRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [jumpedId, setJumpedId] = useState<string | null>(null);
   const [jumpMiss, setJumpMiss] = useState<{ id: string; reason: IntakeJumpMissReason } | null>(null);
   const jumpMissHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -110,6 +111,14 @@ function IntakesPage() {
   // Cards are expanded by default; ids listed here are collapsed by the reader.
   const [collapsedIds, setCollapsedIds] = useState<Record<string, true>>({});
   const [jumpAnnouncement, setJumpAnnouncement] = useState("");
+
+  // Closing a details panel always hands focus back to the toggle that opened
+  // it, so keyboard users landing here from a deep link never lose their place.
+  const collapseCard = (id: string) => {
+    setCollapsedIds((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
+    requestAnimationFrame(() => toggleRefs.current[id]?.focus());
+  };
+
 
   useEffect(() => {
     if (isLoading || !rows) return;
