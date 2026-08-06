@@ -150,9 +150,20 @@ function IntakesPage() {
       });
       const row = rows.find((x) => x.id === incomingIntakeId);
       const name = `${row?.customer_first_name ?? ""} ${row?.customer_last_name ?? ""}`.trim();
+      // Screen-reader users can't see the button row, so spell out what they can
+      // do with the submission that just auto-expanded.
+      const actions = [
+        "Schedule visit",
+        "Copy link",
+        "Change status",
+        (row?.photo_urls?.length ?? 0) > 0 ? "View photos" : null,
+        "Hide details",
+      ].filter(Boolean) as string[];
       setJumpAnnouncement(
-        `Opened intake submission${name ? ` for ${name}` : ""}. Details expanded.`,
+        `Opened intake submission${name ? ` for ${name}` : ""}. Details expanded. ` +
+          `Available actions: ${actions.join(", ")}.`,
       );
+
       requestAnimationFrame(() => {
         const el = rowRefs.current[incomingIntakeId];
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
