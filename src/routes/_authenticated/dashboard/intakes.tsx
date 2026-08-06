@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/AppShell";
 import { signIntakePhotos } from "@/lib/intake.functions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  INTAKE_HASH_PREFIX,
   intakeDeepLinkHref,
   parseIntakeDeepLink,
   resolveIntakeJump,
@@ -24,6 +25,7 @@ const STATUSES = ["new", "contacted", "quoted", "closed"] as const;
 
 function IntakesPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const sign = useServerFn(signIntakePhotos);
   const [publicUrl, setPublicUrl] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -133,6 +135,32 @@ function IntakesPage() {
   const [collapsedIds, setCollapsedIds] = useState<Record<string, true>>({});
   const [jumpAnnouncement, setJumpAnnouncement] = useState("");
 
+  // Roving tabindex: the deep-linked card (or the newest one) is the single
+  // tab stop; arrow keys move focus between cards from there.
+  const activeCardId = incomingIntakeId ?? rows?.[0]?.id ?? null;
+
+  // Arrow navigation keeps the URL deep-link in sync, so the focused card is the
+  // one that stays expanded and the link can be shared or reloaded as-is.
+  const moveToCard = (id: string) => {
+    setCollapsedIds((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    navigate({
+      to: "/dashboard/intakes",
+      search: { intakeId: id },
+      hash: `${INTAKE_HASH_PREFIX}${id}`,
+      replace: true,
+    });
+    requestAnimationFrame(() => {
+      const el = rowRefs.current[id];
+      el?.focus({ preventScroll: true });
+      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
   // True when the reader's focus already sits inside one of the intake cards —
   // in that case nothing on this page is allowed to move focus for them.
   const focusIsInsideCards = () => {
@@ -140,6 +168,7 @@ function IntakesPage() {
     if (!active || active === document.body) return false;
     return Object.values(rowRefs.current).some((el) => !!el && el.contains(active));
   };
+
 
   // Closing a details panel always hands focus back to the toggle that opened
   // it, so keyboard users landing here from a deep link never lose their place.
@@ -343,8 +372,12 @@ function IntakesPage() {
           <div className="panel p-6 text-muted-foreground text-sm">No submissions yet. Share your intake URL above.</div>
         )}
 
-        <div className="space-y-4">
-          {rows?.map((r) => {
+        <div className="space-y-4" role="list" aria-label="Intake submissions">
+          <p className="sr-only">
+            Use the up and down arrow keys to move between intake submissions, Home and End to jump to
+            the newest or oldest. The focused submission stays expanded and its link stays in the address bar.
+          </p>
+          {rows?.map((r, index) => {
             const resp = (r.responses ?? {}) as Record<string, string>;
             const isOpen = !collapsedIds[r.id];
             const panelId = `intake-details-${r.id}`;
@@ -354,15 +387,30 @@ function IntakesPage() {
                 key={r.id}
                 id={`intake-${r.id}`}
                 ref={(el) => { rowRefs.current[r.id] = el; }}
-                tabIndex={-1}
-                role="group"
+                tabIndex={activeCardId === r.id ? 0 : -1}
+                role="listitem"
                 aria-labelledby={headingId}
                 data-jumped={jumpedId === r.id ? "true" : undefined}
                 onKeyDown={(e) => {
-                  if (e.key !== "Escape" || !isOpen) return;
-                  e.stopPropagation();
-                  collapseCard(r.id);
+                  if (e.key === "Escape" && isOpen) {
+                    e.stopPropagation();
+                    collapseCard(r.id);
+                    return;
+                  }
+                  // Arrow navigation only applies to the card shell itself, so
+                  // arrows inside selects, inputs and links keep native behaviour.
+                  if (e.target !== e.currentTarget) return;
+                  const ids = (rows ?? []).map((x) => x.id);
+                  let next: string | undefined;
+                  if (e.key === "ArrowDown") next = ids[Math.min(index + 1, ids.length - 1)];
+                  else if (e.key === "ArrowUp") next = ids[Math.max(index - 1, 0)];
+                  else if (e.key === "Home") next = ids[0];
+                  else if (e.key === "End") next = ids[ids.length - 1];
+                  if (!next) return;
+                  e.preventDefault();
+                  moveToCard(next);
                 }}
+
                 className={`panel p-5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-violet ${
                   jumpedId === r.id ? "ring-2 ring-violet shadow-[0_0_0_4px_rgba(108,74,182,0.18)]" : ""
                 }`}
