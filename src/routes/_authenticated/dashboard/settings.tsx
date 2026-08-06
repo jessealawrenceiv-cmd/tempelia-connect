@@ -568,7 +568,10 @@ function AutomationBadge({
         document.activeElement instanceof Node &&
         !!containerRef.current?.contains(document.activeElement);
       setOpen(false);
-      if (hadFocusInside) triggerRef.current?.focus();
+      if (hadFocusInside) {
+        // refocus after the browser's default mousedown focus handling
+        window.setTimeout(() => triggerRef.current?.focus(), 0);
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("pointerdown", handlePointerDown, true);
