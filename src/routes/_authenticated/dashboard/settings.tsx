@@ -558,19 +558,19 @@ function SettingsPage() {
         <button
           type="button"
           onClick={() => {
-            if (isRefreshingStatuses) return;
+            if (isRefreshingStatuses || isInCooldown) return;
             refreshStatuses();
           }}
-          aria-disabled={isRefreshingStatuses}
+          aria-disabled={isRefreshingStatuses || isInCooldown}
           aria-busy={isRefreshingStatuses}
-          aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : "Refresh automation statuses now"}
-          className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses ? "cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
+          aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
+          className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
         >
           <span className="flex items-center gap-1.5">
             {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
             <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
           </span>
-          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "↻"}</span>
+          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : isInCooldown ? `${formatCooldown(cooldownMs)}` : "↻"}</span>
         </button>
         {refreshError ? (
           <div
