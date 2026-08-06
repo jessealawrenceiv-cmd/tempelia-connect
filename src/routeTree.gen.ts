@@ -17,6 +17,7 @@ import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as QuoteQuoteIdRouteImport } from './routes/quote.$quoteId'
+import { Route as InvoiceInvoiceIdRouteImport } from './routes/invoice.$invoiceId'
 import { Route as IntakeBusinessIdRouteImport } from './routes/intake.$businessId'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -79,6 +80,11 @@ const IndexRoute = IndexRouteImport.update({
 const QuoteQuoteIdRoute = QuoteQuoteIdRouteImport.update({
   id: '/quote/$quoteId',
   path: '/quote/$quoteId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoiceInvoiceIdRoute = InvoiceInvoiceIdRouteImport.update({
+  id: '/invoice/$invoiceId',
+  path: '/invoice/$invoiceId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntakeBusinessIdRoute = IntakeBusinessIdRouteImport.update({
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -264,6 +271,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -299,6 +307,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/invoice/$invoiceId'
     | '/quote/$quoteId'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/invoice/$invoiceId'
     | '/quote/$quoteId'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/onboarding'
     | '/intake/$businessId'
+    | '/invoice/$invoiceId'
     | '/quote/$quoteId'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -435,6 +447,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   IntakeBusinessIdRoute: typeof IntakeBusinessIdRoute
+  InvoiceInvoiceIdRoute: typeof InvoiceInvoiceIdRoute
   QuoteQuoteIdRoute: typeof QuoteQuoteIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -501,6 +514,13 @@ declare module '@tanstack/react-router' {
       path: '/quote/$quoteId'
       fullPath: '/quote/$quoteId'
       preLoaderRoute: typeof QuoteQuoteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoice/$invoiceId': {
+      id: '/invoice/$invoiceId'
+      path: '/invoice/$invoiceId'
+      fullPath: '/invoice/$invoiceId'
+      preLoaderRoute: typeof InvoiceInvoiceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/intake/$businessId': {
@@ -728,6 +748,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   IntakeBusinessIdRoute: IntakeBusinessIdRoute,
+  InvoiceInvoiceIdRoute: InvoiceInvoiceIdRoute,
   QuoteQuoteIdRoute: QuoteQuoteIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
