@@ -442,7 +442,12 @@ function SettingsPage() {
       const code = (e as { code?: string })?.code || (e as { error_code?: string })?.error_code;
       const at = new Date();
       setRefreshError({ message, code, at });
-      setRefreshAttempts((n) => n + 1);
+      const nextAttempt = refreshAttempts + 1;
+      setRefreshAttempts(nextAttempt);
+      if (nextAttempt >= 3) {
+        const duration = Math.min(COOLDOWN_BASE_MS * Math.pow(2, nextAttempt - 3), COOLDOWN_MAX_MS);
+        setCooldownMs(duration);
+      }
       void logStatusRefresh("failed", {
         outcome: "Refresh failed",
         error: message,
