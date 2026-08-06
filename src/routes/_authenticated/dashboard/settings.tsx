@@ -304,7 +304,43 @@ function SettingsPage() {
           </span>
           <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "↻"}</span>
         </button>
+        {refreshError ? (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mt-1 space-y-1 rounded-sm border border-orange/60 bg-orange/10 px-2 py-1 normal-case tracking-normal"
+          >
+            <div className="text-foreground">Couldn’t refresh statuses</div>
+            <div className="text-muted-foreground break-words">{refreshError}</div>
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={refreshStatuses}
+                disabled={isRefreshingStatuses}
+                aria-label="Retry refreshing automation statuses"
+                className="rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground hover:bg-orange/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:opacity-50"
+              >
+                {isRefreshingStatuses ? "Retrying…" : "Retry"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRefreshError(null);
+                  setRefreshAttempts(0);
+                }}
+                aria-label="Dismiss refresh error"
+                className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+              >
+                Dismiss
+              </button>
+            </div>
+            {refreshAttempts > 1 ? (
+              <div className="text-muted-foreground">{refreshAttempts} failed attempts in a row.</div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+
     </div>
   );
 
