@@ -97,6 +97,10 @@
   --steel-blue-foreground: oklch(0.965 0.012 85);
   --moss-green: oklch(0.51 0.08 150);          /* #4C7A5C */
   --moss-green-foreground: oklch(0.965 0.012 85);
+  /* Lightened chip text so 10px labels clear WCAG AA on charcoal */
+  --moss-green-ink: oklch(0.82 0.08 150);
+  --steel-blue-ink: oklch(0.82 0.05 235);
+  --industrial-violet-ink: oklch(0.84 0.1 295);
   --rule: oklch(1 0 0 / 12%);
 }
 
