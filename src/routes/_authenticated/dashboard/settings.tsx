@@ -1039,7 +1039,68 @@ function SettingsPage() {
 
       {tab === "advanced" && (
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
+        <div className="panel p-6 md:col-span-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="label-eyebrow">Automation</div>
+              <h2 className="mt-1 text-xl">Auto-refresh statuses</h2>
+            </div>
+            <AutomationBadge state={profile?.auto_refresh_enabled ? "active" : "off"} />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Automatically re-check automation statuses while this Settings page is open. Manual refresh and failure cooldown always take precedence.
+          </p>
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-primary"
+                checked={autoRefreshEnabled}
+                disabled={updateAutoRefresh.isPending}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setAutoRefreshEnabled(enabled);
+                  updateAutoRefresh.mutate({ enabled, intervalMinutes: autoRefreshInterval });
+                }}
+              />
+              {autoRefreshEnabled ? "Enabled" : "Disabled"}
+            </label>
+            <label className="flex flex-1 items-center gap-2">
+              <span className="label-eyebrow whitespace-nowrap">Every</span>
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={autoRefreshInterval}
+                disabled={updateAutoRefresh.isPending}
+                onChange={(e) => {
+                  const raw = parseInt(e.target.value, 10);
+                  const intervalMinutes = Number.isNaN(raw) ? 1 : Math.max(1, Math.min(120, raw));
+                  setAutoRefreshInterval(intervalMinutes);
+                }}
+                onBlur={() => {
+                  if (profile?.auto_refresh_enabled) {
+                    updateAutoRefresh.mutate({ enabled: autoRefreshEnabled, intervalMinutes: autoRefreshInterval });
+                  }
+                }}
+                className="mono w-20 rounded-sm border border-border bg-background px-3 py-2 text-sm"
+              />
+              <span className="text-xs text-muted-foreground">minutes (1–120)</span>
+            </label>
+          </div>
+          {profile?.auto_refresh_enabled ? (
+            <p className="mono mt-3 text-[10px] uppercase tracking-widest text-moss">
+              Active · next refresh in {profile.auto_refresh_interval_minutes ?? 15} minutes while this page is visible
+            </p>
+          ) : (
+            <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+              Off · enable above to schedule automatic re-checks
+            </p>
+          )}
+        </div>
+
         <div id="adv-opt-in-prompt" className="scroll-mt-24 rounded-sm transition md:col-span-2">
+
           <OptInPromptSettingsPanel
             businessName={profile?.business_name}
             template={profile?.opt_in_prompt_template}
