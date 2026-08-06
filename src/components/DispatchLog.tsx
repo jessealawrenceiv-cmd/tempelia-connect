@@ -208,7 +208,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             })}
           </div>
 
-          </div>
         </div>
       </div>
 
