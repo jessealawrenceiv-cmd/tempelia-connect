@@ -12,6 +12,9 @@ import { Copy, Check } from "lucide-react";
 import { ContactImportPanel } from "@/components/ContactImportPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    customerId: typeof search.customerId === "string" ? search.customerId : undefined,
+  }),
   component: ContactsPage,
 });
 
