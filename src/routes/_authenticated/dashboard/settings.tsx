@@ -390,6 +390,9 @@ function SettingsPage() {
   };
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
+  // Ref to the ACTIVE badge so refresh can restore focus to the exact element
+  // that was focused inside the tooltip before the button became disabled.
+  const advancedBadgeRef = useRef<{ contains: (el: Node | null) => boolean; restoreFocus: (el: HTMLElement | null) => void } | null>(null);
 
 
   useEffect(() => {
