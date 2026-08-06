@@ -1042,6 +1042,7 @@ function SettingsPage() {
               Their reply is captured on the quote.
             </p>
             <select
+              aria-label="Declined-quote follow-up mode"
               value={profile?.decline_followup_mode ?? "off"}
               disabled={setDeclineMode.isPending}
               onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
