@@ -20,14 +20,17 @@ test.describe("intake deep link", () => {
   test("clicking a Home 'New request' highlights the right submission", async ({ page }) => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
+    // Wait for the attention panel to finish loading before counting items.
+    await expect(page.getByText("Needs your attention")).toBeVisible();
+    await expect(page.getByText("Loading…").first()).toBeHidden({ timeout: 20_000 });
+
     const item = page
       .getByRole("link")
       .filter({ has: page.getByText("New request", { exact: true }) })
       .first();
 
-    if ((await item.count()) === 0) {
-      test.skip(true, "no pending intake submissions on this account");
-    }
+    await expect(item).toBeVisible({ timeout: 20_000 });
+
 
     const href = await item.getAttribute("href");
     const intakeId = new URL(href!, BASE).searchParams.get("intakeId");
