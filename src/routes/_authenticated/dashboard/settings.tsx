@@ -755,16 +755,19 @@ function SettingsPage() {
               <button
                 ref={retryButtonRef}
                 type="button"
-                disabled={isRefreshingStatuses || isInCooldown}
+                aria-disabled={isRefreshingStatuses || isInCooldown}
+                aria-busy={isRefreshingStatuses}
+                aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
                 onClick={() => {
                   if (isRefreshingStatuses || isInCooldown) return;
                   refreshStatuses("manual");
                 }}
-
-                aria-disabled={isRefreshingStatuses || isInCooldown}
-                aria-busy={isRefreshingStatuses}
-                aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
-                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+                    e.preventDefault();
+                  }
+                }}
+                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
               >
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
                 {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
