@@ -57,6 +57,19 @@ function IntakesPage() {
   });
 
   // Live updates: push new/changed intake rows into the list without a reload.
+  // If the reader is currently working inside the deep-linked card, the refetch
+  // is queued instead of applied, so a background change can never remount the
+  // card out from under their focus.
+  const pendingRealtimeRef = useRef(false);
+  const [deferredUpdates, setDeferredUpdates] = useState(false);
+  const focusHeldIdRef = useRef<string | null>(null);
+
+  const applyIntakeUpdates = () => {
+    pendingRealtimeRef.current = false;
+    setDeferredUpdates(false);
+    qc.invalidateQueries({ queryKey: ["intake-submissions"] });
+  };
+
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -64,11 +77,19 @@ function IntakesPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "intake_submissions", filter: `user_id=eq.${user.id}` },
-        () => qc.invalidateQueries({ queryKey: ["intake-submissions"] }),
+        () => {
+          if (focusHeldIdRef.current) {
+            pendingRealtimeRef.current = true;
+            setDeferredUpdates(true);
+            return;
+          }
+          qc.invalidateQueries({ queryKey: ["intake-submissions"] });
+        },
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, qc]);
+
 
   const allPaths = useMemo(
     () => (rows ?? []).flatMap((r) => r.photo_urls ?? []),
