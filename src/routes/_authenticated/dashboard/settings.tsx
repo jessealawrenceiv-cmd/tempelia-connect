@@ -1411,7 +1411,7 @@ const AutomationBadge = forwardRef<
       </span>
     </span>
   );
-}
+});
 
 
 
