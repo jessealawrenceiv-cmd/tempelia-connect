@@ -188,7 +188,8 @@ function IntakesPage() {
       requestAnimationFrame(() => {
         const el = rowRefs.current[incomingIntakeId];
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
-        el?.focus({ preventScroll: true });
+        // Never yank focus if the reader is already working somewhere on the page.
+        if (!focusIsInsideCards()) el?.focus({ preventScroll: true });
       });
     } else {
       setJumpedId(null);
@@ -205,9 +206,32 @@ function IntakesPage() {
 
   useEffect(() => {
     if (!jumpMiss) return;
-    const t = window.setTimeout(() => jumpMissHeadingRef.current?.focus(), 60);
+    const t = window.setTimeout(() => {
+      // A late-arriving miss (e.g. after a live update) must not pull focus out
+      // of a card the reader is already inside.
+      if (!focusIsInsideCards()) jumpMissHeadingRef.current?.focus();
+    }, 60);
     return () => window.clearTimeout(t);
   }, [jumpMiss]);
+
+  // Track whether focus is parked inside the deep-linked card. While it is,
+  // realtime refetches are held; the moment focus leaves, queued updates land.
+  useEffect(() => {
+    const sync = () => {
+      const el = incomingIntakeId ? rowRefs.current[incomingIntakeId] : null;
+      const inside = !!el && el.contains(document.activeElement);
+      focusHeldIdRef.current = inside ? incomingIntakeId : null;
+      if (!inside && pendingRealtimeRef.current) applyIntakeUpdates();
+    };
+    sync();
+    document.addEventListener("focusin", sync);
+    document.addEventListener("focusout", sync);
+    return () => {
+      document.removeEventListener("focusin", sync);
+      document.removeEventListener("focusout", sync);
+    };
+  }, [incomingIntakeId]);
+
 
   // Fade the highlight after a few seconds so the page settles.
   useEffect(() => {
