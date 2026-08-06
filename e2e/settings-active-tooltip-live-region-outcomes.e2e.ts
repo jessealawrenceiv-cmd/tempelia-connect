@@ -233,11 +233,23 @@ test.describe("Settings · ACTIVE tooltip live region · refresh outcomes", () =
     const focusBefore = await focusSignature(page);
     const tooltipTextBefore = (await live.textContent())?.trim() ?? "";
 
+    // Realtime connection notices share this region, so record every
+    // announcement instead of sampling the region's text at one instant.
+    await pageLive.evaluate((el) => {
+      const seen: string[] = [(el.textContent ?? "").trim()];
+      (window as unknown as { __liveLog: string[] }).__liveLog = seen;
+      new MutationObserver(() => seen.push((el.textContent ?? "").trim())).observe(el, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    });
+
     await refresh.click();
 
     // The contention notice is announced in the polite region.
     await expect
-      .poll(async () => (await pageLive.textContent())?.trim() ?? "", {
+      .poll(async () => await page.evaluate(() => (window as unknown as { __liveLog: string[] }).__liveLog.join(" | ")), {
         message: '"Refresh already running" should be announced politely',
         timeout: 20_000,
       })
