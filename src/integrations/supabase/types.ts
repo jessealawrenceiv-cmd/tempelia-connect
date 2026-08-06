@@ -351,6 +351,47 @@ export type Database = {
         }
         Relationships: []
       }
+      home_quote_dismissals: {
+        Row: {
+          business_owner_id: string
+          created_at: string
+          dismissed_by: string | null
+          dismissed_decline_reason: string | null
+          dismissed_status: string
+          id: string
+          quote_id: string
+          updated_at: string
+        }
+        Insert: {
+          business_owner_id: string
+          created_at?: string
+          dismissed_by?: string | null
+          dismissed_decline_reason?: string | null
+          dismissed_status: string
+          id?: string
+          quote_id: string
+          updated_at?: string
+        }
+        Update: {
+          business_owner_id?: string
+          created_at?: string
+          dismissed_by?: string | null
+          dismissed_decline_reason?: string | null
+          dismissed_status?: string
+          id?: string
+          quote_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_quote_dismissals_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: true
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intake_rate_limits: {
         Row: {
           id: string
