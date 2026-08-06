@@ -19,6 +19,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { createContext, forwardRef, memo, useCallback, useContext, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
+import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
@@ -54,6 +55,7 @@ function SettingsPage() {
   const [tab, setTab] = useState<"settings" | "advanced">("settings");
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
+  const [zipCode, setZipCode] = useState("");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(15);
 
@@ -409,6 +411,7 @@ function SettingsPage() {
   useEffect(() => {
     if (profile) {
       setOwnerPhone(profile.owner_phone ?? "");
+      setZipCode(profile.zip_code ?? "");
       setAutoRefreshEnabled(profile.auto_refresh_enabled ?? false);
       setAutoRefreshInterval(profile.auto_refresh_interval_minutes ?? 15);
     }
@@ -425,7 +428,10 @@ function SettingsPage() {
       );
       if (error) throw error;
       const { error: e2 } = await supabase.from("profiles")
-        .update({ owner_phone: ownerPhone.trim() || null }).eq("id", u.user.id);
+        .update({
+          owner_phone: ownerPhone.trim() || null,
+          zip_code: zipCode.trim() === "" ? null : zipCode.trim(),
+        }).eq("id", u.user.id);
       if (e2) throw e2;
     },
     onSuccess: () => {
@@ -1157,6 +1163,25 @@ function SettingsPage() {
                   onChange={(e) => toggleReviews.mutate(e.target.checked)}
                 />
                 {profile?.review_requests_enabled === false ? "Off" : "On"}
+              </label>
+              <label className="mt-3 block">
+                <span className="label-eyebrow">ZIP code (weather only)</span>
+                <input
+                  value={zipCode}
+                  onChange={(e) => setZipCode(sanitizeZipInput(e.target.value))}
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="72201"
+                  aria-label="ZIP code for weather"
+                  data-testid="settings-zip-input"
+                  className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+                />
+                {zipCode !== "" && !isValidZip(zipCode) && (
+                  <p className="mt-1 text-xs text-orange">Enter all 5 digits to see the forecast.</p>
+                )}
+                <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
+                  Used only for today's weather on Home. Press Save to store.
+                </p>
               </label>
             </div>
 

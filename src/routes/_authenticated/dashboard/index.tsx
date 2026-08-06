@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/AppShell";
 import { CalendarDays, Check, ChevronDown, ChevronRight, Clock, MapPin } from "lucide-react";
 import { DispatchLog } from "@/components/DispatchLog";
 import { LastRefreshedStatus } from "@/components/LastRefreshedStatus";
+import { HomeGreetingWeather } from "@/components/HomeGreetingWeather";
 import { toast } from "sonner";
 import { HOME_QUOTE_AUTOHIDE_DAYS, isOlderThanDays, relativeTime } from "@/lib/relative-time";
 
@@ -68,6 +69,21 @@ function HomePage() {
   }, [provisionFn]);
 
   void qc;
+
+  const { data: homeProfile } = useQuery({
+    queryKey: ["home", "profile-basics"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("business_name, zip_code")
+        .eq("id", u.user.id)
+        .maybeSingle();
+      return data;
+    },
+    staleTime: 5 * 60_000,
+  });
 
   const { data: today, isLoading: loadingToday } = useQuery({
     queryKey: ["home", "today-appointments"],
@@ -250,6 +266,11 @@ function HomePage() {
       <PageHeader eyebrow="Today" title="Home" />
 
       <div className="space-y-4 p-5 md:p-8">
+        <HomeGreetingWeather
+          businessName={homeProfile?.business_name}
+          zipCode={homeProfile?.zip_code}
+        />
+
         {/* Today's Schedule */}
         <section className="panel">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
