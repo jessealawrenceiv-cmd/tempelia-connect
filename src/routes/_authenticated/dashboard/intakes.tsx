@@ -26,6 +26,13 @@ function IntakesPage() {
   const qc = useQueryClient();
   const sign = useServerFn(signIntakePhotos);
   const [publicUrl, setPublicUrl] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!copiedId) return;
+    const t = window.setTimeout(() => setCopiedId(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [copiedId]);
 
   const { data: user } = useQuery({
     queryKey: ["me-id"],
