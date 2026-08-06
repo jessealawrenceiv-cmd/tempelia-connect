@@ -77,22 +77,33 @@ function SettingsPage() {
     if (intg) setReviewUrl(intg.google_review_url ?? "");
   }, [intg]);
 
-  // Snapshot of the status-relevant profile fields, so realtime updates can be described.
-  const statusSnapshotRef = useRef<{ voicemail: boolean; decline: string } | null>(null);
-  useEffect(() => {
-    if (profile) {
-      statusSnapshotRef.current = {
-        voicemail: !!profile.voicemail_enabled,
-        decline: profile.decline_followup_mode ?? "off",
-      };
-    }
-  }, [profile]);
-
   // Attribution for the most recent live status change.
   const localEditsRef = useRef<Map<string, number>>(new Map());
   const markLocalEdit = (field: string) => {
     localEditsRef.current.set(field, Date.now());
   };
+  const hasPendingLocalEdit = (field: string) => {
+    const at = localEditsRef.current.get(field);
+    return at !== undefined && Date.now() - at < 15_000;
+  };
+
+  // Snapshot of the status-relevant profile fields, so realtime updates can be described.
+  const statusSnapshotRef = useRef<{ voicemail: boolean; decline: string } | null>(null);
+  useEffect(() => {
+    if (!profile) return;
+    const prev = statusSnapshotRef.current;
+    // A refetch triggered by our own edit must not overwrite the snapshot before
+    // the realtime payload arrives — otherwise the change looks like a no-op and
+    // the "from this device" attribution is silently dropped.
+    statusSnapshotRef.current = {
+      voicemail:
+        prev && hasPendingLocalEdit("voicemail_enabled") ? prev.voicemail : !!profile.voicemail_enabled,
+      decline:
+        prev && hasPendingLocalEdit("decline_followup_mode")
+          ? prev.decline
+          : profile.decline_followup_mode ?? "off",
+    };
+  }, [profile]);
   const [lastUpdate, setLastUpdate] = useState<
     { origin: "this-device" | "other-device" | "backend"; at: Date } | null
   >(null);
