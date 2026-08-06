@@ -3,10 +3,14 @@ import { restoreSession } from "./support/session";
 
 const SETTINGS_PATH = "/dashboard/settings";
 
-/** Opens the Advanced tab and returns the ACTIVE-badge trigger button. */
+/**
+ * The "Automations in Advanced" panel lives on the default Settings tab and
+ * carries the ACTIVE badge with the tooltip. Returns the badge trigger button.
+ */
 async function openAdvancedTab(page: Page) {
-  await page.getByRole("button", { name: "Advanced", exact: false }).first().click();
-  const trigger = page.locator('button[aria-haspopup="true"][aria-controls]').first();
+  const panel = page.getByRole("heading", { name: "Automations in Advanced" }).locator("..").locator("..");
+  await expect(panel).toBeVisible();
+  const trigger = panel.locator('button[aria-haspopup="true"][aria-controls]').first();
   await expect(trigger).toBeVisible();
   return trigger;
 }
