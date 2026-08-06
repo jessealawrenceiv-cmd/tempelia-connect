@@ -961,7 +961,10 @@ function SettingsPage() {
               data-testid="refresh-now-progress"
               className={`pointer-events-none absolute inset-x-0 bottom-0 h-[2px] overflow-hidden ${isRefreshingStatuses ? "opacity-100" : "opacity-0"}`}
             >
-              <span className="block h-full w-1/3 animate-[refresh-sweep_1.1s_linear_infinite] bg-primary/70 motion-reduce:w-full motion-reduce:animate-none" />
+              <span
+                data-testid="refresh-now-progress-bar"
+                className="block h-full w-1/3 animate-[refresh-sweep_1.1s_linear_infinite] bg-primary/70 motion-reduce:w-full motion-reduce:animate-none"
+              />
             </span>
 
             <span className="flex items-center gap-1.5">
@@ -1367,6 +1370,8 @@ function SettingsPage() {
               >
                 <span
                   aria-hidden="true"
+                  data-testid="realtime-indicator-dot"
+                  data-realtime-state={realtimeState}
                   className={`h-1.5 w-1.5 rounded-full ${
                     realtimeState === "live"
                       ? "bg-moss"
@@ -1592,6 +1597,7 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
   return (
     <svg
       aria-hidden="true"
+      data-testid="motion-spinner"
       width={size}
       height={size}
       viewBox="0 0 24 24"
