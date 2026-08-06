@@ -53,6 +53,31 @@ function SettingsPage() {
     if (intg) setReviewUrl(intg.google_review_url ?? "");
   }, [intg]);
 
+  // Live status: refresh the ACTIVE badge/tooltip the moment the profile row changes.
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (cancelled || !u.user) return;
+      channel = supabase
+        .channel(`settings-profile-${u.user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${u.user.id}` },
+          () => {
+            void qc.invalidateQueries({ queryKey: ["profile"] });
+          },
+        )
+        .subscribe();
+    })();
+    return () => {
+      cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
+
   useEffect(() => {
     if (profile) setOwnerPhone(profile.owner_phone ?? "");
   }, [profile]);
