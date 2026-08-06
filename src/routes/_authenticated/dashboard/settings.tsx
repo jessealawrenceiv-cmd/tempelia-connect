@@ -1164,7 +1164,9 @@ function SettingsPage() {
                       ? "bg-moss"
                       : realtimeState === "reconnecting"
                         ? "animate-pulse bg-orange"
-                        : "animate-pulse bg-muted-foreground"
+                        : realtimeState === "disconnected"
+                          ? "bg-orange"
+                          : "animate-pulse bg-muted-foreground"
                   }`}
                 />
                 <span className={realtimeState === "live" ? "text-muted-foreground" : "text-orange"}>
@@ -1172,9 +1174,26 @@ function SettingsPage() {
                     ? "Live"
                     : realtimeState === "reconnecting"
                       ? `Reconnecting${realtimeAttempt > 1 ? ` (try ${realtimeAttempt})` : ""}…`
-                      : "Connecting…"}
+                      : realtimeState === "disconnected"
+                        ? `Disconnected (try ${realtimeAttempt})`
+                        : "Connecting…"}
                 </span>
               </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={realtimeToasts}
+                aria-label="Toast me when live updates connect or drop"
+                onClick={() => setRealtimeToastPref(!realtimeToasts)}
+                className={`mono kb-focus rounded-sm border px-1.5 py-0.5 text-[10px] uppercase tracking-widest ${
+                  realtimeToasts
+                    ? "border-orange/60 text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {realtimeToasts ? "Toasts on" : "Toasts off"}
+              </button>
+
 
             </div>
           </div>
