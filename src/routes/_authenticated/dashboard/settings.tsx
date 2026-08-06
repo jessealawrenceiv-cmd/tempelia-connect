@@ -959,6 +959,9 @@ function SettingsPage() {
           <button
             key="refresh-now-btn"
             type="button"
+            data-testid="refresh-now-btn"
+            data-refresh-runs={refreshRunsStarted}
+            data-ignored-keys={ignoredRefreshKeys}
             aria-disabled={isRefreshingStatuses || isInCooldown}
             aria-busy={isRefreshingStatuses}
             aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
@@ -967,10 +970,24 @@ function SettingsPage() {
               refreshStatuses("manual");
             }}
             onKeyDown={(e) => {
-              if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+              if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") return;
+              if (!(isRefreshingStatuses || isInCooldown)) return;
+              // Busy or cooling down: swallow the activation entirely. No refresh
+              // is queued, the tooltip must not close, and focus stays here.
+              e.preventDefault();
+              e.stopPropagation();
+              setIgnoredRefreshKeys((n) => n + 1);
+              e.currentTarget.focus();
+            }}
+            onKeyUp={(e) => {
+              // Native buttons fire click on Space keyup — swallow that too.
+              if ((e.key === " " || e.key === "Spacebar") && (isRefreshingStatuses || isInCooldown)) {
                 e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.focus();
               }
             }}
+
             className={`relative mt-1 flex min-h-[26px] w-full items-center justify-between overflow-hidden rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
           >
             {/* Indeterminate progress bar: absolutely positioned so it never affects layout */}
