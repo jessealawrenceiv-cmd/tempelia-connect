@@ -130,6 +130,20 @@ function SettingsPage() {
     : "—";
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
+  const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
+  const refreshStatuses = async () => {
+    setIsRefreshingStatuses(true);
+    try {
+      await refetchProfile();
+      setEvaluatedAt(new Date());
+      toast.success("Automation statuses refreshed.");
+    } catch (e) {
+      toast.error((e as Error).message ?? "Refresh failed.");
+    } finally {
+      setIsRefreshingStatuses(false);
+    }
+  };
+
   const jumpToAdvanced = (anchorId: string) => {
     setTab("advanced");
     window.setTimeout(() => {
