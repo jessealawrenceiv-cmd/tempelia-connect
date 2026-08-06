@@ -265,9 +265,11 @@ function HomePage() {
 
         {/* Money */}
         <section className="panel">
-          <div className="border-b border-border px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
             <div className="label-eyebrow">Money</div>
+            <LastRefreshedStatus />
           </div>
+
           <div className="grid gap-px bg-border sm:grid-cols-2">
             <div className="bg-card p-5">
               <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Deposits paid · last 7 days</div>
