@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getIsAdmin } from "@/lib/admin.functions";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import {
-  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText, CalendarDays,
+  LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText, CalendarDays, Receipt,
 } from "lucide-react";
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { to: "/dashboard/missed-calls", label: "Missed Calls", icon: PhoneMissed, ownerOnly: false },
   { to: "/dashboard/contacts", label: "Contacts", icon: Users, ownerOnly: false },
   { to: "/dashboard/quotes", label: "Quotes", icon: FileText, ownerOnly: false },
+  { to: "/dashboard/invoices", label: "Invoices", icon: Receipt, ownerOnly: false },
   { to: "/dashboard/schedule", label: "Schedule", icon: CalendarDays, ownerOnly: false },
   { to: "/dashboard/reviews", label: "Reviews", icon: Star, ownerOnly: false },
   { to: "/dashboard/dead-leads", label: "Win Back", icon: Snowflake, ownerOnly: false },

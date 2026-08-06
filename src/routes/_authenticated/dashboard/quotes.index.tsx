@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Fragment, useState } from "react";
@@ -11,6 +11,7 @@ import { sendDeclineFollowup } from "@/lib/decline-followup.functions";
 import { depositBalanceRemaining, depositSelectionLabel, type DepositSelection } from "@/lib/deposit";
 import { markQuoteDeposit } from "@/lib/deposit.functions";
 import { QuoteDepositPanel } from "@/components/QuoteDepositPanel";
+import { createInvoiceFromQuote } from "@/lib/invoice.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/")({
   component: QuotesListPage,
@@ -65,6 +66,9 @@ function QuotesListPage() {
   const sendSmsFn = useServerFn(sendQuoteSms);
   const askWhyFn = useServerFn(sendDeclineFollowup);
   const markDepositFn = useServerFn(markQuoteDeposit);
+  const [invoicingId, setInvoicingId] = useState<string | null>(null);
+  const createInvoiceFn = useServerFn(createInvoiceFromQuote);
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const toggle = (id: string) => setExpanded((prev) => {
     const next = new Set(prev);
@@ -91,6 +95,30 @@ function QuotesListPage() {
       setSendingId(null);
     }
   }
+  async function handleCreateInvoice(quoteId: string) {
+    setInvoicingId(quoteId);
+    try {
+      const res = await createInvoiceFn({ data: { quoteId } });
+      if (!res.ok && res.reason === "exists") {
+        toast.info(`${res.invoiceNumber} already exists for this quote (${res.status}).`);
+        navigate({ to: "/dashboard/invoices" });
+        return;
+      }
+      if (res.ok) {
+        toast.success(`${res.invoice.invoice_number} created as a draft.`);
+        qc.invalidateQueries({ queryKey: ["invoices"] });
+        navigate({
+          to: "/dashboard/invoices/$invoiceId/edit",
+          params: { invoiceId: res.invoice.id },
+        });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create the invoice");
+    } finally {
+      setInvoicingId(null);
+    }
+  }
+
   async function handleAskWhy(quoteId: string) {
     setAskingId(quoteId);
     try {
@@ -318,6 +346,15 @@ function QuotesListPage() {
                               >
                                 schedule job
                               </Link>
+                            )}
+                            {q.status === "accepted" && (
+                              <button
+                                disabled={invoicingId === q.id}
+                                onClick={() => handleCreateInvoice(q.id)}
+                                className="mono rounded-sm border border-primary/60 px-2 py-1 text-[10px] uppercase tracking-wider text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+                              >
+                                {invoicingId === q.id ? "…" : "create invoice"}
+                              </button>
                             )}
                             {q.deposit_required && q.status !== "archived" && (
                               q.deposit_paid ? (

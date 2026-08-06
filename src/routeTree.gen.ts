@@ -17,6 +17,7 @@ import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as QuoteQuoteIdRouteImport } from './routes/quote.$quoteId'
+import { Route as InvoiceInvoiceIdRouteImport } from './routes/invoice.$invoiceId'
 import { Route as IntakeBusinessIdRouteImport } from './routes/intake.$businessId'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -32,6 +33,7 @@ import { Route as AuthenticatedDashboardContactsRouteImport } from './routes/_au
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedDashboardQuotesIndexRouteImport } from './routes/_authenticated/dashboard/quotes.index'
+import { Route as AuthenticatedDashboardInvoicesIndexRouteImport } from './routes/_authenticated/dashboard/invoices.index'
 import { Route as ApiPublicVoicemailLogIdRouteImport } from './routes/api/public/voicemail/$logId'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
@@ -41,6 +43,7 @@ import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_a
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
 import { Route as AuthenticatedDashboardAdminDepositRecoveryRouteImport } from './routes/_authenticated/dashboard/admin/deposit-recovery'
 import { Route as AuthenticatedDashboardQuotesQuoteIdPrintRouteImport } from './routes/_authenticated/dashboard/quotes.$quoteId.print'
+import { Route as AuthenticatedDashboardInvoicesInvoiceIdEditRouteImport } from './routes/_authenticated/dashboard/invoices.$invoiceId.edit'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -79,6 +82,11 @@ const IndexRoute = IndexRouteImport.update({
 const QuoteQuoteIdRoute = QuoteQuoteIdRouteImport.update({
   id: '/quote/$quoteId',
   path: '/quote/$quoteId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoiceInvoiceIdRoute = InvoiceInvoiceIdRouteImport.update({
+  id: '/invoice/$invoiceId',
+  path: '/invoice/$invoiceId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntakeBusinessIdRoute = IntakeBusinessIdRouteImport.update({
@@ -168,6 +176,12 @@ const AuthenticatedDashboardQuotesIndexRoute =
     path: '/dashboard/quotes/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardInvoicesIndexRoute =
+  AuthenticatedDashboardInvoicesIndexRouteImport.update({
+    id: '/dashboard/invoices/',
+    path: '/dashboard/invoices/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicVoicemailLogIdRoute = ApiPublicVoicemailLogIdRouteImport.update({
   id: '/api/public/voicemail/$logId',
   path: '/api/public/voicemail/$logId',
@@ -219,6 +233,12 @@ const AuthenticatedDashboardQuotesQuoteIdPrintRoute =
     path: '/dashboard/quotes/$quoteId/print',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardInvoicesInvoiceIdEditRoute =
+  AuthenticatedDashboardInvoicesInvoiceIdEditRouteImport.update({
+    id: '/dashboard/invoices/$invoiceId/edit',
+    path: '/dashboard/invoices/$invoiceId/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -231,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -250,7 +271,9 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
+  '/dashboard/invoices/': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/dashboard/invoices/$invoiceId/edit': typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRoutesByTo {
@@ -264,6 +287,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -283,7 +307,9 @@ export interface FileRoutesByTo {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
+  '/dashboard/invoices': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/dashboard/quotes': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/dashboard/invoices/$invoiceId/edit': typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRoutesById {
@@ -299,6 +325,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/intake/$businessId': typeof IntakeBusinessIdRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/quote/$quoteId': typeof QuoteQuoteIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -318,7 +345,9 @@ export interface FileRoutesById {
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
+  '/_authenticated/dashboard/invoices/': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/_authenticated/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/_authenticated/dashboard/invoices/$invoiceId/edit': typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   '/_authenticated/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRouteTypes {
@@ -334,6 +363,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/invoice/$invoiceId'
     | '/quote/$quoteId'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -353,7 +383,9 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/api/public/voicemail/$logId'
+    | '/dashboard/invoices/'
     | '/dashboard/quotes/'
+    | '/dashboard/invoices/$invoiceId/edit'
     | '/dashboard/quotes/$quoteId/print'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -367,6 +399,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/onboarding'
     | '/intake/$businessId'
+    | '/invoice/$invoiceId'
     | '/quote/$quoteId'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -386,7 +419,9 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/api/public/voicemail/$logId'
+    | '/dashboard/invoices'
     | '/dashboard/quotes'
+    | '/dashboard/invoices/$invoiceId/edit'
     | '/dashboard/quotes/$quoteId/print'
   id:
     | '__root__'
@@ -401,6 +436,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/onboarding'
     | '/intake/$businessId'
+    | '/invoice/$invoiceId'
     | '/quote/$quoteId'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -420,7 +456,9 @@ export interface FileRouteTypes {
     | '/api/public/twilio/sms'
     | '/api/public/twilio/voice'
     | '/api/public/voicemail/$logId'
+    | '/_authenticated/dashboard/invoices/'
     | '/_authenticated/dashboard/quotes/'
+    | '/_authenticated/dashboard/invoices/$invoiceId/edit'
     | '/_authenticated/dashboard/quotes/$quoteId/print'
   fileRoutesById: FileRoutesById
 }
@@ -435,6 +473,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   IntakeBusinessIdRoute: typeof IntakeBusinessIdRoute
+  InvoiceInvoiceIdRoute: typeof InvoiceInvoiceIdRoute
   QuoteQuoteIdRoute: typeof QuoteQuoteIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -501,6 +540,13 @@ declare module '@tanstack/react-router' {
       path: '/quote/$quoteId'
       fullPath: '/quote/$quoteId'
       preLoaderRoute: typeof QuoteQuoteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoice/$invoiceId': {
+      id: '/invoice/$invoiceId'
+      path: '/invoice/$invoiceId'
+      fullPath: '/invoice/$invoiceId'
+      preLoaderRoute: typeof InvoiceInvoiceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/intake/$businessId': {
@@ -608,6 +654,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardQuotesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/invoices/': {
+      id: '/_authenticated/dashboard/invoices/'
+      path: '/dashboard/invoices'
+      fullPath: '/dashboard/invoices/'
+      preLoaderRoute: typeof AuthenticatedDashboardInvoicesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/voicemail/$logId': {
       id: '/api/public/voicemail/$logId'
       path: '/api/public/voicemail/$logId'
@@ -671,6 +724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardQuotesQuoteIdPrintRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/invoices/$invoiceId/edit': {
+      id: '/_authenticated/dashboard/invoices/$invoiceId/edit'
+      path: '/dashboard/invoices/$invoiceId/edit'
+      fullPath: '/dashboard/invoices/$invoiceId/edit'
+      preLoaderRoute: typeof AuthenticatedDashboardInvoicesInvoiceIdEditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -687,7 +747,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardAdminDepositRecoveryRoute: typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   AuthenticatedDashboardAdminNumbersRoute: typeof AuthenticatedDashboardAdminNumbersRoute
   AuthenticatedDashboardQuotesNewRoute: typeof AuthenticatedDashboardQuotesNewRoute
+  AuthenticatedDashboardInvoicesIndexRoute: typeof AuthenticatedDashboardInvoicesIndexRoute
   AuthenticatedDashboardQuotesIndexRoute: typeof AuthenticatedDashboardQuotesIndexRoute
+  AuthenticatedDashboardInvoicesInvoiceIdEditRoute: typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   AuthenticatedDashboardQuotesQuoteIdPrintRoute: typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 
@@ -707,8 +769,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardAdminNumbersRoute:
     AuthenticatedDashboardAdminNumbersRoute,
   AuthenticatedDashboardQuotesNewRoute: AuthenticatedDashboardQuotesNewRoute,
+  AuthenticatedDashboardInvoicesIndexRoute:
+    AuthenticatedDashboardInvoicesIndexRoute,
   AuthenticatedDashboardQuotesIndexRoute:
     AuthenticatedDashboardQuotesIndexRoute,
+  AuthenticatedDashboardInvoicesInvoiceIdEditRoute:
+    AuthenticatedDashboardInvoicesInvoiceIdEditRoute,
   AuthenticatedDashboardQuotesQuoteIdPrintRoute:
     AuthenticatedDashboardQuotesQuoteIdPrintRoute,
 }
@@ -728,6 +794,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   IntakeBusinessIdRoute: IntakeBusinessIdRoute,
+  InvoiceInvoiceIdRoute: InvoiceInvoiceIdRoute,
   QuoteQuoteIdRoute: QuoteQuoteIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
