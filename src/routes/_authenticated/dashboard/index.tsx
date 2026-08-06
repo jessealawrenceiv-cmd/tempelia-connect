@@ -405,7 +405,12 @@ function HomePage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => markIntakeContacted.mutate(i.id)}
+                    onClick={() =>
+                      markIntakeContacted.mutate({
+                        id: i.id,
+                        label: `${i.customer_first_name} ${i.customer_last_name ?? ""}`.trim(),
+                      })
+                    }
                     disabled={markIntakeContacted.isPending}
                     title="Sets this request's status to Contacted"
                     className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
@@ -438,7 +443,12 @@ function HomePage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => hideQuote.mutate(q)}
+                    onClick={() =>
+                      hideQuote.mutate({
+                        ...q,
+                        label: `${q.customer_first_name} ${q.customer_last_name ?? ""}`.trim(),
+                      })
+                    }
                     disabled={hideQuote.isPending}
                     title="Hides this quote from Home only — the quote stays live for the customer"
                     className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
@@ -471,7 +481,12 @@ function HomePage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => hideQuote.mutate(q)}
+                    onClick={() =>
+                      hideQuote.mutate({
+                        ...q,
+                        label: `${q.customer_first_name} ${q.customer_last_name ?? ""}`.trim(),
+                      })
+                    }
                     disabled={hideQuote.isPending}
                     title="Hides this quote from Home only — the quote stays live for the customer"
                     className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
@@ -506,7 +521,12 @@ function HomePage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => hideQuote.mutate(q)}
+                    onClick={() =>
+                      hideQuote.mutate({
+                        ...q,
+                        label: `${q.customer_first_name} ${q.customer_last_name ?? ""}`.trim(),
+                      })
+                    }
                     disabled={hideQuote.isPending}
                     title="Hides this quote from Home only — the quote stays live for the customer"
                     className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-moss hover:bg-accent hover:text-foreground disabled:opacity-50"
