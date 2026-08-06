@@ -472,7 +472,7 @@ function SettingsPage() {
   const lastRefreshAtRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
   // Dispatch-style activity entry for each status re-check.
-  const logStatusRefresh = async (
+  const logStatusRefresh = useCallback(async (
     status: "already_current" | "updated" | "failed",
     detail: Record<string, unknown>,
   ) => {
@@ -499,7 +499,7 @@ function SettingsPage() {
     } catch {
       // logging must never block the refresh itself
     }
-  };
+  }, [collectAffected, qc]);
 
   const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
     // Remember the exact element that had focus inside the ACTIVE tooltip so we
