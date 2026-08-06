@@ -120,13 +120,23 @@ function SettingsPage() {
   const [evaluatedAt, setEvaluatedAt] = useState<Date | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    if (profile !== undefined) setEvaluatedAt(new Date());
-  }, [profile]);
+    if (profileUpdatedAt) setEvaluatedAt(new Date(profileUpdatedAt));
+  }, [profileUpdatedAt]);
   useEffect(() => {
     setNow(new Date());
-    const id = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(id);
-  }, []);
+    const id = window.setInterval(() => setNow(new Date()), 15_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        setNow(new Date());
+        void refetchProfile();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refetchProfile]);
   const evaluatedLabel = evaluatedAt
     ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "—";
