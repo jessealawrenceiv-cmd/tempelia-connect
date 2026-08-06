@@ -11,6 +11,7 @@ import { DepositDefaultsPanel } from "@/components/DepositDefaultsPanel";
 import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 
 import { useTeamRole } from "@/hooks/useTeamRole";
+import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -110,6 +111,10 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const declineMode = (profile?.decline_followup_mode ?? "off") as "off" | "manual" | "auto";
+  const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
+  const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
+
   if (isStaff) {
     return (
       <div>
@@ -143,6 +148,12 @@ function SettingsPage() {
             }`}
           >
             {t === "settings" ? "Settings" : "Advanced"}
+            {t === "advanced" && advancedActiveCount > 0 && (
+              <span
+                className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-moss align-middle"
+                title={`${advancedActiveCount} automation(s) active`}
+              />
+            )}
           </button>
         ))}
       </div>
@@ -267,8 +278,16 @@ function SettingsPage() {
         />
 
         <div className="panel p-6">
-          <div className="label-eyebrow">Automation</div>
-          <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="label-eyebrow">Automation</div>
+              <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
+            </div>
+            <AutomationBadge
+              state={declineMode === "auto" ? "active" : declineMode === "manual" ? "manual" : "off"}
+            />
+
+          </div>
           <div className="mt-4 flex items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">
               When a customer declines a quote: <span className="mono">off</span> = do nothing;
@@ -289,9 +308,37 @@ function SettingsPage() {
           </div>
         </div>
 
+        <div className="panel p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="label-eyebrow">Advanced</div>
+              <h2 className="mt-1 text-xl">Automations in Advanced</h2>
+            </div>
+            <AutomationBadge state={advancedActiveCount > 0 ? "active" : "off"} activeCount={advancedActiveCount} />
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
+              <span className="text-xs text-muted-foreground">Opt-in prompt & cooldown</span>
+              <AutomationBadge state={optInPromptActive ? "active" : "hold"} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-muted-foreground">Inbound webhook diagnostics</span>
+              <AutomationBadge state="off" label="Manual tool" />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTab("advanced")}
+            className="mono mt-4 rounded-sm border border-border px-3 py-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          >
+            Open advanced
+          </button>
+        </div>
+
         <ExcludedNumbersPanel />
 
         <TeamMembersPanel tier={profile?.subscription_tier} />
+
       </div>
       )}
 
@@ -325,7 +372,41 @@ function SettingsPage() {
 }
 
 
+function AutomationBadge({
+  state,
+  label,
+  activeCount,
+}: {
+  state: "active" | "manual" | "hold" | "off";
+  label?: string;
+  activeCount?: number;
+}) {
+  const styles: Record<string, string> = {
+    active: "border-moss/60 bg-moss/15 text-moss",
+    manual: "border-steel/60 bg-steel/15 text-steel",
+    hold: "border-orange/60 bg-orange/15 text-orange",
+    off: "border-border bg-muted/20 text-muted-foreground",
+  };
+  const defaults: Record<string, string> = {
+    active: activeCount ? `${activeCount} active` : "Active",
+    manual: "Manual",
+    hold: "On hold",
+    off: "Off",
+  };
+  return (
+    <span
+      className={`mono shrink-0 rounded-sm border px-2 py-1 text-[10px] uppercase tracking-widest ${styles[state]}`}
+    >
+      {state === "active" && (
+        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-moss align-middle" />
+      )}
+      {label ?? defaults[state]}
+    </span>
+  );
+}
+
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
+
   return (
     <div className="flex items-center justify-between border-b border-border pb-2">
       <span className="label-eyebrow">{k}</span>
