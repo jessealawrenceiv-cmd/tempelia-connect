@@ -225,7 +225,7 @@ function SettingsPage() {
         ))}
       </ul>
       <div className="border-t border-border pt-1">
-        <div>
+        <div aria-live="polite" aria-atomic="true">
           Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
         </div>
         <button
