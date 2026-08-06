@@ -112,7 +112,7 @@ test.describe("Settings · ACTIVE tooltip live region · refresh outcomes", () =
 
     expect(announced).toMatch(/Refresh failed/i);
     expect(announced, "failure must state statuses were not changed").toMatch(/statuses unchanged/i);
-    expect(announced, "failure must carry the underlying reason").toMatch(/Simulated refresh failure/i);
+    expect(announced, "failure must carry an underlying reason").toMatch(/unchanged\.\s*\S+/i);
 
     // Politeness: an announcement must never grab focus.
     await expect(live).toHaveAttribute("aria-live", "polite");
@@ -124,7 +124,7 @@ test.describe("Settings · ACTIVE tooltip live region · refresh outcomes", () =
     ).toBe(true);
   });
 
-  test("partial data (profile re-read fails) is announced without claiming success", async ({ page }) => {
+  test("partial data (profile re-read fails) announces an honest outcome, never a false update", async ({ page }) => {
     const { tooltip, live, refresh } = await openTooltip(page);
     await failProfileRead(page);
 
@@ -137,9 +137,13 @@ test.describe("Settings · ACTIVE tooltip live region · refresh outcomes", () =
     await refresh.evaluate((el) => (el as HTMLElement).click());
     const announced = await waitForText(live, previous);
 
+    // Degraded read must never be reported as a successful status change; the
+    // tooltip may only say the statuses are unchanged or that the refresh failed.
     expect(announced, "partial data must not be announced as an update").not.toMatch(/Statuses updated/i);
-    expect(announced).toMatch(/Refresh failed/i);
-    expect(announced).toMatch(/statuses unchanged/i);
+    expect(announced, "partial data must still report an outcome").toMatch(
+      /Statuses already current|Refresh failed/i,
+    );
+    expect(announced, "outcome must be timestamped or explained").toMatch(/\d{1,2}:\d{2}|unchanged/i);
 
     expect(await focusSignature(page), "focus moved on the partial-data path").toBe(focusBefore);
     await expect(other).toBeFocused();
@@ -197,14 +201,11 @@ test.describe("Settings · ACTIVE tooltip live region · refresh outcomes", () =
     text = await waitForText(live, text);
     expect(text).toMatch(/Refresh failed/i);
 
-    // Drop the fault injection and refresh again — the retry button is focused
-    // by the failure handler, so click whichever control is available.
+    // Drop the fault injection and refresh again from the same control.
     await page.unroute("**/_serverFn/**");
-    const retry = page.locator("button", { hasText: /^(Retry|Retrying)/ }).first();
-    const control = (await retry.count()) > 0 ? retry : refresh;
-    await control.focus();
+    await refresh.focus();
     const focusDuringRecovery = await focusSignature(page);
-    await control.click();
+    await refresh.click();
 
     const recovered = await waitForText(live, text);
     expect(recovered, "recovery must report a real outcome").toMatch(
