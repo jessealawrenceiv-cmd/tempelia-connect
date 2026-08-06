@@ -75,9 +75,16 @@ function describe(row: { action_type: string; status: string | null; message_sen
 
 
 
+const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
+  "this-device": "This device",
+  "other-device": "Another device",
+  "backend": "Backend",
+};
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
+  const [originFilter, setOriginFilter] = useState<"all" | "this-device" | "other-device" | "backend">("all");
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
@@ -94,6 +101,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   });
 
   const filtered = (data ?? []).filter((row) => {
+    if (originFilter !== "all") {
+      if (row.action_type !== "automation_status_change") return false;
+      if (row.status !== originFilter) return false;
+      return true;
+    }
     if (statusRefreshOnly && row.action_type !== "status_refresh") return false;
     if (failedOnly) {
       if (row.action_type !== "status_refresh") return false;
@@ -140,6 +152,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               type="checkbox"
               className="h-3.5 w-3.5 accent-primary"
               checked={statusRefreshOnly}
+              disabled={originFilter !== "all"}
               onChange={(e) => {
                 setStatusRefreshOnly(e.target.checked);
                 if (!e.target.checked) setFailedOnly(false);
@@ -149,18 +162,50 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           </label>
           <label
             className={`flex items-center gap-2 text-xs ${
-              statusRefreshOnly ? "cursor-pointer text-foreground" : "cursor-not-allowed text-muted-foreground"
+              statusRefreshOnly && originFilter === "all"
+                ? "cursor-pointer text-foreground"
+                : "cursor-not-allowed text-muted-foreground"
             }`}
           >
             <input
               type="checkbox"
               className="h-3.5 w-3.5 accent-primary"
               checked={failedOnly}
-              disabled={!statusRefreshOnly}
+              disabled={!statusRefreshOnly || originFilter !== "all"}
               onChange={(e) => setFailedOnly(e.target.checked)}
             />
             Failed only
           </label>
+
+          <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">ACTIVE source</span>
+            {(["all", "this-device", "other-device", "backend"] as const).map((key) => {
+              const active = originFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setOriginFilter(key);
+                    if (key !== "all") {
+                      setStatusRefreshOnly(false);
+                      setFailedOnly(false);
+                    }
+                  }}
+                  className={`kb-focus rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    active
+                      ? "bg-primary text-paper"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {key === "all" ? "All" : ORIGIN_LABEL[key]}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -189,6 +234,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             />
             <span>
               <span className="mr-2 font-semibold text-foreground">{LABEL[row.action_type] ?? row.action_type}</span>
+              {row.action_type === "automation_status_change" && row.status && row.status in ORIGIN_LABEL && (
+                <span className="mr-2 inline-flex items-center rounded bg-muted px-1 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}
+                </span>
+              )}
               <span className="text-foreground/80">{describe(row)}</span>
               {affected.length > 0 && (
                 <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
