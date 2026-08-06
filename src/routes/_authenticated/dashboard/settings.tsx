@@ -168,6 +168,9 @@ function SettingsPage() {
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshAttempts, setRefreshAttempts] = useState(0);
+
   // Snapshot of the fields that drive the automation status badges, so the
   // refresh toast can say whether anything actually changed.
   const statusSnapshot = (p: typeof profile) =>
