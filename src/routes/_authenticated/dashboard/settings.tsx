@@ -1436,7 +1436,7 @@ const AutomationBadge = memo(forwardRef<
       </span>
     </span>
   );
-});
+}));
 
 
 
