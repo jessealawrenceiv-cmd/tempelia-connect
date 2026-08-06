@@ -138,6 +138,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       if (row.action_type !== "status_refresh") return false;
       if (row.status !== "failed") return false;
     }
+    if (searchTerms.length > 0) {
+      const haystack = `${LABEL[row.action_type] ?? row.action_type} ${describe(row)}`.toLowerCase();
+      if (!searchTerms.every((term) => haystack.includes(term))) return false;
+    }
     return true;
   });
 
