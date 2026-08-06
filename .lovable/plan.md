@@ -1,41 +1,39 @@
-## Plan: Connect Tempelia to GitHub
+## Plan: Optional auto-refresh interval on the dashboard
 
 ### Goal
-Back up the Tempelia codebase and enable two-way sync with a GitHub repository so you can collaborate, review code, and optionally deploy externally.
+Let the business owner configure an automatic status re-evaluation interval on the Settings page so automation statuses refresh without clicking "Refresh now".
 
-### Background
-The project is currently only stored in Lovable's internal git storage. No GitHub remote is configured. The codebase is a TanStack Start + Supabase app with Stripe, Twilio, and role-based admin features.
+### What changes
 
-### Steps
+1. **Database schema**
+   - Add two columns to `public.profiles`:
+     - `auto_refresh_enabled` boolean, default `false`
+     - `auto_refresh_interval_minutes` integer, default `15`
+   - Grant as part of the existing profiles permissions.
 
-1. **Open the GitHub connection flow in Lovable**
-   - In the Lovable editor, click the **Plus (+) menu** in the chat input (bottom left).
-   - Choose **GitHub → Connect project**.
+2. **Settings UI (Advanced section)**
+   - Add an "Auto-refresh statuses" panel with:
+     - Toggle to enable/disable.
+     - Number input for interval in minutes (min 1, max 120).
+     - Live summary of next scheduled refresh.
+   - Persist changes immediately via the existing `profiles` update mutation.
 
-2. **Authorize the Lovable GitHub App**
-   - You will be redirected to GitHub to authorize the Lovable GitHub App.
-   - Grant access to the account or organization where you want the repo created.
+3. **Auto-refresh behavior**
+   - When enabled, start a timer that calls the existing `refreshStatuses()` function every N minutes.
+   - Pause while the page is hidden (`document.visibilityState !== "visible"`).
+   - Skip a tick if a manual refresh is already running or if the failure cooldown is active.
+   - Stop the timer when disabled, the page is unmounted, or the user leaves the Settings tab.
+   - Record each auto-refresh in the activity log with a distinct `trigger: "auto"` field so they can be filtered separately from manual refreshes.
 
-3. **Select target account and create repository**
-   - Choose the GitHub account/organization.
-   - Name the repository (suggested: `tempelia`).
-   - Click **Create Repository** in Lovable.
+4. **Realtime badge integration**
+   - Auto-refresh counts as a "backend" origin update if it changes statuses.
+   - The existing toast and activity-log flow remains unchanged.
 
-4. **Verify initial sync**
-   - Lovable will push the current codebase to the new GitHub repo.
-   - Open the repo on GitHub and confirm all files are present.
-
-5. **Post-connection recommendations**
-   - Enable branch switching in Lovable if needed: Account Settings → Labs → GitHub Branch Switching.
-   - Decide on external hosting (optional): the code can be deployed outside Lovable after GitHub sync, but environment variables and Lovable Cloud backend would need to be reconfigured elsewhere.
-
-### Notes / considerations
-- This is **Git sync**, not the GitHub connector for app automations.
-- No code changes are required in the project to enable sync.
-- Secrets (Twilio, Stripe, Supabase service role) are **not** synced to GitHub. You will need to reconfigure them in any external hosting environment.
-- Database data is exported separately via Cloud → Advanced settings → Export data if needed.
+5. **Tests**
+   - Add a Playwright test that enables a short interval, waits for one auto-tick, and verifies the Activity log receives a `status_refresh` row with `trigger: "auto"`.
 
 ### Success criteria
-- A GitHub repository exists with the Tempelia codebase.
-- Future edits in Lovable push to GitHub automatically.
-- Future pushes to GitHub sync back to Lovable.
+- Owner can enable/disable auto-refresh and choose 1–120 minutes.
+- With auto-refresh on, statuses re-evaluate on the interval while the Settings page is visible.
+- Manual refresh and failure cooldown still take precedence and prevent overlapping runs.
+- Each auto-run is auditable in the Activity log.
