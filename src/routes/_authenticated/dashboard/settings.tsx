@@ -465,7 +465,7 @@ function SettingsPage() {
   // Start of the window this refresh covers (previous re-check, else last 24h).
   const lastRefreshAtRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-  // Dispatch-style activity entry for each manual status re-check.
+  // Dispatch-style activity entry for each status re-check.
   const logStatusRefresh = async (
     status: "already_current" | "updated" | "failed",
     detail: Record<string, unknown>,
@@ -494,7 +494,7 @@ function SettingsPage() {
     }
   };
 
-  const refreshStatuses = async () => {
+  const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
     setIsRefreshingStatuses(true);
     setRefreshError(null);
     const before = statusSnapshot(profile);
@@ -516,15 +516,22 @@ function SettingsPage() {
       });
       const changed = before !== after;
       void logStatusRefresh(changed ? "updated" : "already_current", {
+        trigger,
         outcome: changed ? "Statuses updated" : "Statuses already current",
         duration_ms: Date.now() - startedAt,
         checked_at_local: checkedAt,
       });
-      if (!changed) {
-        toast.success("Statuses already current", {
-          description: `No changes since the last check · re-checked at ${checkedAt}.`,
-        });
-      } else {
+      if (trigger === "manual") {
+        if (!changed) {
+          toast.success("Statuses already current", {
+            description: `No changes since the last check · re-checked at ${checkedAt}.`,
+          });
+        } else {
+          toast.success("Statuses updated", {
+            description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
+          });
+        }
+      } else if (changed) {
         toast.success("Statuses updated", {
           description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
         });
@@ -541,6 +548,7 @@ function SettingsPage() {
         setCooldownMs(duration);
       }
       void logStatusRefresh("failed", {
+        trigger,
         outcome: "Refresh failed",
         error: message,
         error_code: code,
@@ -551,6 +559,7 @@ function SettingsPage() {
       setIsRefreshingStatuses(false);
     }
   };
+
 
 
 
