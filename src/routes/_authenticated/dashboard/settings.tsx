@@ -527,6 +527,16 @@ function SettingsPage() {
   // Which kind of refresh is currently running, so the in-progress banner can
   // distinguish "you clicked this" from a background auto re-check.
   const [refreshTrigger, setRefreshTrigger] = useState<"manual" | "auto">("manual");
+  // Tooltip-local live region text: announces the automation status outcome of
+  // every completed refresh (including repeats) without moving focus.
+  const [tooltipStatusMessage, setTooltipStatusMessage] = useState("");
+  const tooltipAnnounceCountRef = useRef(0);
+  const announceTooltipStatus = useCallback((text: string) => {
+    tooltipAnnounceCountRef.current += 1;
+    // The counter guarantees a text change, so identical back-to-back outcomes
+    // are still re-announced by screen readers.
+    setTooltipStatusMessage(`${text} (update ${tooltipAnnounceCountRef.current})`);
+  }, []);
   const [refreshError, setRefreshError] = useState<{
     message: string;
     code?: string;
