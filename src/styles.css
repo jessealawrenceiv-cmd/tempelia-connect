@@ -48,6 +48,10 @@
   --color-steel-foreground: var(--steel-blue-foreground);
   --color-moss: var(--moss-green);
   --color-moss-foreground: var(--moss-green-foreground);
+  /* AA-contrast text variants for tinted status chips on the app surface */
+  --color-moss-ink: var(--moss-green-ink);
+  --color-steel-ink: var(--steel-blue-ink);
+  --color-orange-ink: var(--industrial-violet-ink);
   --color-rule: var(--rule);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -93,6 +97,10 @@
   --steel-blue-foreground: oklch(0.965 0.012 85);
   --moss-green: oklch(0.51 0.08 150);          /* #4C7A5C */
   --moss-green-foreground: oklch(0.965 0.012 85);
+  /* Lightened chip text so 10px labels clear WCAG AA on charcoal */
+  --moss-green-ink: oklch(0.82 0.08 150);
+  --steel-blue-ink: oklch(0.82 0.05 235);
+  --industrial-violet-ink: oklch(0.84 0.1 295);
   --rule: oklch(1 0 0 / 12%);
 }
 
@@ -118,6 +126,10 @@
   --border: oklch(0.82 0.01 85);
   --input: oklch(0.88 0.012 85);
   --ring: oklch(0.45 0.15 295);
+  /* On paper, chip text darkens instead of lightening */
+  --moss-green-ink: oklch(0.42 0.08 150);
+  --steel-blue-ink: oklch(0.4 0.05 235);
+  --industrial-violet-ink: oklch(0.42 0.15 295);
 }
 
 @layer base {

@@ -1042,6 +1042,7 @@ function SettingsPage() {
               Their reply is captured on the quote.
             </p>
             <select
+              aria-label="Declined-quote follow-up mode"
               value={profile?.decline_followup_mode ?? "off"}
               disabled={setDeclineMode.isPending}
               onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
@@ -1310,9 +1311,9 @@ const AutomationBadge = memo(forwardRef<
   }
 >(function AutomationBadge({ state, label, activeCount, tooltip }, ref) {
   const styles: Record<string, string> = {
-    active: "border-moss/60 bg-moss/15 text-moss",
-    manual: "border-steel/60 bg-steel/15 text-steel",
-    hold: "border-orange/60 bg-orange/15 text-orange",
+    active: "border-moss/60 bg-moss/15 text-moss-ink",
+    manual: "border-steel/60 bg-steel/15 text-steel-ink",
+    hold: "border-orange/60 bg-orange/15 text-orange-ink",
     off: "border-border bg-muted/20 text-muted-foreground",
   };
   const defaults: Record<string, string> = {
