@@ -5,12 +5,15 @@ const DOT: Record<string, string> = {
   missed_call_text: "bg-orange",
   review_request: "bg-steel",
   reactivation_text: "bg-moss",
+  status_refresh: "bg-violet",
 };
 const LABEL: Record<string, string> = {
   missed_call_text: "MISSED_CALL_TEXT",
   review_request: "REVIEW_REQUEST",
   reactivation_text: "REACTIVATION_TEXT",
+  status_refresh: "STATUS_REFRESH",
 };
+
 
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const { data, isLoading } = useQuery({
