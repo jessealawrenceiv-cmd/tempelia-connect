@@ -23,7 +23,7 @@ test.describe("intake deep-link history navigation", () => {
   test("back/forward moves highlight, scroll and focus between two intakes", async ({ page }) => {
     await page.goto("/dashboard/intakes", { waitUntil: "domcontentloaded" });
 
-    const cards = page.locator('[id^="intake-"]');
+    const cards = page.locator('[id^="intake-"]:not([id^="intake-details-"])');
     await expect(cards.first()).toBeVisible({ timeout: 20_000 });
 
     const ids = (await cards.evaluateAll((els) =>
@@ -65,7 +65,7 @@ test.describe("intake deep-link history navigation", () => {
 
       // Focus follows the deep link (roving tab stop lands on the card group).
       await expect
-        .poll(() => page.evaluate(() => document.activeElement?.closest("[id^='intake-']")?.id), {
+        .poll(() => page.evaluate(() => document.activeElement?.closest("[id^='intake-']:not([id^='intake-details-'])")?.id), {
           message: `focus inside #intake-${id}`,
         })
         .toBe(`intake-${id}`);
