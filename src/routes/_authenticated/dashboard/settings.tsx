@@ -303,6 +303,7 @@ function SettingsPage() {
             attempt = 0;
             setRealtimeAttempt(0);
             setRealtimeState("live");
+            setLastSyncAt(new Date());
             // A gap in the stream may have hidden a change — resync on reconnect.
             void qc.invalidateQueries({ queryKey: ["profile"] });
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
