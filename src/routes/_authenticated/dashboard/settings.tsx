@@ -953,22 +953,46 @@ function SettingsPage() {
                 e.preventDefault();
               }
             }}
-            className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
+            className={`relative mt-1 flex min-h-[26px] w-full items-center justify-between overflow-hidden rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
           >
+            {/* Indeterminate progress bar: absolutely positioned so it never affects layout */}
+            <span
+              aria-hidden="true"
+              data-testid="refresh-now-progress"
+              className={`pointer-events-none absolute inset-x-0 bottom-0 h-[2px] overflow-hidden ${isRefreshingStatuses ? "opacity-100" : "opacity-0"}`}
+            >
+              <span className="block h-full w-1/3 animate-[refresh-sweep_1.1s_linear_infinite] bg-primary/70 motion-reduce:w-full motion-reduce:animate-none" />
+            </span>
+
             <span className="flex items-center gap-1.5">
-              {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
+              {/* Fixed-size icon slot keeps spinner and glyph identical in footprint */}
+              <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center leading-none">
+                {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
+              </span>
               <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
             </span>
-            <span className="text-foreground">
-              {isRefreshingStatuses
-                ? "Checking…"
-                : isInCooldown
+            {/* Stacked grid: width is the widest state, so swapping text causes no shift */}
+            <span className="inline-grid shrink-0 justify-items-end text-right tabular-nums text-foreground">
+              <span
+                aria-hidden={!isRefreshingStatuses}
+                className={`col-start-1 row-start-1 ${isRefreshingStatuses ? "visible" : "invisible"}`}
+                data-testid="refresh-now-loading-label"
+              >
+                Checking…
+              </span>
+              <span
+                aria-hidden={isRefreshingStatuses}
+                className={`col-start-1 row-start-1 ${isRefreshingStatuses ? "invisible" : "visible"}`}
+              >
+                {isInCooldown
                   ? `${formatCooldown(cooldownMs)}`
                   : evaluatedAt
                     ? `Last refreshed ${evaluatedLabel}`
                     : "Not yet refreshed"}
+              </span>
             </span>
           </button>
+
           {refreshError ? (
             <div
               key="refresh-error-detail"
