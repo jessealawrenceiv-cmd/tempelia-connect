@@ -266,7 +266,8 @@ function SettingsPage() {
       if (cancelled || retryTimer !== null) return;
       attempt += 1;
       setRealtimeAttempt(attempt);
-      setRealtimeState("reconnecting");
+      // After a few failed attempts the outage is no longer a blip — say so.
+      setRealtimeState(attempt >= 4 ? "disconnected" : "reconnecting");
       const delay = Math.min(30_000, 1000 * 2 ** (attempt - 1));
       retryTimer = window.setTimeout(() => {
         retryTimer = null;
