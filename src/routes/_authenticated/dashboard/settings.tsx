@@ -716,7 +716,15 @@ function SettingsPage() {
             {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
             <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
           </span>
-          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : isInCooldown ? `${formatCooldown(cooldownMs)}` : "↻"}</span>
+          <span className="text-foreground">
+            {isRefreshingStatuses
+              ? "Checking…"
+              : isInCooldown
+                ? `${formatCooldown(cooldownMs)}`
+                : evaluatedAt
+                  ? `Last refreshed ${evaluatedLabel}`
+                  : "Not yet refreshed"}
+          </span>
         </button>
         {refreshError ? (
           <div
