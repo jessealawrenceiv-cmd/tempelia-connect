@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/AppShell";
 import { signIntakePhotos } from "@/lib/intake.functions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  intakeDeepLinkHref,
   parseIntakeDeepLink,
   resolveIntakeJump,
   type IntakeJumpMissReason,
@@ -25,6 +26,13 @@ function IntakesPage() {
   const qc = useQueryClient();
   const sign = useServerFn(signIntakePhotos);
   const [publicUrl, setPublicUrl] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!copiedId) return;
+    const t = window.setTimeout(() => setCopiedId(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [copiedId]);
 
   const { data: user } = useQuery({
     queryKey: ["me-id"],
@@ -236,6 +244,23 @@ function IntakesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const url = `${window.location.origin}${intakeDeepLinkHref(r.id)}`;
+                        try {
+                          await navigator.clipboard.writeText(url);
+                          setCopiedId(r.id);
+                          toast.success("Link copied", { description: url });
+                        } catch {
+                          toast.error("Couldn't copy link");
+                        }
+                      }}
+                      title="Copy the deep link to this submission"
+                      className="mono rounded-sm border border-steel/60 px-2 py-1 text-[10px] uppercase tracking-wider text-steel hover:bg-steel hover:text-charcoal"
+                    >
+                      {copiedId === r.id ? "copied" : "copy link"}
+                    </button>
                     <Link
                       to="/dashboard/schedule"
                       search={{
