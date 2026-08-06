@@ -606,6 +606,7 @@ function AutomationBadge({
     if (!next || !containerRef.current?.contains(next)) {
       const blurredFromContent =
         !!e && e.target instanceof Node && e.target !== triggerRef.current;
+      console.log("[tt-hide]", { type: e?.type, blurredFromContent, next: !!next, hasTrigger: !!triggerRef.current });
       setOpen(false);
       if (blurredFromContent && !next) {
         // outside click / focus loss from tooltip content: hand focus back to the badge
