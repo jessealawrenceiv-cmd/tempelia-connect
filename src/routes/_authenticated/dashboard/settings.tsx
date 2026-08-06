@@ -693,10 +693,11 @@ function SettingsPage() {
         <button
           type="button"
           disabled={isRefreshingStatuses || isInCooldown}
-          onClick={() => {
-            if (isRefreshingStatuses || isInCooldown) return;
-            refreshStatuses();
-          }}
+                onClick={() => {
+                  if (isRefreshingStatuses || isInCooldown) return;
+                  refreshStatuses("manual");
+                }}
+
           aria-disabled={isRefreshingStatuses || isInCooldown}
           aria-busy={isRefreshingStatuses}
           aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
