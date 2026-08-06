@@ -168,6 +168,9 @@ function SettingsPage() {
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshAttempts, setRefreshAttempts] = useState(0);
+
   // Snapshot of the fields that drive the automation status badges, so the
   // refresh toast can say whether anything actually changed.
   const statusSnapshot = (p: typeof profile) =>
@@ -181,12 +184,16 @@ function SettingsPage() {
     });
   const refreshStatuses = async () => {
     setIsRefreshingStatuses(true);
+    setRefreshError(null);
     const before = statusSnapshot(profile);
     try {
       const result = await refetchProfile();
+      // TanStack Query surfaces fetch failures on the result rather than throwing.
+      if (result?.error) throw result.error as Error;
       const nowDate = new Date();
       setNow(nowDate);
       setEvaluatedAt(nowDate);
+      setRefreshAttempts(0);
       const after = statusSnapshot(result?.data ?? profile);
       const checkedAt = nowDate.toLocaleTimeString([], {
         hour: "2-digit",
@@ -203,13 +210,15 @@ function SettingsPage() {
         });
       }
     } catch (e) {
-      toast.error("Refresh failed", {
-        description: (e as Error).message ?? "Could not re-check automation statuses.",
-      });
+      const message = (e as Error)?.message || "Could not re-check automation statuses.";
+      setRefreshError(message);
+      setRefreshAttempts((n) => n + 1);
+      toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
     }
   };
+
 
 
   const highlightTimersRef = useRef<Map<HTMLElement, number[]>>(new Map());
@@ -295,7 +304,43 @@ function SettingsPage() {
           </span>
           <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "↻"}</span>
         </button>
+        {refreshError ? (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mt-1 space-y-1 rounded-sm border border-orange/60 bg-orange/10 px-2 py-1 normal-case tracking-normal"
+          >
+            <div className="text-foreground">Couldn’t refresh statuses</div>
+            <div className="text-muted-foreground break-words">{refreshError}</div>
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={refreshStatuses}
+                disabled={isRefreshingStatuses}
+                aria-label="Retry refreshing automation statuses"
+                className="rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground hover:bg-orange/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:opacity-50"
+              >
+                {isRefreshingStatuses ? "Retrying…" : "Retry"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRefreshError(null);
+                  setRefreshAttempts(0);
+                }}
+                aria-label="Dismiss refresh error"
+                className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+              >
+                Dismiss
+              </button>
+            </div>
+            {refreshAttempts > 1 ? (
+              <div className="text-muted-foreground">{refreshAttempts} failed attempts in a row.</div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+
     </div>
   );
 
