@@ -1029,6 +1029,31 @@ function SettingsPage() {
         ))}
       </div>
 
+      {/* Page-level confirmation that a refresh click was handled. Visible on
+          both tabs so the feedback is not hidden inside the ACTIVE tooltip. */}
+      {isRefreshingStatuses && (
+        <div
+          data-testid="refresh-in-progress-banner"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="mono mx-5 mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm border border-steel/60 bg-steel/10 px-3 py-2 text-[11px] text-paper md:mx-8"
+        >
+          <span className="flex items-center gap-2">
+            <Spinner size={12} />
+            <span className="uppercase tracking-widest">Refresh in progress</span>
+          </span>
+          <span className="text-muted-foreground">
+            {refreshTrigger === "auto"
+              ? "// automatic re-check running"
+              : "// your click was handled — re-checking automation statuses"}
+          </span>
+          <span className="text-muted-foreground">
+            {evaluatedAt ? `last refresh ${evaluatedLabel} (${relativeLabel})` : "no refresh yet"}
+          </span>
+        </div>
+      )}
+
       {tab === "settings" && (
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
         <div className="panel p-6">
