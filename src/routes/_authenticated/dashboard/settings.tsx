@@ -382,6 +382,61 @@ function SettingsPage() {
       opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
       optInPromptActive,
     });
+  // Contacts / submissions that saw activity in the window covered by this
+  // re-check, so the Activity entry can link straight to what changed.
+  const collectAffected = async (sinceIso: string) => {
+    const affected: Array<{ type: "customer" | "intake"; id: string; label: string }> = [];
+    try {
+      const [{ data: logRows }, { data: intakeRows }] = await Promise.all([
+        supabase
+          .from("logs")
+          .select("customer_id, created_at")
+          .not("customer_id", "is", null)
+          .neq("action_type", "status_refresh")
+          .gte("created_at", sinceIso)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("intake_submissions")
+          .select("id, customer_first_name, customer_last_name, updated_at")
+          .gte("updated_at", sinceIso)
+          .order("updated_at", { ascending: false })
+          .limit(8),
+      ]);
+
+      const customerIds = Array.from(
+        new Set((logRows ?? []).map((r) => r.customer_id).filter((v): v is string => Boolean(v))),
+      ).slice(0, 8);
+      if (customerIds.length > 0) {
+        const { data: people } = await supabase
+          .from("customers")
+          .select("id, first_name, last_name, phone_number")
+          .in("id", customerIds);
+        (people ?? []).forEach((p) => {
+          affected.push({
+            type: "customer",
+            id: p.id,
+            label: [p.first_name, p.last_name].filter(Boolean).join(" ") || p.phone_number || "Contact",
+          });
+        });
+      }
+      (intakeRows ?? []).forEach((r) => {
+        affected.push({
+          type: "intake",
+          id: r.id,
+          label:
+            [r.customer_first_name, r.customer_last_name].filter(Boolean).join(" ") || "Submission",
+        });
+      });
+    } catch {
+      // linking is best-effort; never block the refresh audit
+    }
+    return affected;
+  };
+
+  // Start of the window this refresh covers (previous re-check, else last 24h).
+  const lastRefreshAtRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
   // Dispatch-style activity entry for each manual status re-check.
   const logStatusRefresh = async (
     status: "already_current" | "updated" | "failed",
@@ -390,12 +445,21 @@ function SettingsPage() {
     try {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
+      const windowStart = lastRefreshAtRef.current;
+      const affected = status === "failed" ? [] : await collectAffected(windowStart);
       await supabase.from("logs").insert({
         user_id: u.user.id,
         action_type: "status_refresh",
         status,
-        message_sent: JSON.stringify({ source: "settings_active_badge", at: new Date().toISOString(), ...detail }),
+        message_sent: JSON.stringify({
+          source: "settings_active_badge",
+          at: new Date().toISOString(),
+          window_start: windowStart,
+          affected,
+          ...detail,
+        }),
       });
+      if (status !== "failed") lastRefreshAtRef.current = new Date().toISOString();
       void qc.invalidateQueries({ queryKey: ["logs"] });
     } catch {
       // logging must never block the refresh itself

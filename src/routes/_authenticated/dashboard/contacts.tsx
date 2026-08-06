@@ -12,6 +12,9 @@ import { Copy, Check } from "lucide-react";
 import { ContactImportPanel } from "@/components/ContactImportPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    customerId: typeof search.customerId === "string" ? search.customerId : undefined,
+  }),
   component: ContactsPage,
 });
 
@@ -87,6 +90,26 @@ function ContactsPage() {
     return next;
   });
   const { copied, copy } = useCopy();
+
+  // Deep link from an Activity entry (?customerId=…): expand, scroll, highlight.
+  const { customerId: incomingCustomerId } = Route.useSearch();
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  useEffect(() => {
+    if (!incomingCustomerId) return;
+    setExpanded((prev) => new Set(prev).add(incomingCustomerId));
+    setHighlighted(incomingCustomerId);
+    const scroll = window.setTimeout(() => {
+      document
+        .getElementById(`contact-${incomingCustomerId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    const clear = window.setTimeout(() => setHighlighted(null), 3000);
+    return () => {
+      window.clearTimeout(scroll);
+      window.clearTimeout(clear);
+    };
+  }, [incomingCustomerId]);
+
 
 
   const { data: contacts, isLoading } = useQuery({
@@ -264,7 +287,10 @@ function ContactsPage() {
                 return (
                   <Fragment key={c.id}>
                     <tr
-                      className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                      id={`contact-${c.id}`}
+                      className={`border-b border-border/50 hover:bg-accent/30 cursor-pointer ${
+                        highlighted === c.id ? "ring-2 ring-primary ring-inset bg-primary/5" : ""
+                      }`}
                       onClick={() => toggleExpand(c.id)}
                     >
 

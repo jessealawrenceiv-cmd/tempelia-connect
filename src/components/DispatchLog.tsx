@@ -1,7 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Filter } from "lucide-react";
+
+type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
+
+function parseAffected(row: { action_type: string; message_sent: string | null }): AffectedRef[] {
+  if (row.action_type !== "status_refresh" || !row.message_sent) return [];
+  try {
+    const payload = JSON.parse(row.message_sent) as Record<string, unknown>;
+    const list = payload["affected"];
+    if (!Array.isArray(list)) return [];
+    return list.filter(
+      (a): a is AffectedRef =>
+        !!a &&
+        typeof a === "object" &&
+        typeof (a as AffectedRef).id === "string" &&
+        ((a as AffectedRef).type === "customer" || (a as AffectedRef).type === "intake"),
+    );
+  } catch {
+    return [];
+  }
+}
+
 
 
 const DOT: Record<string, string> = {
@@ -131,8 +153,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               : "No entries match the selected filters."}
           </li>
         )}
-        {filtered.map((row) => (
-
+        {filtered.map((row) => {
+          const affected = parseAffected(row);
+          return (
           <li key={row.id} className="grid grid-cols-[auto_auto_1fr] items-start gap-3 px-5 py-3">
             <span className="text-muted-foreground">
               {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
@@ -147,10 +170,38 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <span>
               <span className="mr-2 font-semibold text-foreground">{LABEL[row.action_type] ?? row.action_type}</span>
               <span className="text-foreground/80">{describe(row)}</span>
-
+              {affected.length > 0 && (
+                <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">affected</span>
+                  {affected.map((a) =>
+                    a.type === "customer" ? (
+                      <Link
+                        key={`c-${a.id}`}
+                        to="/dashboard/contacts"
+                        search={{ customerId: a.id }}
+                        className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-primary hover:border-primary hover:underline"
+                        title="Open this contact"
+                      >
+                        {a.label}
+                      </Link>
+                    ) : (
+                      <Link
+                        key={`i-${a.id}`}
+                        to="/dashboard/intakes"
+                        search={{ intakeId: a.id }}
+                        className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-steel hover:border-steel hover:underline"
+                        title="Open this submission"
+                      >
+                        {a.label} · intake
+                      </Link>
+                    ),
+                  )}
+                </span>
+              )}
             </span>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
