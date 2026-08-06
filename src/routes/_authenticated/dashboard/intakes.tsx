@@ -107,6 +107,9 @@ function IntakesPage() {
   const [jumpMiss, setJumpMiss] = useState<{ id: string; reason: IntakeJumpMissReason } | null>(null);
   const jumpMissHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const handledJumpRef = useRef<string | null>(null);
+  // Cards are expanded by default; ids listed here are collapsed by the reader.
+  const [collapsedIds, setCollapsedIds] = useState<Record<string, true>>({});
+  const [jumpAnnouncement, setJumpAnnouncement] = useState("");
 
   useEffect(() => {
     if (isLoading || !rows) return;
@@ -116,6 +119,7 @@ function IntakesPage() {
       handledJumpRef.current = null;
       setJumpedId(null);
       setJumpMiss(null);
+      setJumpAnnouncement("");
       return;
     }
 
@@ -128,6 +132,18 @@ function IntakesPage() {
     if (res.kind === "hit") {
       setJumpMiss(null);
       setJumpedId(incomingIntakeId);
+      // Deep links always reveal the details of the submission they point at.
+      setCollapsedIds((prev) => {
+        if (!prev[incomingIntakeId]) return prev;
+        const next = { ...prev };
+        delete next[incomingIntakeId];
+        return next;
+      });
+      const row = rows.find((x) => x.id === incomingIntakeId);
+      const name = `${row?.customer_first_name ?? ""} ${row?.customer_last_name ?? ""}`.trim();
+      setJumpAnnouncement(
+        `Opened intake submission${name ? ` for ${name}` : ""}. Details expanded.`,
+      );
       requestAnimationFrame(() => {
         const el = rowRefs.current[incomingIntakeId];
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -135,6 +151,7 @@ function IntakesPage() {
       });
     } else {
       setJumpedId(null);
+      setJumpAnnouncement("");
       setJumpMiss({ id: incomingIntakeId, reason: res.reason });
       const fallback = ids[res.fallbackIndex];
       if (fallback) {
