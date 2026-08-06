@@ -7,6 +7,12 @@ import { PageHeader } from "@/components/AppShell";
 import { getVoicemailProxyUrl } from "@/lib/voicemail.functions";
 import { sendOptInPrompt, sendOptInPromptBatch } from "@/lib/opt-in-prompt.functions";
 import { OPT_IN_PROMPT_ACTION } from "@/lib/opt-in-prompt";
+import {
+  OPT_IN_PROMPT_ENGAGEMENT_RULE,
+  OPT_IN_PROMPT_HOLD_REASON,
+  OPT_IN_PROMPT_REAL_SENDS_ENABLED,
+} from "@/lib/opt-in-prompt-gate";
+
 import { MissedCallDetailSheet, type MissedCallDetail } from "@/components/MissedCallDetailSheet";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
