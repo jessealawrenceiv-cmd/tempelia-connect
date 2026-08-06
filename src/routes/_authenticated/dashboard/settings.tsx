@@ -115,6 +115,33 @@ function SettingsPage() {
   const optInPromptActive = OPT_IN_PROMPT_REAL_SENDS_ENABLED;
   const advancedActiveCount = [optInPromptActive].filter(Boolean).length;
 
+  const [evaluatedAt, setEvaluatedAt] = useState<Date | null>(null);
+  useEffect(() => {
+    if (profile !== undefined) setEvaluatedAt(new Date());
+  }, [profile]);
+  const evaluatedLabel = evaluatedAt
+    ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "—";
+
+  const advancedAutomations: { name: string; mode: string }[] = [
+    { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD" },
+    { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL" },
+  ];
+
+  const advancedTooltip = (
+    <div className="space-y-1">
+      <div className="text-foreground">Advanced automations</div>
+      {advancedAutomations.map((a) => (
+        <div key={a.name} className="flex items-center justify-between gap-3">
+          <span>{a.name}</span>
+          <span className="text-foreground">{a.mode}</span>
+        </div>
+      ))}
+      <div className="border-t border-border pt-1">Last evaluated {evaluatedLabel}</div>
+    </div>
+  );
+
+
   if (isStaff) {
     return (
       <div>
