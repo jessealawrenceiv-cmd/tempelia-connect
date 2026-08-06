@@ -57,6 +57,19 @@ function IntakesPage() {
   });
 
   // Live updates: push new/changed intake rows into the list without a reload.
+  // If the reader is currently working inside the deep-linked card, the refetch
+  // is queued instead of applied, so a background change can never remount the
+  // card out from under their focus.
+  const pendingRealtimeRef = useRef(false);
+  const [deferredUpdates, setDeferredUpdates] = useState(false);
+  const focusHeldIdRef = useRef<string | null>(null);
+
+  const applyIntakeUpdates = () => {
+    pendingRealtimeRef.current = false;
+    setDeferredUpdates(false);
+    qc.invalidateQueries({ queryKey: ["intake-submissions"] });
+  };
+
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -64,11 +77,19 @@ function IntakesPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "intake_submissions", filter: `user_id=eq.${user.id}` },
-        () => qc.invalidateQueries({ queryKey: ["intake-submissions"] }),
+        () => {
+          if (focusHeldIdRef.current) {
+            pendingRealtimeRef.current = true;
+            setDeferredUpdates(true);
+            return;
+          }
+          qc.invalidateQueries({ queryKey: ["intake-submissions"] });
+        },
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, qc]);
+
 
   const allPaths = useMemo(
     () => (rows ?? []).flatMap((r) => r.photo_urls ?? []),
@@ -112,12 +133,21 @@ function IntakesPage() {
   const [collapsedIds, setCollapsedIds] = useState<Record<string, true>>({});
   const [jumpAnnouncement, setJumpAnnouncement] = useState("");
 
+  // True when the reader's focus already sits inside one of the intake cards —
+  // in that case nothing on this page is allowed to move focus for them.
+  const focusIsInsideCards = () => {
+    const active = document.activeElement;
+    if (!active || active === document.body) return false;
+    return Object.values(rowRefs.current).some((el) => !!el && el.contains(active));
+  };
+
   // Closing a details panel always hands focus back to the toggle that opened
   // it, so keyboard users landing here from a deep link never lose their place.
   const collapseCard = (id: string) => {
     setCollapsedIds((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
     requestAnimationFrame(() => toggleRefs.current[id]?.focus());
   };
+
 
 
   useEffect(() => {
@@ -167,7 +197,8 @@ function IntakesPage() {
       requestAnimationFrame(() => {
         const el = rowRefs.current[incomingIntakeId];
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
-        el?.focus({ preventScroll: true });
+        // Never yank focus if the reader is already working somewhere on the page.
+        if (!focusIsInsideCards()) el?.focus({ preventScroll: true });
       });
     } else {
       setJumpedId(null);
@@ -184,9 +215,32 @@ function IntakesPage() {
 
   useEffect(() => {
     if (!jumpMiss) return;
-    const t = window.setTimeout(() => jumpMissHeadingRef.current?.focus(), 60);
+    const t = window.setTimeout(() => {
+      // A late-arriving miss (e.g. after a live update) must not pull focus out
+      // of a card the reader is already inside.
+      if (!focusIsInsideCards()) jumpMissHeadingRef.current?.focus();
+    }, 60);
     return () => window.clearTimeout(t);
   }, [jumpMiss]);
+
+  // Track whether focus is parked inside the deep-linked card. While it is,
+  // realtime refetches are held; the moment focus leaves, queued updates land.
+  useEffect(() => {
+    const sync = () => {
+      const el = incomingIntakeId ? rowRefs.current[incomingIntakeId] : null;
+      const inside = !!el && el.contains(document.activeElement);
+      focusHeldIdRef.current = inside ? incomingIntakeId : null;
+      if (!inside && pendingRealtimeRef.current) applyIntakeUpdates();
+    };
+    sync();
+    document.addEventListener("focusin", sync);
+    document.addEventListener("focusout", sync);
+    return () => {
+      document.removeEventListener("focusin", sync);
+      document.removeEventListener("focusout", sync);
+    };
+  }, [incomingIntakeId]);
+
 
   // Fade the highlight after a few seconds so the page settles.
   useEffect(() => {
@@ -263,6 +317,26 @@ function IntakesPage() {
             </div>
           </div>
         )}
+
+        {deferredUpdates && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mono flex flex-wrap items-center justify-between gap-3 rounded-sm border border-steel/60 bg-steel/10 px-4 py-3 text-[11px] text-steel"
+          >
+            <span className="normal-case">
+              New intake activity arrived. It's held so your place isn't lost — it applies when you leave this submission.
+            </span>
+            <button
+              type="button"
+              onClick={applyIntakeUpdates}
+              className="mono min-h-8 rounded-sm border border-steel/60 px-2 py-1 text-[10px] uppercase tracking-wider hover:bg-steel hover:text-charcoal focus-visible:ring-2 focus-visible:ring-violet"
+            >
+              show updates now
+            </button>
+          </div>
+        )}
+
 
         {isLoading && <div className="text-muted-foreground">Loading…</div>}
         {!isLoading && rows?.length === 0 && (
