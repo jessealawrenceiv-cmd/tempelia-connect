@@ -343,16 +343,32 @@ function SettingsPage() {
     at: Date;
   } | null>(null);
   const [refreshAttempts, setRefreshAttempts] = useState(0);
+  // Cooldown after repeated failures to prevent hammering the status endpoint.
+  const COOLDOWN_BASE_MS = 30_000; // 30s after the 3rd consecutive failure
+  const COOLDOWN_MAX_MS = 300_000; // cap at 5 minutes
+  const [cooldownMs, setCooldownMs] = useState(0);
+  const isInCooldown = cooldownMs > 0;
+  useEffect(() => {
+    if (cooldownMs <= 0) return;
+    const id = window.setInterval(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
+    return () => window.clearInterval(id);
+  }, [cooldownMs > 0]);
+  const formatCooldown = (ms: number) => {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  };
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
-    if (!refreshError || isRefreshingStatuses) return;
+    if (!refreshError || isRefreshingStatuses || isInCooldown) return;
     const id = window.requestAnimationFrame(() => {
       const el = retryButtonRef.current;
       if (el && el.isConnected) el.focus();
     });
     return () => window.cancelAnimationFrame(id);
-  }, [refreshError, isRefreshingStatuses]);
+  }, [refreshError, isRefreshingStatuses, isInCooldown]);
 
 
   // Snapshot of the fields that drive the automation status badges, so the
@@ -399,6 +415,7 @@ function SettingsPage() {
       setNow(nowDate);
       setEvaluatedAt(nowDate);
       setRefreshAttempts(0);
+      setCooldownMs(0);
       const after = statusSnapshot(result?.data ?? profile);
       const checkedAt = nowDate.toLocaleTimeString([], {
         hour: "2-digit",
@@ -425,7 +442,12 @@ function SettingsPage() {
       const code = (e as { code?: string })?.code || (e as { error_code?: string })?.error_code;
       const at = new Date();
       setRefreshError({ message, code, at });
-      setRefreshAttempts((n) => n + 1);
+      const nextAttempt = refreshAttempts + 1;
+      setRefreshAttempts(nextAttempt);
+      if (nextAttempt >= 3) {
+        const duration = Math.min(COOLDOWN_BASE_MS * Math.pow(2, nextAttempt - 3), COOLDOWN_MAX_MS);
+        setCooldownMs(duration);
+      }
       void logStatusRefresh("failed", {
         outcome: "Refresh failed",
         error: message,
@@ -536,19 +558,19 @@ function SettingsPage() {
         <button
           type="button"
           onClick={() => {
-            if (isRefreshingStatuses) return;
+            if (isRefreshingStatuses || isInCooldown) return;
             refreshStatuses();
           }}
-          aria-disabled={isRefreshingStatuses}
+          aria-disabled={isRefreshingStatuses || isInCooldown}
           aria-busy={isRefreshingStatuses}
-          aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : "Refresh automation statuses now"}
-          className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses ? "cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
+          aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
+          className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
         >
           <span className="flex items-center gap-1.5">
             {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
             <span className="underline decoration-dotted underline-offset-2">Refresh now</span>
           </span>
-          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : "↻"}</span>
+          <span className="text-foreground">{isRefreshingStatuses ? "Checking…" : isInCooldown ? `${formatCooldown(cooldownMs)}` : "↻"}</span>
         </button>
         {refreshError ? (
           <div
@@ -564,22 +586,23 @@ function SettingsPage() {
                 type="button"
 
                 onClick={() => {
-                  if (isRefreshingStatuses) return;
+                  if (isRefreshingStatuses || isInCooldown) return;
                   refreshStatuses();
                 }}
-                aria-disabled={isRefreshingStatuses}
+                aria-disabled={isRefreshingStatuses || isInCooldown}
                 aria-busy={isRefreshingStatuses}
-                aria-label="Retry refreshing automation statuses"
-                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses ? "cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
+                aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
+                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
               >
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
-                {isRefreshingStatuses ? "Retrying…" : "Retry"}
+                {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setRefreshError(null);
                   setRefreshAttempts(0);
+                  setCooldownMs(0);
                 }}
                 aria-label="Dismiss refresh error"
                 className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
@@ -588,7 +611,10 @@ function SettingsPage() {
               </button>
             </div>
             {refreshAttempts > 1 ? (
-              <div className="text-muted-foreground">{refreshAttempts} failed attempts in a row.</div>
+              <div className="text-muted-foreground">
+                {refreshAttempts} failed attempts in a row.
+                {isInCooldown ? ` Retry disabled for ${formatCooldown(cooldownMs)}.` : null}
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -808,16 +834,16 @@ function SettingsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (isRefreshingStatuses) return;
+                  if (isRefreshingStatuses || isInCooldown) return;
                   refreshStatuses();
                 }}
-                aria-disabled={isRefreshingStatuses}
+                aria-disabled={isRefreshingStatuses || isInCooldown}
                 aria-busy={isRefreshingStatuses}
-                aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : "Refresh automation statuses now"}
-                className={`mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 ${isRefreshingStatuses ? "cursor-not-allowed opacity-40" : "hover:text-foreground"}`}
+                aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
+                className={`mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:text-foreground"}`}
               >
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
-                {isRefreshingStatuses ? "Checking…" : "Refresh statuses"}
+                {isRefreshingStatuses ? "Checking…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Refresh statuses"}
               </button>
               <div
                 role="status"
