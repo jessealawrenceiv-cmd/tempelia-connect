@@ -123,23 +123,40 @@ function SettingsPage() {
     ? evaluatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "—";
 
-  const advancedAutomations: { name: string; mode: string }[] = [
-    { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD" },
-    { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL" },
+  const jumpToAdvanced = (anchorId: string) => {
+    setTab("advanced");
+    window.setTimeout(() => {
+      const el = document.getElementById(anchorId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-1", "ring-orange");
+      window.setTimeout(() => el.classList.remove("ring-1", "ring-orange"), 1800);
+    }, 60);
+  };
+
+  const advancedAutomations: { name: string; mode: string; anchorId: string }[] = [
+    { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD", anchorId: "adv-opt-in-prompt" },
+    { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL", anchorId: "adv-webhook-diagnostics" },
   ];
 
   const advancedTooltip = (
     <div className="space-y-1">
       <div className="text-foreground">Advanced automations</div>
       {advancedAutomations.map((a) => (
-        <div key={a.name} className="flex items-center justify-between gap-3">
-          <span>{a.name}</span>
+        <button
+          key={a.name}
+          type="button"
+          onClick={() => jumpToAdvanced(a.anchorId)}
+          className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground"
+        >
+          <span className="underline decoration-dotted underline-offset-2">{a.name}</span>
           <span className="text-foreground">{a.mode}</span>
-        </div>
+        </button>
       ))}
       <div className="border-t border-border pt-1">Last evaluated {evaluatedLabel}</div>
     </div>
   );
+
 
 
   if (isStaff) {
