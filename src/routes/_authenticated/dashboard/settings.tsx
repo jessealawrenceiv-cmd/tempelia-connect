@@ -527,6 +527,16 @@ function SettingsPage() {
   // Which kind of refresh is currently running, so the in-progress banner can
   // distinguish "you clicked this" from a background auto re-check.
   const [refreshTrigger, setRefreshTrigger] = useState<"manual" | "auto">("manual");
+  // Tooltip-local live region text: announces the automation status outcome of
+  // every completed refresh (including repeats) without moving focus.
+  const [tooltipStatusMessage, setTooltipStatusMessage] = useState("");
+  const tooltipAnnounceCountRef = useRef(0);
+  const announceTooltipStatus = useCallback((text: string) => {
+    tooltipAnnounceCountRef.current += 1;
+    // The counter guarantees a text change, so identical back-to-back outcomes
+    // are still re-announced by screen readers.
+    setTooltipStatusMessage(`${text} (update ${tooltipAnnounceCountRef.current})`);
+  }, []);
   const [refreshError, setRefreshError] = useState<{
     message: string;
     code?: string;
@@ -714,6 +724,10 @@ function SettingsPage() {
         second: "2-digit",
       });
       const changed = before !== after;
+      announceTooltipStatus(
+        `Opt-in prompt & cooldown ${optInPromptActive ? "ACTIVE" : "ON HOLD"}. ` +
+          `${changed ? "Statuses updated" : "Statuses already current"} — re-checked at ${checkedAt}.`,
+      );
       void logStatusRefresh(changed ? "updated" : "already_current", {
         trigger,
         outcome: changed ? "Statuses updated" : "Statuses already current",
@@ -759,6 +773,7 @@ function SettingsPage() {
         duration_ms: Date.now() - startedAt,
       });
       setStatusAnnouncement(`Refresh failed. ${message}`);
+      announceTooltipStatus(`Refresh failed — statuses unchanged. ${message}`);
       toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
@@ -766,7 +781,7 @@ function SettingsPage() {
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
-  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts, runStatusRefreshFn]);
+  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts, runStatusRefreshFn, announceTooltipStatus, optInPromptActive]);
 
   // Optional auto-refresh: re-evaluate statuses on a configurable interval while
   // this Settings page is visible. Skips ticks when hidden, already refreshing,
@@ -900,6 +915,17 @@ function SettingsPage() {
               ? `Last live update ${UPDATE_ORIGIN_LABEL[lastUpdate.origin]} · ${lastUpdate.at.toLocaleTimeString()}`
               : "No live update since this page opened"}
           </div>
+          {/* Tooltip-local live region: announces the automation status result of
+              each completed refresh. Never focused, so focus stays put. */}
+          <div
+            data-testid="adv-tooltip-status-live"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only"
+          >
+            {tooltipStatusMessage}
+          </div>
 
           <button
             key="refresh-now-btn"
@@ -999,6 +1025,7 @@ function SettingsPage() {
       cooldownMs,
       evaluatedAt,
       lastUpdate,
+      tooltipStatusMessage,
       refreshAttempts,
       jumpToAdvanced,
       refreshStatuses,
