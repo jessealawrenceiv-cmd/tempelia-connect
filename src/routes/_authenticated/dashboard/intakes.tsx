@@ -133,6 +133,32 @@ function IntakesPage() {
   const [collapsedIds, setCollapsedIds] = useState<Record<string, true>>({});
   const [jumpAnnouncement, setJumpAnnouncement] = useState("");
 
+  // Roving tabindex: the deep-linked card (or the newest one) is the single
+  // tab stop; arrow keys move focus between cards from there.
+  const activeCardId = incomingIntakeId ?? rows?.[0]?.id ?? null;
+
+  // Arrow navigation keeps the URL deep-link in sync, so the focused card is the
+  // one that stays expanded and the link can be shared or reloaded as-is.
+  const moveToCard = (id: string) => {
+    setCollapsedIds((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    navigate({
+      to: "/dashboard/intakes",
+      search: { intakeId: id },
+      hash: `${INTAKE_HASH_PREFIX}${id}`,
+      replace: true,
+    });
+    requestAnimationFrame(() => {
+      const el = rowRefs.current[id];
+      el?.focus({ preventScroll: true });
+      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
   // True when the reader's focus already sits inside one of the intake cards —
   // in that case nothing on this page is allowed to move focus for them.
   const focusIsInsideCards = () => {
@@ -140,6 +166,7 @@ function IntakesPage() {
     if (!active || active === document.body) return false;
     return Object.values(rowRefs.current).some((el) => !!el && el.contains(active));
   };
+
 
   // Closing a details panel always hands focus back to the toggle that opened
   // it, so keyboard users landing here from a deep link never lose their place.
