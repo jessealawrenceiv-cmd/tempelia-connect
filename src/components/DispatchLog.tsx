@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Filter } from "lucide-react";
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
@@ -78,6 +78,8 @@ function describe(row: { action_type: string; status: string | null; message_sen
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const lastAnnouncedIdRef = useRef<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["logs", limit],
@@ -100,8 +102,26 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     return true;
   });
 
+  useEffect(() => {
+    const latest = filtered[0];
+    if (!latest || latest.id === lastAnnouncedIdRef.current) return;
+    lastAnnouncedIdRef.current = latest.id;
+    const time = new Date(latest.created_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setAnnouncement(`New activity: ${LABEL[latest.action_type] ?? latest.action_type} at ${time}`);
+  }, [filtered]);
+
   return (
     <div className="panel">
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announcement}
+      </div>
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
         <div className="label-eyebrow">Activity</div>
         <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
