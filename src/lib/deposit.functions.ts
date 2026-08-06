@@ -55,28 +55,11 @@ export const markQuoteDeposit = createServerFn({ method: "POST" })
     const total = Number(q.total_amount ?? 0);
     const balanceRemaining = Math.round((total - (data.paid ? depositAmount : 0)) * 100) / 100;
 
-    // Audit trail — tenant-scoped row, actor captured in the payload.
-    const { error: logErr } = await supabase.from("logs").insert({
-      user_id: q.user_id,
-      customer_id: q.customer_id,
-      action_type: DEPOSIT_AUDIT_ACTION,
-      status: data.paid ? "deposit_received" : "deposit_undone",
-      message_sent: JSON.stringify({
-        quote_id: q.id,
-        actor_user_id: userId,
-        actor_email: actorEmail,
-        actor_is_owner: userId === q.user_id,
-        deposit_amount: depositAmount,
-        total_amount: total,
-        balance_remaining: balanceRemaining,
-        previous_paid: q.deposit_paid,
-        previous_paid_at: q.deposit_paid_at,
-        new_paid: data.paid,
-        new_paid_at: data.paid ? nowIso : null,
-        at: nowIso,
-      }),
-    });
-    if (logErr) console.error("deposit audit log failed", logErr.message);
+    // Audit trail is written by the public.quotes_audit_deposit_change trigger,
+    // which fires for EVERY deposit change — this action, quote edits, and
+    // revisions alike — so no path can silently clear deposit state.
+    void actorEmail;
+
 
     return {
       ok: true as const,
@@ -84,7 +67,7 @@ export const markQuoteDeposit = createServerFn({ method: "POST" })
       paidAt: data.paid ? nowIso : null,
       depositAmount,
       balanceRemaining,
-      audited: !logErr,
+      audited: true as const,
     };
   });
 
