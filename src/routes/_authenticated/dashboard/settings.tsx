@@ -552,18 +552,43 @@ function AutomationBadge({
   const containerRef = useRef<HTMLSpanElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  // set while focus is handed back programmatically, so the trigger's onFocus doesn't reopen
+  const suppressReopenRef = useRef(false);
+  const returnFocusToTrigger = () => {
+    suppressReopenRef.current = true;
+    window.setTimeout(() => {
+      triggerRef.current?.focus();
+      window.setTimeout(() => {
+        suppressReopenRef.current = false;
+      }, 0);
+    }, 0);
+  };
 
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
-        triggerRef.current?.focus();
+        returnFocusToTrigger();
       }
     };
+    const handlePointerDown = (e: PointerEvent | MouseEvent) => {
+      const target = e.target as Node | null;
+      if (target && containerRef.current?.contains(target)) return;
+      const hadFocusInside =
+        document.activeElement instanceof Node &&
+        !!containerRef.current?.contains(document.activeElement);
+      setOpen(false);
+      if (hadFocusInside) returnFocusToTrigger();
+    };
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
   }, [open]);
+
 
   const text = label ?? defaults[state];
   const badge = (
@@ -582,13 +607,23 @@ function AutomationBadge({
 
   if (!tooltip) return badge;
 
-  const show = () => setOpen(true);
+  const show = () => {
+    if (suppressReopenRef.current) return;
+    setOpen(true);
+  };
   const hide = (e?: React.SyntheticEvent) => {
     const next = "relatedTarget" in (e ?? {}) ? ((e as React.FocusEvent).relatedTarget as Node | null) : null;
     if (!next || !containerRef.current?.contains(next)) {
+      const blurredFromContent =
+        !!e && e.target instanceof Node && e.target !== triggerRef.current;
       setOpen(false);
+      if (blurredFromContent && !next) {
+        // outside click / focus loss from tooltip content: hand focus back to the badge
+        returnFocusToTrigger();
+      }
     }
   };
+
 
   return (
     <span ref={containerRef} className="relative shrink-0">
