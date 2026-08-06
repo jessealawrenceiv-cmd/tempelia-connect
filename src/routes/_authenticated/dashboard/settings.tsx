@@ -225,7 +225,7 @@ function SettingsPage() {
         ))}
       </ul>
       <div className="border-t border-border pt-1">
-        <div>
+        <div aria-live="polite" aria-atomic="true">
           Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
         </div>
         <button
@@ -634,6 +634,25 @@ function AutomationBadge({
         onMouseEnter={show}
         onMouseLeave={hide}
         onBlur={hide}
+        onKeyDown={(e) => {
+          if (e.key !== "Tab") return;
+          const tooltipEl = containerRef.current?.querySelector<HTMLElement>(`#${CSS.escape(tooltipId)}`);
+          const focusables = Array.from(
+            tooltipEl?.querySelectorAll<HTMLElement>(
+              "button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+            ) ?? []
+          );
+          if (focusables.length === 0) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }}
       >
         {tooltip}
       </span>
