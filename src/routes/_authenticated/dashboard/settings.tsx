@@ -27,7 +27,7 @@ function SettingsPage() {
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
-  const { data: profile } = useQuery({
+  const { data: profile, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
