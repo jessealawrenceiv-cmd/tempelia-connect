@@ -55,6 +55,7 @@ export function DateRangePicker({
     const from = startOfDay(new Date());
     from.setDate(from.getDate() - days);
     onChange({ from, to });
+    setOpen(false);
   };
 
   return (
