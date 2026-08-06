@@ -372,10 +372,27 @@ function HomePage() {
 
         {/* Needs your attention */}
         <section className="panel">
-          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
             <div className="label-eyebrow">Needs your attention</div>
-            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{attentionCount}</span>
+            <div className="flex items-center gap-3">
+              {lastDismissed ? (
+                <button
+                  type="button"
+                  onClick={undoLast}
+                  disabled={undoing}
+                  title={`Bring ${lastDismissed.label || "the last item"} back to this list`}
+                  className="mono kb-focus flex items-center gap-1 border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-steel hover:bg-accent hover:text-foreground disabled:opacity-50"
+                >
+                  <Undo2 size={12} /> {undoing ? "Undoing…" : `Undo ${lastDismissed.label || "last"}`}
+                </button>
+              ) : null}
+              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{attentionCount}</span>
+            </div>
           </div>
+          <div aria-live="polite" className="sr-only">
+            {undoing ? "Bringing the item back" : ""}
+          </div>
+
           {loadingAttention ? (
             <div className="p-5 text-sm text-muted-foreground">Loading…</div>
           ) : attentionCount === 0 ? (
