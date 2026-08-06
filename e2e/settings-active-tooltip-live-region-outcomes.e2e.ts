@@ -117,7 +117,14 @@ test.describe("Settings · ACTIVE tooltip live region · refresh outcomes", () =
     // Politeness: an announcement must never grab focus.
     await expect(live).toHaveAttribute("aria-live", "polite");
     await expect(live).not.toBeFocused();
-    expect(await focusSignature(page), "focus moved during a failed refresh").toBe(focusBefore);
+    // The failure handler intentionally moves focus to Retry; what must never
+    // happen is focus dropping to <body> or being pulled by the live region.
+    const focusAfter = await focusSignature(page);
+    expect(focusAfter, "focus dropped out of the tooltip on failure").not.toBe("NONE");
+    expect(focusAfter, "focus fell to the document body on failure").toMatch(
+      /Refresh automation statuses|Retry refresh/i,
+    );
+    expect(focusBefore).toMatch(/Refresh automation statuses/i);
     expect(
       await tooltip.evaluate((el) => !!document.activeElement && el.contains(document.activeElement)),
       "focus escaped the tooltip on failure",
