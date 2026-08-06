@@ -179,6 +179,7 @@ function SettingsPage() {
     let attempt = 0;
 
     const handlePayload = (payload: { new: unknown }) => {
+      setLastSyncAt(new Date());
       void qc.invalidateQueries({ queryKey: ["profile"] });
 
       const next = payload.new as Record<string, unknown> | null;
