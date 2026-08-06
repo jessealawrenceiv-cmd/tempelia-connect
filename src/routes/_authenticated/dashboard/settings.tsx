@@ -1370,6 +1370,8 @@ function SettingsPage() {
               >
                 <span
                   aria-hidden="true"
+                  data-testid="realtime-indicator-dot"
+                  data-realtime-state={realtimeState}
                   className={`h-1.5 w-1.5 rounded-full ${
                     realtimeState === "live"
                       ? "bg-moss"
