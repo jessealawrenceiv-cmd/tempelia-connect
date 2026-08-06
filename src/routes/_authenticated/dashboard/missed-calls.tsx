@@ -480,13 +480,21 @@ function MissedCallsPage() {
                       {canPrompt ? (
                         <button
                           type="button"
-                          disabled={mutation.isPending}
+                          disabled={mutation.isPending || !OPT_IN_PROMPT_REAL_SENDS_ENABLED}
+                          title={
+                            OPT_IN_PROMPT_REAL_SENDS_ENABLED ? undefined : OPT_IN_PROMPT_HOLD_REASON
+                          }
                           onClick={() => mutation.mutate(row.customer_id!)}
                           className="rounded-sm border border-violet/50 px-2 py-1 text-[10px] uppercase tracking-widest text-violet transition-colors hover:bg-violet/10 disabled:opacity-50"
                         >
-                          {prompt ? "Re-send opt-in prompt" : "Send opt-in prompt"}
+                          {!OPT_IN_PROMPT_REAL_SENDS_ENABLED
+                            ? "On hold"
+                            : prompt
+                              ? "Re-send opt-in prompt"
+                              : "Send opt-in prompt"}
                         </button>
                       ) : row.customers?.opt_in_consent ? (
+
                         <span className="text-xs text-moss">Opted in</span>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
