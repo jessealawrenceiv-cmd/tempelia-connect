@@ -1256,6 +1256,8 @@ const AutomationBadge = forwardRef<
     contains: (el: Node | null) => containerRef.current?.contains(el ?? null) ?? false,
     restoreFocus: (el: HTMLElement | null) => {
       if (!el || !el.isConnected) return;
+      // If focus never left, don't force it back — avoids screen-reader re-announcement.
+      if (document.activeElement === el) return;
       // Reopen the tooltip if it closed, then hand focus back to the element.
       // Wait a tick so any re-render that re-enables the control has finished.
       setOpen(true);
