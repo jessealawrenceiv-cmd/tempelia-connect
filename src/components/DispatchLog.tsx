@@ -75,9 +75,16 @@ function describe(row: { action_type: string; status: string | null; message_sen
 
 
 
+const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
+  "this-device": "This device",
+  "other-device": "Another device",
+  "backend": "Backend",
+};
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
+  const [originFilter, setOriginFilter] = useState<"all" | "this-device" | "other-device" | "backend">("all");
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
@@ -94,6 +101,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   });
 
   const filtered = (data ?? []).filter((row) => {
+    if (originFilter !== "all") {
+      if (row.action_type !== "automation_status_change") return false;
+      if (row.status !== originFilter) return false;
+      return true;
+    }
     if (statusRefreshOnly && row.action_type !== "status_refresh") return false;
     if (failedOnly) {
       if (row.action_type !== "status_refresh") return false;
