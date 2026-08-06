@@ -11,6 +11,7 @@ import { DepositDefaultsPanel } from "@/components/DepositDefaultsPanel";
 import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 
 import { useTeamRole } from "@/hooks/useTeamRole";
+import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
