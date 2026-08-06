@@ -146,6 +146,15 @@ function SettingsPage() {
     }
   };
 
+  const highlightTimersRef = useRef<Map<HTMLElement, number[]>>(new Map());
+  useEffect(() => {
+    const timers = highlightTimersRef.current;
+    return () => {
+      timers.forEach((ids) => ids.forEach((id) => window.clearTimeout(id)));
+      timers.clear();
+    };
+  }, []);
+
   const jumpToAdvanced = (anchorId: string) => {
     setTab("advanced");
     window.setTimeout(() => {
