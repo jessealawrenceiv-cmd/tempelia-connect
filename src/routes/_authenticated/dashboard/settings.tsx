@@ -561,9 +561,23 @@ function AutomationBadge({
         triggerRef.current?.focus();
       }
     };
+    const handlePointerDown = (e: PointerEvent | MouseEvent) => {
+      const target = e.target as Node | null;
+      if (target && containerRef.current?.contains(target)) return;
+      const hadFocusInside =
+        document.activeElement instanceof Node &&
+        !!containerRef.current?.contains(document.activeElement);
+      setOpen(false);
+      if (hadFocusInside) triggerRef.current?.focus();
+    };
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
   }, [open]);
+
 
   const text = label ?? defaults[state];
   const badge = (
