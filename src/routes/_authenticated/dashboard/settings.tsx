@@ -502,6 +502,11 @@ function SettingsPage() {
   };
 
   const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
+    // Remember the exact element that had focus inside the ACTIVE tooltip so we
+    // can hand focus back to it after the refresh button flips from disabled.
+    const focusBefore = document.activeElement as HTMLElement | null;
+    const focusWasInTooltip = focusBefore ? advancedBadgeRef.current?.contains(focusBefore) ?? false : false;
+
     setIsRefreshingStatuses(true);
     setRefreshError(null);
     setStatusAnnouncement("Refreshing automation statuses. Please wait.");
@@ -571,6 +576,9 @@ function SettingsPage() {
       toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
+      if (focusWasInTooltip && focusBefore) {
+        advancedBadgeRef.current?.restoreFocus(focusBefore);
+      }
     }
   };
 
