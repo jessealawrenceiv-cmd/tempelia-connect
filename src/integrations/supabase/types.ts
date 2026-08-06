@@ -487,6 +487,142 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_counters: {
+        Row: {
+          created_at: string
+          next_seq: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          next_seq?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          next_seq?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          archived_at: string | null
+          balance_due: number | null
+          balance_paid_at: string | null
+          created_at: string
+          customer_business_name: string | null
+          customer_email: string | null
+          customer_first_name: string
+          customer_id: string | null
+          customer_last_name: string | null
+          customer_phone: string
+          deposit_amount: number
+          deposit_paid: boolean
+          id: string
+          invoice_number: string
+          invoice_seq: number
+          job_site_address: string
+          last_sms_sent_at: string | null
+          line_items: Json
+          quote_id: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          superseded_by_id: string | null
+          tax_amount: number
+          tax_rate: number
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          balance_due?: number | null
+          balance_paid_at?: string | null
+          created_at?: string
+          customer_business_name?: string | null
+          customer_email?: string | null
+          customer_first_name: string
+          customer_id?: string | null
+          customer_last_name?: string | null
+          customer_phone: string
+          deposit_amount?: number
+          deposit_paid?: boolean
+          id?: string
+          invoice_number: string
+          invoice_seq: number
+          job_site_address: string
+          last_sms_sent_at?: string | null
+          line_items?: Json
+          quote_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          superseded_by_id?: string | null
+          tax_amount?: number
+          tax_rate?: number
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          balance_due?: number | null
+          balance_paid_at?: string | null
+          created_at?: string
+          customer_business_name?: string | null
+          customer_email?: string | null
+          customer_first_name?: string
+          customer_id?: string | null
+          customer_last_name?: string | null
+          customer_phone?: string
+          deposit_amount?: number
+          deposit_paid?: boolean
+          id?: string
+          invoice_number?: string
+          invoice_seq?: number
+          job_site_address?: string
+          last_sms_sent_at?: string | null
+          line_items?: Json
+          quote_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          superseded_by_id?: string | null
+          tax_amount?: number
+          tax_rate?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           completed_at: string | null
