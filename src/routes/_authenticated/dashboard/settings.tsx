@@ -184,12 +184,16 @@ function SettingsPage() {
     });
   const refreshStatuses = async () => {
     setIsRefreshingStatuses(true);
+    setRefreshError(null);
     const before = statusSnapshot(profile);
     try {
       const result = await refetchProfile();
+      // TanStack Query surfaces fetch failures on the result rather than throwing.
+      if (result?.error) throw result.error as Error;
       const nowDate = new Date();
       setNow(nowDate);
       setEvaluatedAt(nowDate);
+      setRefreshAttempts(0);
       const after = statusSnapshot(result?.data ?? profile);
       const checkedAt = nowDate.toLocaleTimeString([], {
         hour: "2-digit",
@@ -206,13 +210,15 @@ function SettingsPage() {
         });
       }
     } catch (e) {
-      toast.error("Refresh failed", {
-        description: (e as Error).message ?? "Could not re-check automation statuses.",
-      });
+      const message = (e as Error)?.message || "Could not re-check automation statuses.";
+      setRefreshError(message);
+      setRefreshAttempts((n) => n + 1);
+      toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
     }
   };
+
 
 
   const highlightTimersRef = useRef<Map<HTMLElement, number[]>>(new Map());
