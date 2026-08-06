@@ -29,3 +29,17 @@ export function isOlderThanDays(iso: string | null | undefined, days: number, no
   if (Number.isNaN(then)) return false;
   return now - then > days * 86400000;
 }
+
+/** Full local timestamp, e.g. "Aug 6, 2026 at 5:34 PM". */
+export function exactTime(iso: string | null | undefined): string {
+  if (!iso) return "unknown time";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "unknown time";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
