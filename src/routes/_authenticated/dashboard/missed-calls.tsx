@@ -14,7 +14,7 @@ import {
 } from "@/lib/opt-in-prompt-gate";
 
 import { MissedCallDetailSheet, type MissedCallDetail } from "@/components/MissedCallDetailSheet";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { buildMissedCallsCsv, downloadCsv, type MissedCallCsvRow } from "@/lib/missed-calls-csv";
 
@@ -169,6 +169,40 @@ function MissedCallsPage() {
   });
   const needsConsent = rows.filter((r) => r.customers && !r.customers.opt_in_consent).length;
 
+  // --- Screen-reader live region -----------------------------------------
+  // Announces the missed-call automation outcome (auto-reply status counts and
+  // the newest call) after every data update, without moving focus.
+  const outcome = {
+    total: rows.length,
+    sent: rows.filter((r) => rowStatus(r) === "sent").length,
+    failed: rows.filter((r) => rowStatus(r) === "failed").length,
+    unconfirmed: rows.filter((r) => rowStatus(r) === "unconfirmed").length,
+    skipped: rows.filter((r) => rowStatus(r) === "skipped").length,
+    latestId: rows[0]?.id ?? "",
+    latestStatus: rows[0] ? rowStatus(rows[0]) : "",
+    latestCaller: rows[0]?.customers?.phone_number ?? rows[0]?.customers?.first_name ?? "",
+  };
+  const outcomeKey = Object.values(outcome).join("|");
+  const [announcement, setAnnouncement] = useState("");
+  const lastOutcomeKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoading) return;
+    if (lastOutcomeKey.current === outcomeKey) return;
+    const hadPrevious = lastOutcomeKey.current !== null;
+    lastOutcomeKey.current = outcomeKey;
+    const latest = outcome.latestId
+      ? ` Newest call ${outcome.latestCaller || "unknown caller"}: auto-reply ${outcome.latestStatus}.`
+      : "";
+    const text =
+      `Missed-call automation updated. ${outcome.total} call${outcome.total === 1 ? "" : "s"} shown: ` +
+      `${outcome.sent} auto-reply sent, ${outcome.failed} failed, ${outcome.unconfirmed} unconfirmed, ` +
+      `${outcome.skipped} skipped. ${needsConsent} awaiting consent.${latest}`;
+    if (hadPrevious) setAnnouncement("");
+    const id = window.setTimeout(() => setAnnouncement(text), hadPrevious ? 60 : 0);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outcomeKey, isLoading]);
+
   // One row per contact: bulk selection is per customer, not per call event.
   const eligibleIds = Array.from(
     new Set(
@@ -267,6 +301,16 @@ function MissedCallsPage() {
     <div>
       <PageHeader eyebrow="Feature 01" title="Missed calls" />
       <div className="space-y-5 p-5 md:p-8">
+        <span
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="missed-calls-status-live"
+          className="sr-only"
+        >
+          {announcement}
+        </span>
+
         <div className="grid grid-cols-2 gap-3 md:max-w-md">
           <Stat label="Calls logged" value={rows.length} />
           <Stat label="Awaiting consent" value={needsConsent} />
