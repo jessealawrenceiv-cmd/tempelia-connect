@@ -94,8 +94,14 @@ function IntakesPage() {
   });
 
   // ── Deep link: jump to a specific submission (?intakeId= / #intake-<id>) ──
+  // Works with browser back/forward: every history entry gets its own key, so
+  // popping back to an earlier entry re-evaluates (and re-highlights) it, and
+  // landing on an entry without an intake id clears the highlight.
   const location = useLocation();
   const { intakeId: incomingIntakeId } = parseIntakeDeepLink(location.searchStr, location.hash);
+  const historyKey =
+    (location.state as { key?: string } | undefined)?.key ??
+    `${location.searchStr ?? ""}|${location.hash ?? ""}`;
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [jumpedId, setJumpedId] = useState<string | null>(null);
   const [jumpMiss, setJumpMiss] = useState<{ id: string; reason: IntakeJumpMissReason } | null>(null);
@@ -103,9 +109,19 @@ function IntakesPage() {
   const handledJumpRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!incomingIntakeId || isLoading || !rows) return;
-    if (handledJumpRef.current === incomingIntakeId) return;
-    handledJumpRef.current = incomingIntakeId;
+    if (isLoading || !rows) return;
+
+    // A history entry with no intake id means "no target": clear any highlight.
+    if (!incomingIntakeId) {
+      handledJumpRef.current = null;
+      setJumpedId(null);
+      setJumpMiss(null);
+      return;
+    }
+
+    const dedupeKey = `${historyKey}::${incomingIntakeId}`;
+    if (handledJumpRef.current === dedupeKey) return;
+    handledJumpRef.current = dedupeKey;
 
     const ids = rows.map((r) => r.id);
     const res = resolveIntakeJump(incomingIntakeId, ids, ids);
@@ -127,7 +143,7 @@ function IntakesPage() {
         });
       }
     }
-  }, [incomingIntakeId, isLoading, rows]);
+  }, [incomingIntakeId, historyKey, isLoading, rows]);
 
   useEffect(() => {
     if (!jumpMiss) return;
