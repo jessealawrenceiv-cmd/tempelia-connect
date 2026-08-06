@@ -1329,11 +1329,16 @@ const AutomationBadge = memo(forwardRef<
   const [open, setOpen] = useState(false);
   // set while focus is handed back programmatically, so the trigger's onFocus doesn't reopen
   const suppressReopenRef = useRef(false);
-  const focusWasInsideRef = useRef(false);
+  // true once focus has entered the tooltip during this open cycle. Used to decide
+  // whether to return focus to the trigger when the tooltip closes (Escape, outside
+  // click, or Tab cycling), without resetting when focus later leaves the tooltip.
+  const focusStartedInsideRef = useRef(false);
   const returnFocusToTrigger = () => {
+    const trigger = triggerRef.current;
+    if (!trigger || !trigger.isConnected || document.activeElement === trigger) return;
     suppressReopenRef.current = true;
     window.setTimeout(() => {
-      triggerRef.current?.focus();
+      trigger.focus();
       window.setTimeout(() => {
         suppressReopenRef.current = false;
       }, 0);
@@ -1364,14 +1369,20 @@ const AutomationBadge = memo(forwardRef<
 
   useEffect(() => {
     if (!open) return;
-    focusWasInsideRef.current = false;
+    // Start each open cycle assuming focus has not yet entered the tooltip.
+    focusStartedInsideRef.current = false;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
       }
     };
     const handleFocusIn = (e: FocusEvent) => {
-      focusWasInsideRef.current = !!containerRef.current?.contains(e.target as Node);
+      // Record that focus entered the tooltip at least once. We intentionally do
+      // NOT reset this when focus leaves, so the close handler can still return
+      // focus to the trigger after Escape, outside click, or Tab cycling.
+      if (containerRef.current?.contains(e.target as Node)) {
+        focusStartedInsideRef.current = true;
+      }
     };
     const handlePointerDown = (e: PointerEvent | MouseEvent) => {
       const target = e.target as Node | null;
@@ -1390,8 +1401,8 @@ const AutomationBadge = memo(forwardRef<
 
   // Whenever the tooltip closes, return focus to the trigger if focus originated inside it.
   useEffect(() => {
-    if (!open && focusWasInsideRef.current) {
-      focusWasInsideRef.current = false;
+    if (!open && focusStartedInsideRef.current) {
+      focusStartedInsideRef.current = false;
       returnFocusToTrigger();
     }
   }, [open]);
