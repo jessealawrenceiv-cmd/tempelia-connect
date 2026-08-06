@@ -337,7 +337,11 @@ function SettingsPage() {
   const relativeLabel = evaluatedAt && now ? formatRelativeTime(evaluatedAt, now) : "—";
 
   const [isRefreshingStatuses, setIsRefreshingStatuses] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<{
+    message: string;
+    code?: string;
+    at: Date;
+  } | null>(null);
   const [refreshAttempts, setRefreshAttempts] = useState(0);
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
