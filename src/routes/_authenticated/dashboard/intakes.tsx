@@ -273,10 +273,16 @@ function IntakesPage() {
                 role="group"
                 aria-labelledby={headingId}
                 data-jumped={jumpedId === r.id ? "true" : undefined}
+                onKeyDown={(e) => {
+                  if (e.key !== "Escape" || !isOpen) return;
+                  e.stopPropagation();
+                  collapseCard(r.id);
+                }}
                 className={`panel p-5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-violet ${
                   jumpedId === r.id ? "ring-2 ring-violet shadow-[0_0_0_4px_rgba(108,74,182,0.18)]" : ""
                 }`}
               >
+
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
