@@ -355,14 +355,20 @@ function MissedCallsPage() {
               </button>
               <button
                 type="button"
-                disabled={checked.size === 0 || batch.isPending}
+                disabled={
+                  checked.size === 0 || batch.isPending || !OPT_IN_PROMPT_REAL_SENDS_ENABLED
+                }
+                title={OPT_IN_PROMPT_REAL_SENDS_ENABLED ? undefined : OPT_IN_PROMPT_HOLD_REASON}
                 onClick={() => batch.mutate(Array.from(checked))}
                 className="rounded-sm border border-violet/60 bg-violet/10 px-3 py-1.5 text-[10px] uppercase tracking-widest text-violet transition-colors hover:bg-violet/20 disabled:opacity-40"
               >
-                {batch.isPending
-                  ? "Sending…"
-                  : `Send to ${checked.size} selected`}
+                {!OPT_IN_PROMPT_REAL_SENDS_ENABLED
+                  ? "On hold"
+                  : batch.isPending
+                    ? "Sending…"
+                    : `Send to ${checked.size} selected`}
               </button>
+
             </>
           )}
         </div>
