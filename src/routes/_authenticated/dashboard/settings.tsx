@@ -541,7 +541,7 @@ function SettingsPage() {
             className="mt-1 space-y-1 rounded-sm border border-orange/60 bg-orange/10 px-2 py-1 normal-case tracking-normal"
           >
             <div className="text-foreground">Couldn’t refresh statuses</div>
-            <div className="text-muted-foreground break-words">{refreshError}</div>
+            <div className="text-muted-foreground break-words">{refreshError.message}</div>
             <div className="flex items-center justify-between gap-2">
               <button
                 ref={retryButtonRef}
