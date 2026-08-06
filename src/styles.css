@@ -126,6 +126,10 @@
   --border: oklch(0.82 0.01 85);
   --input: oklch(0.88 0.012 85);
   --ring: oklch(0.45 0.15 295);
+  /* On paper, chip text darkens instead of lightening */
+  --moss-green-ink: oklch(0.42 0.08 150);
+  --steel-blue-ink: oklch(0.4 0.05 235);
+  --industrial-violet-ink: oklch(0.42 0.15 295);
 }
 
 @layer base {
