@@ -1091,6 +1091,8 @@ function SettingsPage() {
       <PageHeader eyebrow="Config" title="Settings" />
 
       <div
+        data-testid="settings-status-live"
+        role="status"
         aria-live="polite"
         aria-atomic="true"
         className="sr-only"
