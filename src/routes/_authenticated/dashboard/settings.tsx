@@ -685,6 +685,16 @@ function SettingsPage() {
   }, [collectAffected, qc]);
 
   const refreshStatuses = useCallback(async (trigger: "manual" | "auto" = "manual") => {
+    // Hard, synchronous re-entrancy guard. React state (isRefreshingStatuses)
+    // updates asynchronously, so two activations in the same tick could both
+    // pass a state-only check and queue a second refresh. This ref cannot.
+    if (refreshInFlightRef.current) {
+      setRefreshRunsStarted((n) => n); // no-op: nothing queued, nothing started
+      return;
+    }
+    refreshInFlightRef.current = true;
+    setRefreshRunsStarted((n) => n + 1);
+
     // Remember the exact element that had focus inside the ACTIVE tooltip so we
     // can hand focus back to it after the refresh button flips from disabled.
     const focusBefore = document.activeElement as HTMLElement | null;
@@ -692,6 +702,7 @@ function SettingsPage() {
 
     setRefreshTrigger(trigger);
     setIsRefreshingStatuses(true);
+
     // NOTE: the previous error is intentionally kept until we know the outcome.
     // Clearing it here unmounted the error alert — and with it the Retry button
     // the user had just focused — dropping focus to <body> on every retry.
