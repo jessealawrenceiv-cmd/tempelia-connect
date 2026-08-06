@@ -568,7 +568,7 @@ function AutomationBadge({
         document.activeElement instanceof Node &&
         !!containerRef.current?.contains(document.activeElement);
       setOpen(false);
-      console.debug("[tooltip-outside]", { hadFocusInside, hasTrigger: !!triggerRef.current });
+      console.log("[tooltip-outside]", { hadFocusInside, hasTrigger: !!triggerRef.current });
       if (hadFocusInside) {
         // refocus after the browser's default mousedown focus handling
         window.setTimeout(() => triggerRef.current?.focus(), 0);
