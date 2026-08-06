@@ -387,8 +387,43 @@ function SettingsPage() {
     const seconds = totalSeconds % 60;
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
   };
+  // Optional auto-refresh: re-evaluate statuses on a configurable interval while
+  // this Settings page is visible. Skips ticks when hidden, already refreshing,
+  // or in a failure cooldown.
+  const autoRefreshTickRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    autoRefreshTickRef.current = () => {
+      if (isRefreshingStatuses || isInCooldown) return;
+      if (document.visibilityState !== "visible") return;
+      void refreshStatuses("auto");
+    };
+  }, [isRefreshingStatuses, isInCooldown, refreshStatuses]);
+
+  useEffect(() => {
+    const enabled = profile?.auto_refresh_enabled ?? false;
+    if (!enabled) return;
+    const intervalMs = Math.max(60_000, (profile?.auto_refresh_interval_minutes ?? 15) * 60_000);
+
+    const id = window.setInterval(() => {
+      autoRefreshTickRef.current?.();
+    }, intervalMs);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        autoRefreshTickRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [profile?.auto_refresh_enabled, profile?.auto_refresh_interval_minutes]);
+
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     if (!refreshError || isRefreshingStatuses || isInCooldown) return;
     const id = window.requestAnimationFrame(() => {
