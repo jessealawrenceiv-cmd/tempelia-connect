@@ -596,11 +596,14 @@ function SettingsPage() {
               />
               <button
                 type="button"
-                onClick={refreshStatuses}
-                disabled={isRefreshingStatuses}
+                onClick={() => {
+                  if (isRefreshingStatuses) return;
+                  refreshStatuses();
+                }}
+                aria-disabled={isRefreshingStatuses}
                 aria-busy={isRefreshingStatuses}
                 aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : "Refresh automation statuses now"}
-                className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className={`mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 ${isRefreshingStatuses ? "cursor-not-allowed opacity-40" : "hover:text-foreground"}`}
               >
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
                 {isRefreshingStatuses ? "Checking…" : "Refresh statuses"}
