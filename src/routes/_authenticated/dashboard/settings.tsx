@@ -152,6 +152,8 @@ function SettingsPage() {
       const el = document.getElementById(anchorId);
       if (!el) return;
       el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.setAttribute("tabindex", "-1");
+      (el as HTMLElement).focus({ preventScroll: true });
       el.classList.add("ring-1", "ring-orange");
       window.setTimeout(() => el.classList.remove("ring-1", "ring-orange"), 1800);
     }, 60);
