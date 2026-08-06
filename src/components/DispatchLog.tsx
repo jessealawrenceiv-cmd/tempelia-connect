@@ -28,7 +28,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   return (
     <div className="panel">
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
-        <div className="label-eyebrow">Dispatch log</div>
+        <div className="label-eyebrow">Activity</div>
         <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
           <span className="h-2 w-2 animate-pulse rounded-full bg-moss" />
           Live
