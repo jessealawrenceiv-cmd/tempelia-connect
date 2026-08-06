@@ -586,16 +586,16 @@ function SettingsPage() {
                 type="button"
 
                 onClick={() => {
-                  if (isRefreshingStatuses) return;
+                  if (isRefreshingStatuses || isInCooldown) return;
                   refreshStatuses();
                 }}
-                aria-disabled={isRefreshingStatuses}
+                aria-disabled={isRefreshingStatuses || isInCooldown}
                 aria-busy={isRefreshingStatuses}
-                aria-label="Retry refreshing automation statuses"
-                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses ? "cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
+                aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
+                className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
               >
                 {isRefreshingStatuses ? <Spinner size={10} /> : null}
-                {isRefreshingStatuses ? "Retrying…" : "Retry"}
+                {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
               </button>
               <button
                 type="button"
