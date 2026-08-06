@@ -35,6 +35,17 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
     if (!cust) throw new Error("Customer not found");
     if (cust.opt_in_consent) throw new Error("This contact is already opted in.");
 
+    // PERMANENT: only contacts with real prior inbound engagement are eligible.
+    const { checkInboundEngagement } = await import("./inbound-engagement.server");
+    const engagement = await checkInboundEngagement(supabase as never, userId, cust);
+    if (!engagement.ok) throw new Error(engagement.reason);
+
+    // HOLD: real customer sends are disabled pending carrier (A2P) registration.
+    const { OPT_IN_PROMPT_REAL_SENDS_ENABLED, OPT_IN_PROMPT_HOLD_REASON } = await import(
+      "./opt-in-prompt-gate"
+    );
+    if (!OPT_IN_PROMPT_REAL_SENDS_ENABLED) throw new Error(OPT_IN_PROMPT_HOLD_REASON);
+
     const { data: excluded } = await supabase
       .from("excluded_numbers")
       .select("phone_number")
@@ -43,6 +54,7 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
     if ((excluded ?? []).some((r) => normalizePhone(r.phone_number) === digits)) {
       throw new Error("This number is on your exclusion list.");
     }
+
 
     const { data: prof } = await supabase
       .from("profiles")

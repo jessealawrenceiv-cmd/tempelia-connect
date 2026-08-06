@@ -7,6 +7,12 @@ import { PageHeader } from "@/components/AppShell";
 import { getVoicemailProxyUrl } from "@/lib/voicemail.functions";
 import { sendOptInPrompt, sendOptInPromptBatch } from "@/lib/opt-in-prompt.functions";
 import { OPT_IN_PROMPT_ACTION } from "@/lib/opt-in-prompt";
+import {
+  OPT_IN_PROMPT_ENGAGEMENT_RULE,
+  OPT_IN_PROMPT_HOLD_REASON,
+  OPT_IN_PROMPT_REAL_SENDS_ENABLED,
+} from "@/lib/opt-in-prompt-gate";
+
 import { MissedCallDetailSheet, type MissedCallDetail } from "@/components/MissedCallDetailSheet";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -323,7 +329,18 @@ function MissedCallsPage() {
           </span>
         </div>
 
+        {!OPT_IN_PROMPT_REAL_SENDS_ENABLED && (
+          <div className="rounded-sm border border-violet/50 bg-violet/10 p-3">
+            <div className="text-[10px] uppercase tracking-widest text-violet">
+              Opt-in prompt on hold
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{OPT_IN_PROMPT_HOLD_REASON}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{OPT_IN_PROMPT_ENGAGEMENT_RULE}</p>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-3">
+
           <button
             type="button"
             onClick={exportCsv}
@@ -355,14 +372,20 @@ function MissedCallsPage() {
               </button>
               <button
                 type="button"
-                disabled={checked.size === 0 || batch.isPending}
+                disabled={
+                  checked.size === 0 || batch.isPending || !OPT_IN_PROMPT_REAL_SENDS_ENABLED
+                }
+                title={OPT_IN_PROMPT_REAL_SENDS_ENABLED ? undefined : OPT_IN_PROMPT_HOLD_REASON}
                 onClick={() => batch.mutate(Array.from(checked))}
                 className="rounded-sm border border-violet/60 bg-violet/10 px-3 py-1.5 text-[10px] uppercase tracking-widest text-violet transition-colors hover:bg-violet/20 disabled:opacity-40"
               >
-                {batch.isPending
-                  ? "Sending…"
-                  : `Send to ${checked.size} selected`}
+                {!OPT_IN_PROMPT_REAL_SENDS_ENABLED
+                  ? "On hold"
+                  : batch.isPending
+                    ? "Sending…"
+                    : `Send to ${checked.size} selected`}
               </button>
+
             </>
           )}
         </div>
@@ -480,13 +503,21 @@ function MissedCallsPage() {
                       {canPrompt ? (
                         <button
                           type="button"
-                          disabled={mutation.isPending}
+                          disabled={mutation.isPending || !OPT_IN_PROMPT_REAL_SENDS_ENABLED}
+                          title={
+                            OPT_IN_PROMPT_REAL_SENDS_ENABLED ? undefined : OPT_IN_PROMPT_HOLD_REASON
+                          }
                           onClick={() => mutation.mutate(row.customer_id!)}
                           className="rounded-sm border border-violet/50 px-2 py-1 text-[10px] uppercase tracking-widest text-violet transition-colors hover:bg-violet/10 disabled:opacity-50"
                         >
-                          {prompt ? "Re-send opt-in prompt" : "Send opt-in prompt"}
+                          {!OPT_IN_PROMPT_REAL_SENDS_ENABLED
+                            ? "On hold"
+                            : prompt
+                              ? "Re-send opt-in prompt"
+                              : "Send opt-in prompt"}
                         </button>
                       ) : row.customers?.opt_in_consent ? (
+
                         <span className="text-xs text-moss">Opted in</span>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
