@@ -62,7 +62,7 @@ async function badgeTrigger(page: Page) {
 
 /** Waits for the realtime subscription to report Live before mutating the row. */
 async function waitForLive(page: Page) {
-  await expect(page.locator('[role="status"]', { hasText: /^\s*Live\s*$/ }).first()).toBeVisible({
+  await expect(page.locator('[role="status"] > span', { hasText: /^Live$/ }).first()).toBeVisible({
     timeout: 20_000,
   });
 }

@@ -88,7 +88,7 @@ async function openTooltip(page: Page) {
 
 async function waitForLive(page: Page) {
   await expect(
-    page.locator('[role="status"]', { hasText: /^\s*Live\s*$/ }).first(),
+    page.locator('[role="status"] > span', { hasText: /^Live$/ }).first(),
   ).toBeVisible({ timeout: 20_000 });
 }
 
