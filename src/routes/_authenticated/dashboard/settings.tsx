@@ -30,7 +30,7 @@ function TooltipCloseButton({ children = "Close" }: { children?: React.ReactNode
     <button
       type="button"
       onClick={close}
-      className="mt-2 rounded-sm border border-border px-2 py-1 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+      className="mt-2 rounded-sm border border-border px-2 py-1 uppercase tracking-widest text-muted-foreground hover:text-foreground kb-focus"
     >
       {children}
     </button>
@@ -698,7 +698,7 @@ function SettingsPage() {
                   toast.success(`Opened ${a.name} in Advanced.`);
                 }}
                 aria-label={`${a.name}, mode ${a.mode}. Open in Advanced tab`}
-                className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+                className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-0.5 text-left uppercase tracking-widest hover:bg-muted/30 hover:text-foreground kb-focus"
               >
                 <span className="underline decoration-dotted underline-offset-2">{a.name}</span>
                 <span className="text-foreground">{a.mode}</span>
@@ -748,7 +748,7 @@ function SettingsPage() {
                 e.preventDefault();
               }
             }}
-            className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
+            className={`mt-1 flex w-full items-center justify-between rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
           >
             <span className="flex items-center gap-1.5">
               {isRefreshingStatuses ? <Spinner size={12} /> : <span aria-hidden="true">↻</span>}
@@ -790,7 +790,7 @@ function SettingsPage() {
                       e.preventDefault();
                     }
                   }}
-                  className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
+                  className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
                 >
                   {isRefreshingStatuses ? <Spinner size={10} /> : null}
                   {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
@@ -804,7 +804,7 @@ function SettingsPage() {
                     setCooldownMs(0);
                   }}
                   aria-label="Dismiss refresh error"
-                  className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+                  className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground kb-focus"
                 >
                   Dismiss
                 </button>
@@ -1448,7 +1448,7 @@ const AutomationBadge = memo(forwardRef<
         aria-controls={tooltipId}
         aria-haspopup="true"
         aria-label={`Automation status: ${text}. ${open ? "Hide details" : "Show details"}`}
-        className="cursor-help rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-orange focus-visible:ring-offset-1"
+        className="cursor-help rounded-sm kb-focus"
         onMouseEnter={show}
         onMouseLeave={hide}
         onFocus={show}
