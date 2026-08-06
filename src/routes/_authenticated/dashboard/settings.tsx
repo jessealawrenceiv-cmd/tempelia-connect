@@ -16,6 +16,12 @@ import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
+const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
+  "this-device": "from this device",
+  "other-device": "from another device",
+  backend: "from the backend",
+};
+
 export const Route = createFileRoute("/_authenticated/dashboard/settings")({
   component: SettingsPage,
 });
