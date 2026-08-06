@@ -32,6 +32,9 @@ function SettingsPage() {
   const [tab, setTab] = useState<"settings" | "advanced">("settings");
   const [reviewUrl, setReviewUrl] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(15);
+
 
   const { data: profile, refetch: refetchProfile, dataUpdatedAt: profileUpdatedAt } = useQuery({
     queryKey: ["profile"],
