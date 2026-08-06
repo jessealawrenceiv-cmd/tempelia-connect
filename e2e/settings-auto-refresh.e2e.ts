@@ -107,7 +107,6 @@ test.describe("Settings · auto-refresh interval", () => {
 
   test("enabling auto-refresh schedules a status re-check and logs it as auto-triggered", async ({ page }) => {
     test.setTimeout(120_000);
-    page.on("console", (msg) => console.log(`[browser ${msg.type()}]`, msg.text()));
     // Pre-enable auto-refresh via the API so the timer starts as soon as the page mounts.
     await patchProfile(api!, original!.id, {
       auto_refresh_enabled: true,
