@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/AppShell";
 import { signIntakePhotos } from "@/lib/intake.functions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  intakeDeepLinkHref,
   parseIntakeDeepLink,
   resolveIntakeJump,
   type IntakeJumpMissReason,
