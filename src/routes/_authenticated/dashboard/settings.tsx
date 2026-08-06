@@ -412,6 +412,12 @@ function SettingsPage() {
         <div aria-live="polite" aria-atomic="true">
           Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
         </div>
+        <div aria-live="polite" aria-atomic="true" className="text-muted-foreground">
+          {lastUpdate
+            ? `Last live update ${UPDATE_ORIGIN_LABEL[lastUpdate.origin]} · ${lastUpdate.at.toLocaleTimeString()}`
+            : "No live update since this page opened"}
+        </div>
+
         <button
           type="button"
           onClick={() => {
