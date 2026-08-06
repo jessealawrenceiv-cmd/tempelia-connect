@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { CalendarDays, Check, ChevronDown, ChevronRight, Clock, ExternalLink, MapPin } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ChevronRight, Clock, ExternalLink, MapPin, Undo2 } from "lucide-react";
 import { DispatchLog } from "@/components/DispatchLog";
 import { LastRefreshedStatus } from "@/components/LastRefreshedStatus";
 import { HomeGreetingWeather } from "@/components/HomeGreetingWeather";
