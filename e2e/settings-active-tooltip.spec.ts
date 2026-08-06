@@ -126,7 +126,8 @@ test.describe("Settings · automation status tooltip a11y", () => {
     const tooltipId = await trigger.getAttribute("aria-controls");
     const tooltip = page.locator(`#${tooltipId}`);
 
-    await trigger.click();
+    await trigger.focus();
+    await page.keyboard.press("Enter");
     await expect(tooltip).toBeVisible();
 
     const live = tooltip.locator('[aria-live="polite"]', { hasText: "Last evaluated" }).first();
