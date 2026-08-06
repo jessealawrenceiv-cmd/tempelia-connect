@@ -764,7 +764,7 @@ function SettingsPage() {
         advancedBadgeRef.current?.restoreFocus(focusBefore);
       }
     }
-  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts]);
+  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts, runStatusRefreshFn]);
 
   // Optional auto-refresh: re-evaluate statuses on a configurable interval while
   // this Settings page is visible. Skips ticks when hidden, already refreshing,
