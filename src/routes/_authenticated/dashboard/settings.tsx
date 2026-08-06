@@ -284,14 +284,9 @@ function SettingsPage() {
               <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
             </div>
             <AutomationBadge
-              state={
-                (profile?.decline_followup_mode ?? "off") === "auto"
-                  ? "active"
-                  : (profile?.decline_followup_mode ?? "off") === "manual"
-                    ? "manual"
-                    : "off"
-              }
+              state={declineMode === "auto" ? "active" : declineMode === "manual" ? "manual" : "off"}
             />
+
           </div>
           <div className="mt-4 flex items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">
