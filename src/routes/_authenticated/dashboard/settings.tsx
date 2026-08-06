@@ -146,6 +146,15 @@ function SettingsPage() {
     }
   };
 
+  const highlightTimersRef = useRef<Map<HTMLElement, number[]>>(new Map());
+  useEffect(() => {
+    const timers = highlightTimersRef.current;
+    return () => {
+      timers.forEach((ids) => ids.forEach((id) => window.clearTimeout(id)));
+      timers.clear();
+    };
+  }, []);
+
   const jumpToAdvanced = (anchorId: string) => {
     setTab("advanced");
     window.setTimeout(() => {
@@ -154,10 +163,28 @@ function SettingsPage() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       el.setAttribute("tabindex", "-1");
       (el as HTMLElement).focus({ preventScroll: true });
-      el.classList.add("ring-1", "ring-orange");
-      window.setTimeout(() => el.classList.remove("ring-1", "ring-orange"), 1800);
+
+      // clear any pending highlight timers (repeat clicks restart the window)
+      const pending = highlightTimersRef.current.get(el);
+      if (pending) pending.forEach((id) => window.clearTimeout(id));
+
+      el.classList.add("transition-shadow", "duration-500");
+      el.classList.add("ring-2", "ring-orange", "ring-offset-2", "ring-offset-charcoal");
+
+      // hold the highlight visible, then fade it out and clean up
+      const fadeId = window.setTimeout(() => {
+        el.classList.remove("ring-2", "ring-orange", "ring-offset-2", "ring-offset-charcoal");
+      }, 3200);
+      const cleanupId = window.setTimeout(() => {
+        el.classList.remove("transition-shadow", "duration-500");
+        el.removeAttribute("tabindex");
+        highlightTimersRef.current.delete(el);
+      }, 3800);
+
+      highlightTimersRef.current.set(el, [fadeId, cleanupId]);
     }, 60);
   };
+
 
   const advancedAutomations: { name: string; mode: string; anchorId: string }[] = [
     { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD", anchorId: "adv-opt-in-prompt" },
