@@ -103,6 +103,8 @@ function SettingsPage() {
     "connecting" | "live" | "reconnecting" | "disconnected"
   >("connecting");
   const [realtimeAttempt, setRealtimeAttempt] = useState(0);
+  // Timestamp of the last successful subscribe / live payload, shown under the ACTIVE indicator.
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [statusAnnouncement, setStatusAnnouncement] = useState("");
   const [realtimeToasts, setRealtimeToasts] = useState(true);
   const realtimeToastsRef = useRef(true);
@@ -177,6 +179,7 @@ function SettingsPage() {
     let attempt = 0;
 
     const handlePayload = (payload: { new: unknown }) => {
+      setLastSyncAt(new Date());
       void qc.invalidateQueries({ queryKey: ["profile"] });
 
       const next = payload.new as Record<string, unknown> | null;
@@ -300,6 +303,7 @@ function SettingsPage() {
             attempt = 0;
             setRealtimeAttempt(0);
             setRealtimeState("live");
+            setLastSyncAt(new Date());
             // A gap in the stream may have hidden a change — resync on reconnect.
             void qc.invalidateQueries({ queryKey: ["profile"] });
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
@@ -1178,7 +1182,13 @@ function SettingsPage() {
                         ? `Disconnected (try ${realtimeAttempt})`
                         : "Connecting…"}
                 </span>
+                <span className="text-muted-foreground/70 normal-case tracking-normal">
+                  {lastSyncAt
+                    ? `· synced ${lastSyncAt.toLocaleTimeString()}`
+                    : "· not yet synced"}
+                </span>
               </div>
+
               <button
                 type="button"
                 role="switch"
