@@ -102,6 +102,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     return true;
   });
 
+  useEffect(() => {
+    const latest = filtered[0];
+    if (!latest || latest.id === lastAnnouncedIdRef.current) return;
+    lastAnnouncedIdRef.current = latest.id;
+    const time = new Date(latest.created_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setAnnouncement(`New activity: ${LABEL[latest.action_type] ?? latest.action_type} at ${time}`);
+  }, [filtered]);
+
   return (
     <div className="panel">
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
