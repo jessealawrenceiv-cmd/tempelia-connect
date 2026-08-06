@@ -3,6 +3,7 @@
 // an auto-text from the same number. Routing: look up the tenant by the To number.
 import { createFileRoute } from "@tanstack/react-router";
 import { PROJECT_PUBLIC_BASE } from "@/lib/twilio.server";
+import { insertLog } from "@/lib/log-action-types";
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
@@ -49,7 +50,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           .maybeSingle();
 
         if (excluded) {
-          await supabaseAdmin.from("logs").insert({
+          await insertLog(supabaseAdmin, {
             user_id: tenant.id,
             action_type: "missed_call_excluded",
             status: "skipped",

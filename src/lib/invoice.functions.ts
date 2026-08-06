@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PROJECT_PUBLIC_BASE } from "./twilio.server";
 import { invoiceSaveSchema } from "./invoice-schemas";
 import { INVOICE_AUDIT_ACTION } from "./invoice";
+import { insertLog } from "@/lib/log-action-types";
 
 
 /**
@@ -282,7 +283,7 @@ export const sendInvoiceSms = createServerFn({ method: "POST" })
       if (inv.status === "draft") updates["status"] = "sent";
       await supabase.from("invoices").update(updates as never).eq("id", inv.id);
 
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: inv.customer_id,
         action_type: "invoice_sms",
@@ -292,7 +293,7 @@ export const sendInvoiceSms = createServerFn({ method: "POST" })
       });
       return { ok: true as const, sid: res.sid, sentAt: nowIso, message };
     } catch (e) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: inv.customer_id,
         action_type: "invoice_sms",

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { RESENDABLE_STATUSES, OUTBOUND_LOG_TYPES } from "./resend-sms";
+import { insertLog } from "@/lib/log-action-types";
 
 function validate(data: unknown): { customerId: string } {
   const { customerId } = (data ?? {}) as { customerId?: unknown };
@@ -68,7 +69,7 @@ export const resendLastMessage = createServerFn({ method: "POST" })
 
     try {
       const res = await sendTwilioSms(from, cust.phone_number, last.message_sent);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: cust.id,
         action_type: last.action_type,
@@ -79,7 +80,7 @@ export const resendLastMessage = createServerFn({ method: "POST" })
       return { ok: true as const, sid: res.sid, actionType: last.action_type };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: cust.id,
         action_type: last.action_type,

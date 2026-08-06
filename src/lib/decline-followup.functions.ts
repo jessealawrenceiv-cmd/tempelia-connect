@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { insertLog } from "@/lib/log-action-types";
 
 const DECLINE_FOLLOWUP_BODY =
   "Sorry we didn't win this one — mind letting us know why? Just reply and let us know.";
@@ -33,7 +34,7 @@ export const sendDeclineFollowup = createServerFn({ method: "POST" })
       const res = await sendTwilioSms(from, q.customer_phone, message);
       const nowIso = new Date().toISOString();
       await supabase.from("quotes").update({ decline_followup_sent_at: nowIso }).eq("id", q.id);
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: q.customer_id,
         action_type: "quote_decline_followup",
@@ -43,7 +44,7 @@ export const sendDeclineFollowup = createServerFn({ method: "POST" })
       });
       return { ok: true as const, sid: res.sid, sentAt: nowIso };
     } catch (e) {
-      await supabase.from("logs").insert({
+      await insertLog(supabase, {
         user_id: userId,
         customer_id: q.customer_id,
         action_type: "quote_decline_followup",
@@ -78,7 +79,7 @@ export async function maybeAutoSendDeclineFollowup(quoteId: string): Promise<voi
     const res = await sendTwilioSms(prof.twilio_phone_number, q.customer_phone, message);
     const nowIso = new Date().toISOString();
     await supabaseAdmin.from("quotes").update({ decline_followup_sent_at: nowIso }).eq("id", q.id);
-    await supabaseAdmin.from("logs").insert({
+    await insertLog(supabaseAdmin, {
       user_id: q.user_id,
       customer_id: q.customer_id,
       action_type: "quote_decline_followup",
@@ -87,7 +88,7 @@ export async function maybeAutoSendDeclineFollowup(quoteId: string): Promise<voi
       twilio_message_sid: res.sid,
     });
   } catch {
-    await supabaseAdmin.from("logs").insert({
+    await insertLog(supabaseAdmin, {
       user_id: q.user_id,
       customer_id: q.customer_id,
       action_type: "quote_decline_followup",

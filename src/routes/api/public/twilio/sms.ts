@@ -1,6 +1,7 @@
 // Twilio inbound SMS webhook — routes by the To number to a specific tenant.
 // Twilio POSTs application/x-www-form-urlencoded.
 import { createFileRoute } from "@tanstack/react-router";
+import { insertLog } from "@/lib/log-action-types";
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
@@ -66,7 +67,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             await supabaseAdmin.from("customers").update({ opt_in_consent: false }).eq("id", cust.id);
           }
           await supabaseAdmin.from("sms_consent_events").insert(consentRow("opt_out"));
-          await supabaseAdmin.from("logs").insert(logRow("opted_out"));
+          await insertLog(supabaseAdmin, logRow("opted_out"));
           return twiml("<Message>You've been unsubscribed. Reply START to resume.</Message>");
         }
 
@@ -75,7 +76,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             await supabaseAdmin.from("customers").update({ opt_in_consent: true }).eq("id", cust.id);
           }
           await supabaseAdmin.from("sms_consent_events").insert(consentRow("opt_in"));
-          await supabaseAdmin.from("logs").insert(logRow("opted_in"));
+          await insertLog(supabaseAdmin, logRow("opted_in"));
           const name = escapeXml(tenant.business_name || "Temaro");
           return twiml(
             `<Message>${name}: You're opted back in to receive recurring text messages regarding your inquiry, appointment updates, and reviews. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe.</Message>`,
@@ -102,7 +103,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             .from("quotes")
             .update({ decline_reason: body })
             .eq("id", pendingQuote.id);
-          await supabaseAdmin.from("logs").insert({
+          await insertLog(supabaseAdmin, {
             user_id: tenant.id,
             customer_id: pendingQuote.customer_id ?? cust?.id ?? null,
             action_type: "quote_decline_reason_captured",
@@ -113,7 +114,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           return twiml("<Message>Thanks — we've passed that along.</Message>");
         }
 
-        await supabaseAdmin.from("logs").insert(logRow("received"));
+        await insertLog(supabaseAdmin, logRow("received"));
         return twiml("");
       },
     },

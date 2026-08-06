@@ -2,6 +2,7 @@
 // finishes uploading. We attach the recording URL to the matching missed-call
 // log row and text the business owner if they've set an owner_phone.
 import { createFileRoute } from "@tanstack/react-router";
+import { insertLog } from "@/lib/log-action-types";
 
 export const Route = createFileRoute("/api/public/twilio/recording")({
   server: {
@@ -58,7 +59,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
             .from("profiles").select("id").eq("twilio_phone_number", called).maybeSingle();
           if (tenant) {
             tenantId = tenant.id;
-            await supabaseAdmin.from("logs").insert({
+            await insertLog(supabaseAdmin, {
               user_id: tenant.id,
               action_type: "missed_call_autotext",
               status: "sent",
@@ -83,7 +84,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
               const { sendTwilioSms } = await import("@/lib/twilio.server");
               const body = `Voicemail from ${from} (${durationStr}s): ${playbackUrl}`;
               const res = await sendTwilioSms(profile.twilio_phone_number, profile.owner_phone, body);
-              await supabaseAdmin.from("logs").insert({
+              await insertLog(supabaseAdmin, {
                 user_id: tenantId,
                 action_type: "voicemail_notify",
                 status: "sent",
@@ -93,7 +94,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
                 voicemail_url: playbackUrl,
               });
             } catch (e) {
-              await supabaseAdmin.from("logs").insert({
+              await insertLog(supabaseAdmin, {
                 user_id: tenantId,
                 action_type: "voicemail_notify",
                 status: "failed",
