@@ -140,7 +140,8 @@ test.describe("Settings · automation status tooltip a11y", () => {
     // Simulate focus leaving the tooltip subtree (e.g. Tab cycling past the trap
     // or the user clicking another control). The close handler should still
     // remember that focus originated inside and return it to the trigger.
-    await page.evaluate(() => document.body.focus());
+    const openAdvanced = page.getByRole("button", { name: "Open advanced" });
+    await openAdvanced.focus();
     await expect(tooltip).toBeHidden();
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await expect(trigger).toBeFocused();
