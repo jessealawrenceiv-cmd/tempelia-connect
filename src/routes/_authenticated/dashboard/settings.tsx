@@ -13,7 +13,7 @@ import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
@@ -390,6 +390,9 @@ function SettingsPage() {
   };
   // When a manual refresh fails, pull focus straight to Retry so recovery is one keypress away.
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
+  // Ref to the ACTIVE badge so refresh can restore focus to the exact element
+  // that was focused inside the tooltip before the button became disabled.
+  const advancedBadgeRef = useRef<{ contains: (el: Node | null) => boolean; restoreFocus: (el: HTMLElement | null) => void } | null>(null);
 
 
   useEffect(() => {
@@ -499,6 +502,14 @@ function SettingsPage() {
   };
 
   const refreshStatuses = async (trigger: "manual" | "auto" = "manual") => {
+    // Remember the exact element that had focus inside the ACTIVE tooltip so we
+    // can hand focus back to it after the refresh button flips from disabled.
+    const focusBefore = document.activeElement as HTMLElement | null;
+    const focusWasInTooltip = focusBefore ? advancedBadgeRef.current?.contains(focusBefore) ?? false : false;
+
+
+
+
     setIsRefreshingStatuses(true);
     setRefreshError(null);
     setStatusAnnouncement("Refreshing automation statuses. Please wait.");
@@ -568,6 +579,9 @@ function SettingsPage() {
       toast.error("Refresh failed", { description: message });
     } finally {
       setIsRefreshingStatuses(false);
+      if (focusWasInTooltip && focusBefore) {
+        advancedBadgeRef.current?.restoreFocus(focusBefore);
+      }
     }
   };
 
@@ -990,6 +1004,7 @@ function SettingsPage() {
             </div>
             <div className="flex flex-col items-end gap-1">
               <AutomationBadge
+                ref={advancedBadgeRef}
                 state={advancedActiveCount > 0 ? "active" : "off"}
                 activeCount={advancedActiveCount}
                 tooltip={advancedTooltip}
@@ -1189,17 +1204,15 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
 }
 
 
-function AutomationBadge({
-  state,
-  label,
-  activeCount,
-  tooltip,
-}: {
-  state: "active" | "manual" | "hold" | "off";
-  label?: string;
-  activeCount?: number;
-  tooltip?: React.ReactNode;
-}) {
+const AutomationBadge = forwardRef<
+  { contains: (el: Node | null) => boolean; restoreFocus: (el: HTMLElement | null) => void },
+  {
+    state: "active" | "manual" | "hold" | "off";
+    label?: string;
+    activeCount?: number;
+    tooltip?: React.ReactNode;
+  }
+>(function AutomationBadge({ state, label, activeCount, tooltip }, ref) {
   const styles: Record<string, string> = {
     active: "border-moss/60 bg-moss/15 text-moss",
     manual: "border-steel/60 bg-steel/15 text-steel",
@@ -1230,6 +1243,26 @@ function AutomationBadge({
       }, 0);
     }, 0);
   };
+
+  // Expose methods to the parent so the refresh flow can restore focus to the
+  // exact element that was focused inside the tooltip before the button disabled.
+  useImperativeHandle(ref, () => ({
+    contains: (el: Node | null) => containerRef.current?.contains(el ?? null) ?? false,
+    restoreFocus: (el: HTMLElement | null) => {
+      if (!el || !el.isConnected) return;
+      // Reopen the tooltip if it closed, then hand focus back to the element.
+      // Wait a tick so any re-render that re-enables the control has finished.
+      setOpen(true);
+      window.setTimeout(() => {
+        window.requestAnimationFrame(() => {
+          if ((el as HTMLButtonElement | null)?.disabled) return;
+          el.focus();
+        });
+      }, 100);
+    },
+
+
+  }));
 
   useEffect(() => {
     if (!open) return;
@@ -1388,7 +1421,7 @@ function AutomationBadge({
       </span>
     </span>
   );
-}
+});
 
 
 
