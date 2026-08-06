@@ -62,3 +62,6 @@ export function depositCreditedLine(args: {
 export function contactToPayLine(businessName: string | null | undefined): string {
   return `Contact ${businessName || "the business"} directly to pay this balance.`;
 }
+
+/** action_type used for invoice balance/status audit rows in public.logs. */
+export const INVOICE_AUDIT_ACTION = "invoice_balance_status";

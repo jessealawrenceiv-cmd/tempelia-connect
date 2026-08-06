@@ -2,13 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { PROJECT_PUBLIC_BASE } from "./twilio.server";
+import { invoiceSaveSchema } from "./invoice-schemas";
+import { INVOICE_AUDIT_ACTION } from "./invoice";
 
-export const INVOICE_AUDIT_ACTION = "invoice_balance_status";
-
-const lineItemSchema = z.object({
-  label: z.string().default(""),
-  amount: z.coerce.number(),
-});
 
 /**
  * Create an invoice from an ACCEPTED quote. Every customer/money field is
@@ -94,17 +90,6 @@ export const createInvoiceFromQuote = createServerFn({ method: "POST" })
     return { ok: true as const, invoice: inv };
   });
 
-const saveSchema = z.object({
-  invoiceId: z.string().uuid(),
-  customer_first_name: z.string().trim().min(1),
-  customer_last_name: z.string().trim().nullable().optional(),
-  customer_business_name: z.string().trim().nullable().optional(),
-  customer_phone: z.string().trim().min(1),
-  customer_email: z.string().trim().nullable().optional(),
-  job_site_address: z.string().trim().min(1),
-  line_items: z.array(lineItemSchema).min(1),
-  tax_rate: z.coerce.number().min(0),
-});
 
 /**
  * Save an invoice edit.
@@ -116,7 +101,7 @@ const saveSchema = z.object({
  */
 export const saveInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => saveSchema.parse(d))
+  .inputValidator((d: unknown) => invoiceSaveSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
