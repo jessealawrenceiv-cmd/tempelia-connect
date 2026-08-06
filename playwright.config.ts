@@ -8,6 +8,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
+  // .e2e.ts (not .spec.ts) so Vitest's default include never picks these up
+  testMatch: /.*\.e2e\.ts/,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
