@@ -104,11 +104,12 @@ test.describe("Settings · Realtime disconnect, backoff reconnect, and status in
     openSockets.forEach((ws) => ws.close({ code: 1006, reason: "simulated outage" }));
 
     // Wait until the 4th attempt is announced (1s + 2s + 4s ladder ≈ 7s).
-    await expect(status).toContainText(/try 4/i, { timeout: 45_000 });
+    // By then the indicator has escalated from Reconnecting to Disconnected.
+    await expect(status).toContainText(/Disconnected \(try 4\)/i, { timeout: 45_000 });
     await watcher.stop();
 
     // Attempt numbers are surfaced to the user in order.
-    const attemptSamples = watcher.samples.filter((s) => /Reconnecting/i.test(s.text));
+    const attemptSamples = watcher.samples.filter((s) => /Reconnecting|Disconnected/i.test(s.text));
     expect(attemptSamples.length).toBeGreaterThanOrEqual(3);
     const attemptNumbers = attemptSamples.map((s) => Number(/try (\d+)/i.exec(s.text)?.[1] ?? 1));
     for (let i = 1; i < attemptNumbers.length; i += 1) {
