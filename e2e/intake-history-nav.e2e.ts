@@ -46,10 +46,9 @@ test.describe("intake deep-link history navigation", () => {
         "aria-expanded",
         "true",
       );
-      // …and closed for the other one.
-      await expect(
-        page.locator(`#intake-${other}`).getByRole("button", { name: /show details/i }),
-      ).toHaveAttribute("aria-expanded", "false");
+      // …and only the active card carries the jump highlight.
+      await expect(page.locator(`#intake-${other}`)).not.toHaveAttribute("data-jumped", "true");
+
 
       // Scrolled into view.
       await expect
