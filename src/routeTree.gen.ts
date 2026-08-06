@@ -43,6 +43,7 @@ import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_a
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
 import { Route as AuthenticatedDashboardAdminDepositRecoveryRouteImport } from './routes/_authenticated/dashboard/admin/deposit-recovery'
 import { Route as AuthenticatedDashboardQuotesQuoteIdPrintRouteImport } from './routes/_authenticated/dashboard/quotes.$quoteId.print'
+import { Route as AuthenticatedDashboardInvoicesInvoiceIdEditRouteImport } from './routes/_authenticated/dashboard/invoices.$invoiceId.edit'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -232,6 +233,12 @@ const AuthenticatedDashboardQuotesQuoteIdPrintRoute =
     path: '/dashboard/quotes/$quoteId/print',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardInvoicesInvoiceIdEditRoute =
+  AuthenticatedDashboardInvoicesInvoiceIdEditRouteImport.update({
+    id: '/dashboard/invoices/$invoiceId/edit',
+    path: '/dashboard/invoices/$invoiceId/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
   '/dashboard/invoices/': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/dashboard/invoices/$invoiceId/edit': typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRoutesByTo {
@@ -301,6 +309,7 @@ export interface FileRoutesByTo {
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
   '/dashboard/invoices': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/dashboard/quotes': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/dashboard/invoices/$invoiceId/edit': typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   '/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRoutesById {
@@ -338,6 +347,7 @@ export interface FileRoutesById {
   '/api/public/voicemail/$logId': typeof ApiPublicVoicemailLogIdRoute
   '/_authenticated/dashboard/invoices/': typeof AuthenticatedDashboardInvoicesIndexRoute
   '/_authenticated/dashboard/quotes/': typeof AuthenticatedDashboardQuotesIndexRoute
+  '/_authenticated/dashboard/invoices/$invoiceId/edit': typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   '/_authenticated/dashboard/quotes/$quoteId/print': typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 export interface FileRouteTypes {
@@ -375,6 +385,7 @@ export interface FileRouteTypes {
     | '/api/public/voicemail/$logId'
     | '/dashboard/invoices/'
     | '/dashboard/quotes/'
+    | '/dashboard/invoices/$invoiceId/edit'
     | '/dashboard/quotes/$quoteId/print'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -410,6 +421,7 @@ export interface FileRouteTypes {
     | '/api/public/voicemail/$logId'
     | '/dashboard/invoices'
     | '/dashboard/quotes'
+    | '/dashboard/invoices/$invoiceId/edit'
     | '/dashboard/quotes/$quoteId/print'
   id:
     | '__root__'
@@ -446,6 +458,7 @@ export interface FileRouteTypes {
     | '/api/public/voicemail/$logId'
     | '/_authenticated/dashboard/invoices/'
     | '/_authenticated/dashboard/quotes/'
+    | '/_authenticated/dashboard/invoices/$invoiceId/edit'
     | '/_authenticated/dashboard/quotes/$quoteId/print'
   fileRoutesById: FileRoutesById
 }
@@ -711,6 +724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardQuotesQuoteIdPrintRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/invoices/$invoiceId/edit': {
+      id: '/_authenticated/dashboard/invoices/$invoiceId/edit'
+      path: '/dashboard/invoices/$invoiceId/edit'
+      fullPath: '/dashboard/invoices/$invoiceId/edit'
+      preLoaderRoute: typeof AuthenticatedDashboardInvoicesInvoiceIdEditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -729,6 +749,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardQuotesNewRoute: typeof AuthenticatedDashboardQuotesNewRoute
   AuthenticatedDashboardInvoicesIndexRoute: typeof AuthenticatedDashboardInvoicesIndexRoute
   AuthenticatedDashboardQuotesIndexRoute: typeof AuthenticatedDashboardQuotesIndexRoute
+  AuthenticatedDashboardInvoicesInvoiceIdEditRoute: typeof AuthenticatedDashboardInvoicesInvoiceIdEditRoute
   AuthenticatedDashboardQuotesQuoteIdPrintRoute: typeof AuthenticatedDashboardQuotesQuoteIdPrintRoute
 }
 
@@ -752,6 +773,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedDashboardInvoicesIndexRoute,
   AuthenticatedDashboardQuotesIndexRoute:
     AuthenticatedDashboardQuotesIndexRoute,
+  AuthenticatedDashboardInvoicesInvoiceIdEditRoute:
+    AuthenticatedDashboardInvoicesInvoiceIdEditRoute,
   AuthenticatedDashboardQuotesQuoteIdPrintRoute:
     AuthenticatedDashboardQuotesQuoteIdPrintRoute,
 }
