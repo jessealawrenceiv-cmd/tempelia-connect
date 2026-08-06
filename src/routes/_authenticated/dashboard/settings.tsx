@@ -13,7 +13,7 @@ import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
