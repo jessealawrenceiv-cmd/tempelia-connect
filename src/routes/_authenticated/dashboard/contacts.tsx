@@ -206,8 +206,8 @@ function ContactsPage() {
             </select>
             <select value={smsFilter} onChange={(e) => setSmsFilter(e.target.value as any)} className="mono rounded-sm border border-border bg-background px-2 py-2 text-xs uppercase tracking-wider">
               <option value="all">sms: all</option>
-              <option value="opted_in">sms: opted in</option>
-              <option value="no_consent">sms: no consent</option>
+              <option value="opted_in">Can text</option>
+              <option value="no_consent">Can't text yet</option>
             </select>
             <select value={formFilter} onChange={(e) => setFormFilter(e.target.value as any)} className="mono rounded-sm border border-border bg-background px-2 py-2 text-xs uppercase tracking-wider">
               <option value="all">form: all</option>
