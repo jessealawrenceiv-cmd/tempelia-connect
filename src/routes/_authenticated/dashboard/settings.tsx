@@ -247,10 +247,15 @@ function SettingsPage() {
 
 
   useEffect(() => {
-    if (profile) setOwnerPhone(profile.owner_phone ?? "");
+    if (profile) {
+      setOwnerPhone(profile.owner_phone ?? "");
+      setAutoRefreshEnabled(profile.auto_refresh_enabled ?? false);
+      setAutoRefreshInterval(profile.auto_refresh_interval_minutes ?? 15);
+    }
   }, [profile]);
 
   const save = useMutation({
+
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
