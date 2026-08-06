@@ -602,6 +602,7 @@ function SettingsPage() {
                 onClick={() => {
                   setRefreshError(null);
                   setRefreshAttempts(0);
+                  setCooldownMs(0);
                 }}
                 aria-label="Dismiss refresh error"
                 className="rounded-sm px-2 py-0.5 uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
