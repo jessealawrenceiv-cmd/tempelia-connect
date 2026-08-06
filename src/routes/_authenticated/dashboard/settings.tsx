@@ -1001,6 +1001,7 @@ function SettingsPage() {
             </div>
             <div className="flex flex-col items-end gap-1">
               <AutomationBadge
+                ref={advancedBadgeRef}
                 state={advancedActiveCount > 0 ? "active" : "off"}
                 activeCount={advancedActiveCount}
                 tooltip={advancedTooltip}
