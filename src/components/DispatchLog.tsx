@@ -152,6 +152,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               type="checkbox"
               className="h-3.5 w-3.5 accent-primary"
               checked={statusRefreshOnly}
+              disabled={originFilter !== "all"}
               onChange={(e) => {
                 setStatusRefreshOnly(e.target.checked);
                 if (!e.target.checked) setFailedOnly(false);
@@ -161,18 +162,50 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           </label>
           <label
             className={`flex items-center gap-2 text-xs ${
-              statusRefreshOnly ? "cursor-pointer text-foreground" : "cursor-not-allowed text-muted-foreground"
+              statusRefreshOnly && originFilter === "all"
+                ? "cursor-pointer text-foreground"
+                : "cursor-not-allowed text-muted-foreground"
             }`}
           >
             <input
               type="checkbox"
               className="h-3.5 w-3.5 accent-primary"
               checked={failedOnly}
-              disabled={!statusRefreshOnly}
+              disabled={!statusRefreshOnly || originFilter !== "all"}
               onChange={(e) => setFailedOnly(e.target.checked)}
             />
             Failed only
           </label>
+
+          <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">ACTIVE source</span>
+            {(["all", "this-device", "other-device", "backend"] as const).map((key) => {
+              const active = originFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setOriginFilter(key);
+                    if (key !== "all") {
+                      setStatusRefreshOnly(false);
+                      setFailedOnly(false);
+                    }
+                  }}
+                  className={`kb-focus rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    active
+                      ? "bg-primary text-paper"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {key === "all" ? "All" : ORIGIN_LABEL[key]}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
