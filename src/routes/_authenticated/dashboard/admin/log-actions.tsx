@@ -209,6 +209,9 @@ function AdminLogActionsPage() {
 
             <ActionTypeCoveragePanel />
 
+            <WebhookDeliveryAuditPanel />
+
+
             {/* Generated enum values */}
             <div className="panel p-5">
               <div className="flex items-center gap-2">
