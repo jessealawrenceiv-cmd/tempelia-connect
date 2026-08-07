@@ -17,6 +17,15 @@ jobs:
         with:
           node-version: 20
 
+      # Token verification: confirms CI and the deployed app hold the SAME
+      # CI_ENUM_CHECK_TOKEN by comparing truncated sha256 fingerprints. Touches
+      # no database and never prints the token.
+      - name: Verify CI_ENUM_CHECK_TOKEN (fingerprint match)
+        env:
+          LOG_ACTION_TYPES_URL: ${{ vars.LOG_ACTION_TYPES_URL || 'https://project--8e32f1fd-252b-4fe0-a35d-4ff20cd7fded.lovable.app/api/public/log-action-types/constraint' }}
+          CI_ENUM_CHECK_TOKEN: ${{ secrets.CI_ENUM_CHECK_TOKEN }}
+        run: bash scripts/ci-enum-token-verify.sh
+
       # Preflight: the scoped CI token and the constraint endpoint must both be
       # usable. No database credential is involved — the endpoint reads
       # pg_constraint server-side and returns only the allowed value list.
