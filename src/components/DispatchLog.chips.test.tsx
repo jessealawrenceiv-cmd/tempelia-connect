@@ -205,7 +205,12 @@ describe("Activity log row copy action", () => {
   it("copies a formatted dispatch line to the clipboard", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+      writable: true,
+    });
 
     renderLog();
     await waitFor(() => expect(screen.getByText("quote link sent")).toBeTruthy());
