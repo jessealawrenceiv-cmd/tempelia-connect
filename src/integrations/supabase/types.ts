@@ -715,6 +715,42 @@ export type Database = {
           },
         ]
       }
+      log_action_type_drift_runs: {
+        Row: {
+          actor_user_id: string
+          constraint_name: string
+          created_at: string
+          db_values: string[]
+          detail: string | null
+          generated_values: string[]
+          id: string
+          matched: boolean
+          ran_at: string
+        }
+        Insert: {
+          actor_user_id: string
+          constraint_name: string
+          created_at?: string
+          db_values: string[]
+          detail?: string | null
+          generated_values: string[]
+          id?: string
+          matched: boolean
+          ran_at?: string
+        }
+        Update: {
+          actor_user_id?: string
+          constraint_name?: string
+          created_at?: string
+          db_values?: string[]
+          detail?: string | null
+          generated_values?: string[]
+          id?: string
+          matched?: boolean
+          ran_at?: string
+        }
+        Relationships: []
+      }
       log_retention_runs: {
         Row: {
           archived_age_count: number
@@ -1484,6 +1520,14 @@ export type Database = {
           expires_at: string
           invite_id: string
           invited_at: string
+        }[]
+      }
+      logs_action_type_whitelist: {
+        Args: never
+        Returns: {
+          allowed_values: string[]
+          constraint_def: string
+          constraint_name: string
         }[]
       }
       mcp_rate_limits_prune: { Args: never; Returns: undefined }
