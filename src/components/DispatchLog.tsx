@@ -678,8 +678,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
         {filtered.map((row) => {
           const affected = parseAffected(row);
+          const isCopied = copiedId === row.id;
           return (
-          <li key={row.id} className="grid grid-cols-[auto_auto_1fr] items-start gap-3 px-5 py-3">
+          <li key={row.id} className="group grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
             <span className="text-muted-foreground">
               {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
@@ -729,6 +730,28 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                 </span>
               )}
             </span>
+            <button
+              type="button"
+              aria-label={isCopied ? "Copied" : "Copy dispatch line"}
+              title={isCopied ? "Copied" : "Copy dispatch line"}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(formatDispatchLine(row));
+                  setCopiedId(row.id);
+                  toast.success("Dispatch line copied");
+                  window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
+                } catch {
+                  toast.error("Copy failed", { description: "Clipboard access was denied." });
+                }
+              }}
+              className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+            >
+              {isCopied ? (
+                <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
+              ) : (
+                <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
+              )}
+            </button>
           </li>
           );
         })}
