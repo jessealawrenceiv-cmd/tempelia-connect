@@ -1634,7 +1634,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                   search: (prev: Record<string, unknown>) => ({
                     ...prev,
                     logStatusOnly: on ? "1" : undefined,
-                    logFailed: on ? prev.logFailed : undefined,
+                    logFailed: on ? (prev.logFailed as string | undefined) : undefined,
                   }),
                   resetScroll: false,
                 });
