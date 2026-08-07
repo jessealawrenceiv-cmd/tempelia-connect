@@ -1,0 +1,1 @@
+SELECT cron.schedule('prune-webhook-deliveries', '25 3 * * *', 'SELECT public.webhook_deliveries_prune();');
