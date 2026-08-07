@@ -1154,73 +1154,20 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
-  const SkeletonRow = () => (
-    <div
-      className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 border-b border-border px-5 py-3"
-      aria-hidden="true"
-    >
-      <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
-      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
-      <div className="space-y-1.5">
-        <span className="block h-3.5 w-32 rounded bg-muted animate-pulse" />
-        <span className="block h-3 w-48 rounded bg-muted animate-pulse" />
-      </div>
-      <span className="h-3 w-6 rounded bg-muted animate-pulse" />
-    </div>
+  const ErrorRetry = () => (
+    <LogErrorRetry
+      logError={logError}
+      hasActiveFilters={hasActiveFilters}
+      filtersBlocked={filtersBlocked}
+      busy={isFetchingNextPage || isLoading}
+      onClearFilters={resetFilters}
+      onRetry={() => {
+        if (filtersBlocked) return;
+        void refetch();
+      }}
+    />
   );
 
-  const ErrorRetry = () => {
-    const info = logError ? describeLogRequestError(logError) : null;
-    return (
-      <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">{info?.title ?? "Couldn’t load activity"}</p>
-            <p className="text-xs text-muted-foreground">
-              {info?.message ?? "Something went wrong. Pull to retry or tap the button."}
-            </p>
-            {info?.allowedTypes && (
-              <p className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Allowed: {info.allowedTypes.join(", ")}
-              </p>
-            )}
-            {info?.technicalDetail && (
-              <details className="pt-1">
-                <summary className="kb-focus cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Technical details{info.status ? ` (HTTP ${info.status})` : ""}
-                </summary>
-                <p className="mono mt-1 break-words text-[10px] leading-relaxed text-muted-foreground">
-                  {info.technicalDetail}
-                </p>
-              </details>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {info?.suggestClearFilters && hasActiveFilters && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                Clear filters
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (filtersBlocked) return;
-                void refetch();
-              }}
-              disabled={isFetchingNextPage || isLoading || filtersBlocked}
-              className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
-            >
-              {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   /** One dispatch line; shared by the plain and virtualized render paths. */
   const RowBody = ({ row }: { row: LogRow }) => {
