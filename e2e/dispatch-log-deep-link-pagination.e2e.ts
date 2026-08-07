@@ -166,6 +166,5 @@ test.describe("E2E · Activity log deep link + pagination", () => {
     await expect(list.getByText("SMS_INBOUND")).toHaveCount(0, { timeout: 20_000 });
     expect(await list.getByText("MISSED_CALL_TEXT").count()).toBeGreaterThan(0);
   });
-
-  });
 });
+
