@@ -30,10 +30,14 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { claimWebhookDelivery, completeWebhookDelivery, duplicateResponse, twilioDeliveryKey } =
           await import("@/lib/webhook-idempotency.server");
+        const { logWebhookRetryAttempt, logWebhookFailure, WEBHOOK_MAX_ATTEMPTS } = await import(
+          "@/lib/webhook-delivery-audit.server"
+        );
+        const deliveryKey = twilioDeliveryKey("missed_call", form);
         const claim = await claimWebhookDelivery(supabaseAdmin, {
           source: "twilio",
           eventKind: "missed_call",
-          deliveryKey: twilioDeliveryKey("missed_call", form),
+          deliveryKey,
         });
         if (claim.duplicate) return duplicateResponse(claim, "twiml");
 
