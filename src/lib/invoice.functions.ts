@@ -4,7 +4,7 @@ import { z } from "zod";
 import { PROJECT_PUBLIC_BASE } from "./twilio.server";
 import { invoiceSaveSchema } from "./invoice-schemas";
 import { INVOICE_AUDIT_ACTION } from "./invoice";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 
 
 /**
@@ -286,7 +286,7 @@ export const sendInvoiceSms = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: inv.customer_id,
-        action_type: "invoice_sms",
+        action_type: LogAction.invoice_sms,
         message_sent: message,
         status: "sent",
         twilio_message_sid: res.sid,
@@ -296,7 +296,7 @@ export const sendInvoiceSms = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: inv.customer_id,
-        action_type: "invoice_sms",
+        action_type: LogAction.invoice_sms,
         message_sent: message,
         status: "failed",
       });

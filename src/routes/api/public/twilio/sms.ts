@@ -1,7 +1,7 @@
 // Twilio inbound SMS webhook — routes by the To number to a specific tenant.
 // Twilio POSTs application/x-www-form-urlencoded.
 import { createFileRoute } from "@tanstack/react-router";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
         const logRow = (status: string) => ({
           user_id: tenant.id,
           customer_id: cust?.id ?? null,
-          action_type: "sms_inbound",
+          action_type: LogAction.sms_inbound,
           status,
           message_sent: body,
           twilio_message_sid: messageSid || null,
@@ -121,7 +121,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           await insertLog(supabaseAdmin, {
             user_id: tenant.id,
             customer_id: pendingQuote.customer_id ?? cust?.id ?? null,
-            action_type: "quote_decline_reason_captured",
+            action_type: LogAction.quote_decline_reason_captured,
             status: "captured",
             message_sent: body,
             twilio_message_sid: messageSid || null,

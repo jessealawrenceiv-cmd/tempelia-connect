@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 
 interface SendInput {
   customerId: string;
@@ -55,7 +55,7 @@ export const completeJob = createServerFn({ method: "POST" })
     // 2. Gate: is the review-request feature turned on for this business?
     if (prof?.review_requests_enabled === false) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.review_request,
         message_sent: null, status: "skipped_disabled",
       });
       await supabase.from("jobs").update({ status: "completed_no_request" }).eq("id", job.id);
@@ -69,7 +69,7 @@ export const completeJob = createServerFn({ method: "POST" })
     const isExcluded = (excluded ?? []).some((r) => normalizePhone(r.phone_number) === custDigits);
     if (isExcluded) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.review_request,
         message_sent: null, status: "skipped_excluded",
       });
       await supabase.from("jobs").update({ status: "completed_no_request" }).eq("id", job.id);
@@ -87,7 +87,7 @@ export const completeJob = createServerFn({ method: "POST" })
 
     if (!cust.opt_in_consent) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.review_request,
         message_sent: message, status: "needs_consent",
       });
       await supabase.from("jobs").update({ status: "needs_consent" }).eq("id", job.id);
@@ -96,7 +96,7 @@ export const completeJob = createServerFn({ method: "POST" })
 
     if (!from) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.review_request,
         message_sent: message, status: "failed",
       });
       await supabase.from("jobs").update({ status: "failed" }).eq("id", job.id);
@@ -110,14 +110,14 @@ export const completeJob = createServerFn({ method: "POST" })
         last_service_date: new Date().toISOString().slice(0, 10),
       }).eq("id", cust.id);
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.review_request,
         message_sent: message, status: "sent", twilio_message_sid: res.sid,
       });
       await supabase.from("jobs").update({ status: "review_requested" }).eq("id", job.id);
       return { ok: true, jobId: job.id, sent: true, sid: res.sid };
     } catch (e) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "review_request",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.review_request,
         message_sent: message, status: "failed",
       });
       await supabase.from("jobs").update({ status: "failed" }).eq("id", job.id);
@@ -152,7 +152,7 @@ export const sendReactivation = createServerFn({ method: "POST" })
     const isExcluded = (excluded ?? []).some((r) => normalizePhone(r.phone_number) === custDigits);
     if (isExcluded) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.reactivation_text,
         message_sent: null, status: "skipped_excluded",
       });
       throw new Error(`${cust.first_name || "Customer"} is on your exclusion list — skipped.`);
@@ -162,7 +162,7 @@ export const sendReactivation = createServerFn({ method: "POST" })
 
     if (!cust.opt_in_consent) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.reactivation_text,
         message_sent: message, status: "needs_consent",
       });
       throw new Error(`${cust.first_name || "Customer"} needs consent — flagged.`);
@@ -172,13 +172,13 @@ export const sendReactivation = createServerFn({ method: "POST" })
       const res = await sendTwilioSms(from, cust.phone_number, message);
       await supabase.from("customers").update({ last_reactivation_at: new Date().toISOString() }).eq("id", cust.id);
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.reactivation_text,
         message_sent: message, status: "sent", twilio_message_sid: res.sid,
       });
       return { ok: true, sid: res.sid };
     } catch (e) {
       await insertLog(supabase, {
-        user_id: userId, customer_id: cust.id, action_type: "reactivation_text",
+        user_id: userId, customer_id: cust.id, action_type: LogAction.reactivation_text,
         message_sent: message, status: "failed",
       });
       throw e;

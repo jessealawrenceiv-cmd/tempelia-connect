@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 
 interface ProvisionInput {
   areaCode?: string;
@@ -79,7 +79,7 @@ export const provisionTenantNumber = createServerFn({ method: "POST" })
 
     await insertLog(supabase, {
       user_id: userId,
-      action_type: "number_provisioned",
+      action_type: LogAction.number_provisioned,
       status: "sent",
       message_sent: `Auto-provisioned ${phoneNumber} (${phoneSid})`,
     });

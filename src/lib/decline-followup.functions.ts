@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 
 const DECLINE_FOLLOWUP_BODY =
   "Sorry we didn't win this one — mind letting us know why? Just reply and let us know.";
@@ -37,7 +37,7 @@ export const sendDeclineFollowup = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: q.customer_id,
-        action_type: "quote_decline_followup",
+        action_type: LogAction.quote_decline_followup,
         message_sent: message,
         status: "sent",
         twilio_message_sid: res.sid,
@@ -47,7 +47,7 @@ export const sendDeclineFollowup = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: q.customer_id,
-        action_type: "quote_decline_followup",
+        action_type: LogAction.quote_decline_followup,
         message_sent: message,
         status: "failed",
       });
@@ -82,7 +82,7 @@ export async function maybeAutoSendDeclineFollowup(quoteId: string): Promise<voi
     await insertLog(supabaseAdmin, {
       user_id: q.user_id,
       customer_id: q.customer_id,
-      action_type: "quote_decline_followup",
+      action_type: LogAction.quote_decline_followup,
       message_sent: message,
       status: "sent",
       twilio_message_sid: res.sid,
@@ -91,7 +91,7 @@ export async function maybeAutoSendDeclineFollowup(quoteId: string): Promise<voi
     await insertLog(supabaseAdmin, {
       user_id: q.user_id,
       customer_id: q.customer_id,
-      action_type: "quote_decline_followup",
+      action_type: LogAction.quote_decline_followup,
       message_sent: message,
       status: "failed",
     });
