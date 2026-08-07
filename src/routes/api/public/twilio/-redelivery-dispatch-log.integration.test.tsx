@@ -859,6 +859,7 @@ describe("conflicting redeliveries are refused and audited", () => {
     const baseline = rowIds();
 
     for (let i = 0; i < 3; i += 1) {
+      expireDeliveryCache();
       const res = await inboundSms({
         From: CALLER,
         To: TENANT_NUMBER,
@@ -866,6 +867,7 @@ describe("conflicting redeliveries are refused and audited", () => {
         MessageSid: "SM-audit-many",
       });
       expect(res.status).toBe(409);
+
       for (const row of logs) socket.push(row);
       await settle();
 
