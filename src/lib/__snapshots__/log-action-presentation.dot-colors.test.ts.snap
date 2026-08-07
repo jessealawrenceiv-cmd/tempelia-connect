@@ -1,0 +1,27 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`status dot color contract > keeps the per-action dot assignment stable 1`] = `
+{
+  "automation_status_change": "bg-primary",
+  "customer_consent_preserved": "bg-moss",
+  "customer_email_updated": "bg-muted-foreground",
+  "invoice_balance_status": "bg-primary",
+  "invoice_sms": "bg-primary",
+  "missed_call_autotext": "bg-orange",
+  "missed_call_excluded": "bg-muted-foreground",
+  "missed_call_text": "bg-orange",
+  "number_provisioned": "bg-moss",
+  "opt_in_prompt": "bg-steel",
+  "opt_in_prompt_test": "bg-muted-foreground",
+  "quote_decline_followup": "bg-orange",
+  "quote_decline_reason_captured": "bg-orange",
+  "quote_deposit_status": "bg-primary",
+  "quote_sms": "bg-primary",
+  "reactivation_text": "bg-moss",
+  "review_request": "bg-steel",
+  "sms_inbound": "bg-moss",
+  "status_refresh": "bg-orange",
+  "voicemail_notify": "bg-steel",
+  "webhook_delivery_status": "bg-primary",
+}
+`;
