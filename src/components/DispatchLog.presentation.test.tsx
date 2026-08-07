@@ -126,7 +126,9 @@ function renderLog() {
 
 /** The row whose label matches `label`, from the rendered list. */
 function rowFor(label: string): HTMLElement {
-  const labelEl = screen.getByText(label, { selector: "span" });
+  // Scope to the log list: chip labels use the same text.
+  const list = screen.getByRole("list");
+  const labelEl = within(list).getByText(label, { selector: "span" });
   return labelEl.closest('[role="listitem"]') as HTMLElement;
 }
 
@@ -209,7 +211,7 @@ describe("Activity log rows — dot colour and tooltip for every action type", (
     ];
     renderLog();
 
-    await waitFor(() => expect(screen.getByText("STATUS_REFRESH")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("1 loaded")).toBeTruthy());
     const rowEl = rowFor("STATUS_REFRESH");
     expect(dotOf(rowEl).className).toContain(expectedDot);
   });
