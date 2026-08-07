@@ -132,17 +132,20 @@ export const LOG_ACTION_PRESENTATION: Record<LogActionType, LogActionPresentatio
 };
 
 /** Label for any action_type string, falling back safely for unknown values. */
-export function logActionLabel(actionType: string): string {
-  return LOG_ACTION_PRESENTATION[actionType as LogActionType]?.label ?? actionType.toUpperCase();
+export function logActionLabel(actionType: string | null | undefined): string {
+  const known = LOG_ACTION_PRESENTATION[actionType as LogActionType]?.label;
+  if (known) return known;
+  const raw = typeof actionType === "string" ? actionType.trim() : "";
+  return raw ? raw.toUpperCase() : "UNKNOWN";
 }
 
 /** Dot color class for any action_type string. */
-export function logActionDot(actionType: string): string {
+export function logActionDot(actionType: string | null | undefined): string {
   return LOG_ACTION_PRESENTATION[actionType as LogActionType]?.dot ?? "bg-muted";
 }
 
 /** Tooltip text for any action_type string. */
-export function logActionDescription(actionType: string): string {
+export function logActionDescription(actionType: string | null | undefined): string {
   return LOG_ACTION_PRESENTATION[actionType as LogActionType]?.description ?? "Activity record";
 }
 
