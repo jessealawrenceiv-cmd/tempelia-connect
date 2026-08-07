@@ -1583,6 +1583,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <FieldHelp field="dateRange" />
           </div>
 
+          <JumpToDatePicker
+            onJump={(day) => {
+              setDateRange({ from: day, to: day });
+              setAnnouncement(`Jumped to ${day.toLocaleDateString()}`);
+            }}
+          />
+
+
 
           <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
             <input
