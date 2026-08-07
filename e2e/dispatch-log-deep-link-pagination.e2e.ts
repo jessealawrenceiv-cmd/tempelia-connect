@@ -146,9 +146,13 @@ test.describe("E2E · Activity log deep link + pagination", () => {
     await expect(page.getByText("25 loaded")).toBeVisible({ timeout: 20_000 });
     expect(await list.getByText("REVIEW_REQUEST").count()).toBeGreaterThan(0);
 
-    // Pagination still works after the chip interaction.
-    await page.getByRole("button", { name: `Load ${PAGE_SIZE} older` }).click();
-    await expect(page.getByText("50 loaded")).toBeVisible({ timeout: 20_000 });
+    // Pagination still works after the chip interaction. The footer re-renders
+    // as the refetched page settles, so retry the click until it lands.
+    await expect(async () => {
+      await page.getByRole("button", { name: `Load ${PAGE_SIZE} older` }).click({ timeout: 5_000 });
+      await expect(page.getByText("50 loaded")).toBeVisible({ timeout: 10_000 });
+    }).toPass({ timeout: 30_000 });
+
 
     // Removing a type also resets pagination and drops its rows.
     await chip("SMS_INBOUND").click();
