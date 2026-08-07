@@ -11,6 +11,7 @@ import {
   type LogActionDiagnostics,
 } from "@/lib/log-action-diagnostics.functions";
 import { Check, Copy, Database, RefreshCw, ScrollText, ShieldAlert } from "lucide-react";
+import { DriftHistoryPanel } from "@/components/DriftHistoryPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/log-actions")({
   head: () => ({
@@ -140,6 +141,9 @@ function AdminLogActionsPage() {
               <RunCard title="Last successful drift test" run={data.lastSuccessfulRun} tone="ok" />
               <RunCard title="Most recent drift test" run={data.lastRun} tone={data.lastRun?.matched ? "ok" : "warn"} />
             </div>
+
+            {/* Full drift history */}
+            <DriftHistoryPanel runs={data.history} />
 
             {/* Generated enum values */}
             <div className="panel p-5">
