@@ -1379,13 +1379,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </span>
           )}
 
-          <DateRangePicker
-            value={dateRange}
-            onChange={(next) => {
-              setDateRange(next);
-            }}
-            placeholder="Date range"
-          />
+          <div>
+            <DateRangePicker
+              value={dateRange}
+              onChange={(next) => {
+                setDateRange(next);
+              }}
+              placeholder="Date range"
+            />
+            <FieldHelp field="dateRange" />
+          </div>
+
 
           <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
             <input
