@@ -546,7 +546,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       }),
       resetScroll: false,
     });
+    // The query key changes with the filters, but re-run explicitly so a failed
+    // request (e.g. the 400 from logs_action_type_check) is retried immediately
+    // instead of leaving the error alert on screen.
+    void refetch();
   };
+
 
 
   /** Captures the current filter bar as a named preset. */
