@@ -161,7 +161,8 @@ export function friendlyLogRequestError(err: unknown): string {
     }
     return "Some of your filter values weren’t valid, so we couldn’t load the activity log.";
   }
-  const message = err instanceof Error ? err.message : String(err ?? "");
+  const parts = errorParts(err);
+  const message = [parts.message, parts.details, parts.hint, parts.code].filter(Boolean).join(" ");
   if (/action_type/i.test(message)) {
     return "One of the selected record types isn’t valid, so we couldn’t load that view. Try clearing your filters.";
   }
