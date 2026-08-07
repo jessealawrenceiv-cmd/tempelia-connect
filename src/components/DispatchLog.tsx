@@ -10,6 +10,7 @@ import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight
 import { DispatchLogRowDetails } from "@/components/DispatchLogRowDetails";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
+import { JumpToDatePicker } from "@/components/JumpToDatePicker";
 import {
   EXPORT_ROW_CAP,
   buildLogCsv,
