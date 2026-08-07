@@ -6,7 +6,7 @@ import {
   getActionTypeCoverage,
   type BusinessCoverage,
 } from "@/lib/log-action-coverage.functions";
-import type { BusinessSignals, GapSeverity } from "@/lib/log-action-coverage";
+import { gapEvidence, type BusinessSignals, type GapSeverity } from "@/lib/log-action-coverage";
 import {
   describeGapDrilldown,
   type CheckOutcome,
@@ -181,6 +181,7 @@ export function ActionTypeCoveragePanel() {
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">{g.cause}</p>
+                          <GapEvidence actionType={g.actionType} signals={b.signals} />
                           <GapDrilldown
                             actionType={g.actionType}
                             signals={b.signals}
@@ -203,6 +204,54 @@ export function ActionTypeCoveragePanel() {
         </>
       )}
     </section>
+  );
+}
+
+/** Relative age like "3d ago", for scanning a list of gaps quickly. */
+function relativeAge(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return "";
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+const exactTime = (iso: string) => new Date(iso).toLocaleString();
+
+/** Dated evidence behind a gap: newest related source event and latest touches. */
+function GapEvidence({
+  actionType,
+  signals,
+}: {
+  actionType: LogActionType;
+  signals: BusinessSignals;
+}) {
+  const items = useMemo(() => gapEvidence(actionType, signals), [actionType, signals]);
+  if (items.length === 0) return null;
+
+  return (
+    <dl
+      data-testid={`gap-evidence-${actionType}`}
+      className="mono mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] uppercase tracking-widest"
+    >
+      {items.map((item) => (
+        <div key={item.label} className="flex items-center gap-1.5">
+          <dt className="text-muted-foreground">{item.label}:</dt>
+          <dd className={item.at ? "text-paper" : "text-muted-foreground/70"}>
+            {item.at ? (
+              <time dateTime={item.at} title={exactTime(item.at)}>
+                {relativeAge(item.at)}
+              </time>
+            ) : (
+              "never"
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
