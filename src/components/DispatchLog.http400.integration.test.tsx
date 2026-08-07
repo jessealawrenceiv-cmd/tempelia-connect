@@ -173,7 +173,8 @@ describe("HTTP 400 from the logs API", () => {
     renderLog();
 
     const clear = await waitFor(() => screen.getByTestId("log-error-clear-filters"));
-    console.log("IN DOC", document.body.contains(clear));
+    // The alert keeps a stable identity, so the button we found is still live.
+    expect(document.body.contains(clear)).toBe(true);
     fail400 = false;
     // Single click on the rendered button must be enough: the alert no longer
     // remounts between render passes, so the node is still attached.
