@@ -1314,30 +1314,37 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
 
 
-          <div className="relative flex items-center">
-            <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name, phone, message…"
-              aria-label="Search activity by phone number, customer name, or message text"
-              aria-invalid={filterIssues.some((i) => i.field === "q") || undefined}
-              maxLength={MAX_LOG_SEARCH_LENGTH + 20}
-              className="kb-focus h-7 w-40 rounded-full border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56"
-            />
+          <div>
+            <div className="relative flex items-center">
+              <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, phone, message…"
+                aria-label="Search activity by phone number, customer name, or message text"
+                aria-invalid={issueFor("q") ? true : undefined}
+                aria-describedby={issueFor("q") ? helpId("q") : undefined}
+                maxLength={MAX_LOG_SEARCH_LENGTH + 20}
+                className={`kb-focus h-7 w-40 rounded-full border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56 ${
+                  issueFor("q") ? "border-orange" : "border-border"
+                }`}
+              />
 
-            {searchQuery && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => setSearchQuery("")}
-                className="kb-focus absolute right-2 text-muted-foreground hover:text-foreground"
-              >
-                ×
-              </button>
-            )}
+              {searchQuery && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setSearchQuery("")}
+                  className="kb-focus absolute right-2 text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <FieldHelp field="q" />
           </div>
+
 
           <div className="relative flex items-center">
             <input
