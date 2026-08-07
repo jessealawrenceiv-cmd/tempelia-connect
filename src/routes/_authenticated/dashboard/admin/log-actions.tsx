@@ -19,6 +19,7 @@ import {
   downloadTextFile,
 } from "@/lib/action-type-export";
 import { DriftHistoryPanel } from "@/components/DriftHistoryPanel";
+import { ActionTypeCoveragePanel } from "@/components/ActionTypeCoveragePanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/log-actions")({
   // Server-side role gate: the operator check happens on the server from the
@@ -196,6 +197,8 @@ function AdminLogActionsPage() {
 
             {/* Full drift history */}
             <DriftHistoryPanel runs={data.history} />
+
+            <ActionTypeCoveragePanel />
 
             {/* Generated enum values */}
             <div className="panel p-5">
