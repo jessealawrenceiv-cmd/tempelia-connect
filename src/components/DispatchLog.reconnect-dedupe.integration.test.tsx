@@ -351,7 +351,7 @@ describe("DispatchLog realtime redelivery after disconnect/reconnect", () => {
     for (const row of missed) socket.push(row);
 
     // A manual refresh reads them straight from the database.
-    const refresh = screen.getByRole("button", { name: /^Refresh$/i });
+    const refresh = screen.getByRole("button", { name: /Refresh activity now/i });
     await user.click(refresh);
     await settle();
     expect(rowIds()).toContain(missed[0]!.id);
