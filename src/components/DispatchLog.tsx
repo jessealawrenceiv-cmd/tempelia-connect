@@ -170,20 +170,20 @@ export function parseLogTypesParam(raw: unknown): LogActionType[] {
 
 const LOG_TYPES_STORAGE_KEY = "temaro-activity-log-types";
 
-function readStoredTypes(): LogActionType[] | null {
-  if (typeof window === "undefined") return null;
+function readStoredTypes(): { valid: LogActionType[]; invalid: string[] } {
+  if (typeof window === "undefined") return { valid: [], invalid: [] };
   try {
     const raw = window.localStorage.getItem(LOG_TYPES_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return { valid: [], invalid: [] };
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed)) return { valid: [], invalid: [] };
     // Stored values are untrusted too (older build, hand-edited storage).
-    const valid = pickLogActionTypes(parsed).valid;
-    return valid.length > 0 ? valid : null;
+    return pickLogActionTypes(parsed);
   } catch {
-    return null;
+    return { valid: [], invalid: [] };
   }
 }
+
 
 function writeStoredTypes(types: LogActionType[]) {
   if (typeof window === "undefined") return;
@@ -366,6 +366,24 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterIssues, filtersBlocked]);
+
+  /**
+   * An invalid action_type is dropped before the request goes out. That used to
+   * be silent (the banner is below the fold on mobile), so also toast it once
+   * per distinct set of rejected values.
+   */
+  const logTypeIssue = filterIssues.find((i) => i.field === "logTypes")?.message;
+  const toastedLogTypeIssueRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!logTypeIssue) {
+      toastedLogTypeIssueRef.current = null;
+      return;
+    }
+    if (toastedLogTypeIssueRef.current === logTypeIssue) return;
+    toastedLogTypeIssueRef.current = logTypeIssue;
+    toast.error("Record type filter ignored", { description: logTypeIssue });
+  }, [logTypeIssue]);
+
   /**
    * Field-level helper text: the summary banner above says "some filters were
    * adjusted", but each control also needs to say what went wrong right where
@@ -553,14 +571,29 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   useEffect(() => {
     if (rawLogTypes != null) return;
     const stored = readStoredTypes();
-    if (stored && stored.length > 0) {
+    // Values we had to drop are surfaced instead of disappearing quietly.
+    if (stored.invalid.length > 0) {
+      toast.error(
+        stored.invalid.length === 1
+          ? "A saved record-type filter is no longer valid"
+          : "Some saved record-type filters are no longer valid",
+        {
+          description: `Ignored: ${stored.invalid.join(", ")}.${
+            stored.valid.length > 0 ? ` Still filtering by ${stored.valid.map((t) => typeLabel(t)).join(", ")}.` : " Showing all record types."
+          }`,
+        },
+      );
+      writeStoredTypes(stored.valid);
+    }
+    if (stored.valid.length > 0) {
       void navigate({
         to: ".",
-        search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: stored.join(",") }),
+        search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: stored.valid.join(",") }),
         replace: true,
         resetScroll: false,
       });
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
