@@ -751,6 +751,39 @@ export type Database = {
         }
         Relationships: []
       }
+      log_reconciliation_runs: {
+        Row: {
+          created_at: string
+          detail: string | null
+          duration_ms: number
+          id: string
+          missed_call_inserted: number
+          provisioned_inserted: number
+          ran_at: string
+          sms_inbound_inserted: number
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number
+          id?: string
+          missed_call_inserted?: number
+          provisioned_inserted?: number
+          ran_at?: string
+          sms_inbound_inserted?: number
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number
+          id?: string
+          missed_call_inserted?: number
+          provisioned_inserted?: number
+          ran_at?: string
+          sms_inbound_inserted?: number
+        }
+        Relationships: []
+      }
       log_retention_runs: {
         Row: {
           archived_age_count: number
@@ -1522,6 +1555,7 @@ export type Database = {
           invited_at: string
         }[]
       }
+      log_reconciliation_runs_prune: { Args: never; Returns: undefined }
       logs_action_type_whitelist: {
         Args: never
         Returns: {
@@ -1531,6 +1565,14 @@ export type Database = {
         }[]
       }
       mcp_rate_limits_prune: { Args: never; Returns: undefined }
+      reconcile_activity_logs: {
+        Args: never
+        Returns: {
+          missed_call_inserted: number
+          provisioned_inserted: number
+          sms_inbound_inserted: number
+        }[]
+      }
       resolve_deposit_amount: {
         Args: {
           _custom_type: string
