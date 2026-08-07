@@ -174,10 +174,16 @@ export function ActionTypeCoveragePanel() {
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">{g.cause}</p>
+                          <GapDrilldown
+                            actionType={g.actionType}
+                            signals={b.signals}
+                            businessId={b.userId}
+                          />
                         </li>
                       ))}
                     </ul>
                   )}
+
                 </div>
               );
             })}
