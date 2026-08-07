@@ -191,7 +191,7 @@ describe("Activity log server error state", () => {
     mode = { kind: "error", message: "permission denied for table logs", code: "42501" };
     const { container } = renderLog();
 
-    const alert = await waitFor(() => screen.getByRole("alert"));
+    const alert = await waitFor(() => screen.getByTestId("log-error-alert"));
     expect(alert.textContent).toMatch(/Couldn’t load activity/i);
 
     // The error path replaces both the empty state and the skeletons.
@@ -206,7 +206,7 @@ describe("Activity log server error state", () => {
     const user = userEvent.setup();
     renderLog();
 
-    await waitFor(() => screen.getByRole("alert"));
+    await waitFor(() => screen.getByTestId("log-error-alert"));
     const before = requestCount;
 
     mode = { kind: "rows", rows: ROWS };

@@ -232,7 +232,102 @@ function toDayParam(date: Date): string {
   return `${date.getFullYear()}-${m}-${d}`;
 }
 
+/**
+ * Placeholder row shown while a page of activity loads. Defined at module
+ * scope so it keeps a stable component identity across renders.
+ */
+function SkeletonRow() {
+  return (
+    <div
+      className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 border-b border-border px-5 py-3"
+      aria-hidden="true"
+    >
+      <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
+      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
+      <div className="space-y-1.5">
+        <span className="block h-3.5 w-32 rounded bg-muted animate-pulse" />
+        <span className="block h-3 w-48 rounded bg-muted animate-pulse" />
+      </div>
+      <span className="h-3 w-6 rounded bg-muted animate-pulse" />
+    </div>
+  );
+}
+
+/**
+ * Inline alert for a failed logs request (including the HTTP 400 raised by the
+ * `logs_action_type_check` constraint). Lives at module scope on purpose: when
+ * it was declared inside DispatchLog, every render produced a brand-new
+ * component type, React remounted the whole alert, and the freshly-rendered
+ * "Clear filters" button could be detached from the tree before a click
+ * landed — so clearing filters silently did nothing.
+ */
+function LogErrorRetry({
+  logError,
+  hasActiveFilters,
+  filtersBlocked,
+  busy,
+  onClearFilters,
+  onRetry,
+}: {
+  logError: unknown;
+  hasActiveFilters: boolean;
+  filtersBlocked: boolean;
+  busy: boolean;
+  onClearFilters: () => void;
+  onRetry: () => void;
+}) {
+  const info = logError ? describeLogRequestError(logError) : null;
+  return (
+    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite" data-testid="log-error-alert">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{info?.title ?? "Couldn’t load activity"}</p>
+          <p className="text-xs text-muted-foreground">
+            {info?.message ?? "Something went wrong. Pull to retry or tap the button."}
+          </p>
+          {info?.allowedTypes && (
+            <p className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Allowed: {info.allowedTypes.join(", ")}
+            </p>
+          )}
+          {info?.technicalDetail && (
+            <details className="pt-1">
+              <summary className="kb-focus cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground">
+                Technical details{info.status ? ` (HTTP ${info.status})` : ""}
+              </summary>
+              <p className="mono mt-1 break-words text-[10px] leading-relaxed text-muted-foreground">
+                {info.technicalDetail}
+              </p>
+            </details>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {info?.suggestClearFilters && hasActiveFilters && (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              data-testid="log-error-clear-filters"
+              className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Clear filters
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={busy || filtersBlocked}
+            className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+          >
+            {busy ? "Retrying…" : "Retry"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
+
   // Record-type filters, sort, free-text search, and the date range all live in
   // the URL (?logTypes=a,b&logSort=oldest&q=text&dateFrom=…&dateTo=…) so a
   // reload, back/forward, or a shared link keeps the same view. Because that
@@ -451,7 +546,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       }),
       resetScroll: false,
     });
+    // The query key changes with the filters, but re-run explicitly so a failed
+    // request (e.g. the 400 from logs_action_type_check) is retried immediately
+    // instead of leaving the error alert on screen.
+    void refetch();
   };
+
 
 
   /** Captures the current filter bar as a named preset. */
@@ -1154,73 +1254,22 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
-  const SkeletonRow = () => (
-    <div
-      className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 border-b border-border px-5 py-3"
-      aria-hidden="true"
-    >
-      <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
-      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
-      <div className="space-y-1.5">
-        <span className="block h-3.5 w-32 rounded bg-muted animate-pulse" />
-        <span className="block h-3 w-48 rounded bg-muted animate-pulse" />
-      </div>
-      <span className="h-3 w-6 rounded bg-muted animate-pulse" />
-    </div>
+  // Rendered inline (not via a locally-declared component) so the alert keeps a
+  // stable identity across renders and its buttons stay attached to the DOM.
+  const errorRetryPanel = (
+    <LogErrorRetry
+      logError={logError}
+      hasActiveFilters={hasActiveFilters}
+      filtersBlocked={filtersBlocked}
+      busy={isFetchingNextPage || isLoading}
+      onClearFilters={resetFilters}
+      onRetry={() => {
+        if (filtersBlocked) return;
+        void refetch();
+      }}
+    />
   );
 
-  const ErrorRetry = () => {
-    const info = logError ? describeLogRequestError(logError) : null;
-    return (
-      <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">{info?.title ?? "Couldn’t load activity"}</p>
-            <p className="text-xs text-muted-foreground">
-              {info?.message ?? "Something went wrong. Pull to retry or tap the button."}
-            </p>
-            {info?.allowedTypes && (
-              <p className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Allowed: {info.allowedTypes.join(", ")}
-              </p>
-            )}
-            {info?.technicalDetail && (
-              <details className="pt-1">
-                <summary className="kb-focus cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Technical details{info.status ? ` (HTTP ${info.status})` : ""}
-                </summary>
-                <p className="mono mt-1 break-words text-[10px] leading-relaxed text-muted-foreground">
-                  {info.technicalDetail}
-                </p>
-              </details>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {info?.suggestClearFilters && hasActiveFilters && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                Clear filters
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (filtersBlocked) return;
-                void refetch();
-              }}
-              disabled={isFetchingNextPage || isLoading || filtersBlocked}
-              className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
-            >
-              {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   /** One dispatch line; shared by the plain and virtualized render paths. */
   const RowBody = ({ row }: { row: LogRow }) => {
@@ -1893,7 +1942,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <SkeletonRow key="s5" />
           </>
         )}
-        {!isLoading && logError && filtered.length === 0 && <ErrorRetry />}
+        {!isLoading && logError && errorRetryPanel}
         {filtersBlocked && filtered.length === 0 && (
           <div role="listitem" data-testid="log-filters-blocked" className="p-5 text-muted-foreground">
             We didn’t search yet — fix the highlighted filters above and results will load.
@@ -1944,7 +1993,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </div>
           ))
         )}
-        {!isLoading && logError && filtered.length > 0 && <ErrorRetry />}
         {isFetchingNextPage && (
           <>
             <SkeletonRow key="s-more-1" />

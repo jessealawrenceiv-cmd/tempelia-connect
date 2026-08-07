@@ -164,7 +164,7 @@ describe("23514 logs_action_type_check surfaces the rejected action_type", () =>
     await waitFor(() =>
       expect(screen.getByText(/record type isn’t one we track/i)).toBeTruthy(),
     );
-    const alert = screen.getByRole("alert");
+    const alert = screen.getByTestId("log-error-alert");
     expect(alert.textContent ?? "").toContain(REJECTED);
   });
 });

@@ -108,11 +108,7 @@ const { DispatchLog } = await import("./DispatchLog");
 
 /** The inline list-view error alert (there are other aria-live alerts on screen). */
 function errorAlert(): HTMLElement {
-  const match = screen
-    .getAllByRole("alert")
-    .find((el) => /record type isn’t one we track|Couldn’t load activity/i.test(el.textContent ?? ""));
-  if (!match) throw new Error("error alert not rendered");
-  return match;
+  return screen.getByTestId("log-error-alert");
 }
 
 function renderLog() {
@@ -172,14 +168,14 @@ describe("HTTP 400 from the logs API", () => {
     fail400 = true;
     renderLog();
 
-    await waitFor(() => within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
+    const clear = await waitFor(() => screen.getByTestId("log-error-clear-filters"));
+    // The alert keeps a stable identity, so the button we found is still live.
+    expect(document.body.contains(clear)).toBe(true);
     fail400 = false;
-    // The alert subtree remounts on each render, so re-query then click until
-    // the filters actually clear (avoids acting on a detached node).
-    await waitFor(() => {
-      fireEvent.click(within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
-      expect(searchState.logTypes).toBeUndefined();
-    });
+    // Single click on the rendered button must be enough: the alert no longer
+    // remounts between render passes, so the node is still attached.
+    fireEvent.click(clear);
+    expect(searchState.logTypes).toBeUndefined();
     await waitFor(() => expect(screen.getByText("quote row 1")).toBeTruthy());
     expect(screen.queryByText(/That record type isn’t one we track/i)).toBeNull();
   });
