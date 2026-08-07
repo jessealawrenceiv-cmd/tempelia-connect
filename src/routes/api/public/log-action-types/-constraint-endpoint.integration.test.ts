@@ -48,12 +48,12 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   },
 }));
 
-async function getHandler() {
+type Handler = (ctx: { request: Request }) => Promise<Response>;
+type RouteShape = { options: { server: { handlers: Record<string, Handler> } } };
+
+async function getHandler(): Promise<Record<string, Handler>> {
   const mod = await import("./constraint");
-  const handlers = (mod.Route as unknown as {
-    options: { server: { handlers: Record<string, (ctx: { request: Request }) => Promise<Response> }> };
-  }).options.server.handlers;
-  return handlers;
+  return (mod.Route as unknown as RouteShape).options.server.handlers;
 }
 
 function request(token?: string) {
