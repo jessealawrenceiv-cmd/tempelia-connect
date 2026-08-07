@@ -14,6 +14,14 @@
 import { LOG_ACTION_TYPES, LogAction, type LogActionType } from "./log-action-types.generated";
 import { LOG_DEDUPE_CONFLICT_TARGET, hasDedupeKey, logDedupeKey } from "./log-dedupe";
 import {
+  DEDUPE_COMPARE_SELECT,
+  dedupeConflictError,
+  diffDedupeRow,
+  isDedupeConflictError,
+  type DedupeConflictError,
+} from "./log-dedupe-conflict";
+
+import {
   logActionTypeSchema,
   LOG_ACTION_TYPE_CONSTRAINT,
   LogActionTypeViolationError,
@@ -45,7 +53,9 @@ export {
   parseLogActionType,
   safeParseLogActionType,
 };
-export type { LogActionType, LogActionTypeViolation };
+export { isDedupeConflictError, dedupeConflictError, diffDedupeRow };
+export type { LogActionType, LogActionTypeViolation, DedupeConflictError };
+
 
 const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
 
@@ -133,9 +143,14 @@ export async function insertLog(
   }
   const list = Array.isArray(rows) ? rows : [rows];
   if (list.some(hasDedupeKey)) {
+    // A redelivery with a different payload is a real problem, not a duplicate:
+    // refuse it loudly instead of letting ignoreDuplicates discard it.
+    const conflict = await checkDedupeConflicts(client, rows);
+    if (conflict) return { error: conflict };
     const builder = upsertBuilder(client, rows);
     if (builder) return (await builder) as { error: { message: string } | null };
   }
+
   return (await client.from("logs").insert(rows as never)) as { error: { message: string } | null };
 }
 
@@ -146,23 +161,85 @@ type SelectIdBuilder = {
 };
 
 /**
- * Look up the row a duplicate delivery collided with, so correlation bookkeeping
- * still gets the original log id instead of null.
+ * Load the row already stored under this (user_id, dedupe_key) so the caller can
+ * compare payloads and resolve the original log id.
  */
-async function findDedupedId(client: unknown, row: LogRowInput): Promise<string | null> {
+async function fetchDedupeRow(
+  client: unknown,
+  row: LogRowInput,
+): Promise<Record<string, unknown> | null> {
   const table = (client as UpsertCapableClient).from("logs");
   if (typeof table.select !== "function") return null;
   try {
     const { data } = await table
-      .select("id")
+      .select(DEDUPE_COMPARE_SELECT)
       .eq("user_id", row["user_id"])
       .eq("dedupe_key", row.dedupe_key)
       .maybeSingle();
-    return (data as { id?: string } | null)?.id ?? null;
+    return (data as Record<string, unknown> | null) ?? null;
   } catch (e) {
     console.error("[logs] dedupe lookup failed", (e as Error).message);
     return null;
   }
+}
+
+/** Original log id for a redelivery that collided with an existing row. */
+async function findDedupedId(client: unknown, row: LogRowInput): Promise<string | null> {
+  const existing = await fetchDedupeRow(client, row);
+  return (existing?.["id"] as string | undefined) ?? null;
+}
+
+/**
+ * Best-effort audit trail for a refused write. Never throws and never changes the
+ * outcome: the conflict error is returned to the caller either way.
+ */
+async function recordDedupeConflict(client: unknown, row: LogRowInput, error: DedupeConflictError) {
+  try {
+    const table = (client as { from?: (t: string) => { insert?: (r: unknown) => unknown } }).from?.(
+      "log_write_rejections",
+    );
+    if (!table || typeof table.insert !== "function") return;
+    await table.insert({
+      user_id: (row["user_id"] as string | undefined) ?? null,
+      rejected_action_type: row.action_type,
+      rejected_action_types: [row.action_type],
+      blocked_at: "dedupe_conflict_guard",
+      error_code: error.code,
+      error_message: `${error.message} (${error.details})`,
+      attempted_row: row as unknown as Record<string, unknown>,
+      correlation_id: error.dedupe_key,
+    });
+  } catch (e) {
+    console.error("[logs] failed to record dedupe conflict", (e as Error).message);
+  }
+}
+
+/**
+ * Pre-flight guard: refuse a keyed write whose payload disagrees with the row
+ * already stored under the same dedupe key, instead of letting the idempotent
+ * upsert swallow it. Returns the first conflict found, or null when every keyed
+ * row is either new or a faithful redelivery.
+ */
+export async function checkDedupeConflicts(
+  client: unknown,
+  rows: LogRowInput | LogRowInput[],
+): Promise<DedupeConflictError | null> {
+  const list = (Array.isArray(rows) ? rows : [rows]).filter(hasDedupeKey);
+  for (const row of list) {
+    const existing = await fetchDedupeRow(client, row);
+    if (!existing) continue;
+    const conflicts = diffDedupeRow(existing, row as Record<string, unknown>);
+    if (conflicts.length === 0) continue;
+    const error = dedupeConflictError(
+      String(row.dedupe_key),
+      (existing["id"] as string | undefined) ?? null,
+      conflicts,
+    );
+    console.error("[logs] dedupe conflict:", error.message, error.details);
+    await recordDedupeConflict(client, row, error);
+    return error;
+  }
+  return null;
 }
 
 /**
@@ -170,7 +247,8 @@ async function findDedupedId(client: unknown, row: LogRowInput): Promise<string 
  * generated log id (e.g. Twilio voicemail callbacks).
  *
  * With a `dedupe_key`, a redelivery returns the id of the row written by the
- * first delivery rather than creating a second one.
+ * first delivery rather than creating a second one — unless its payload
+ * conflicts, in which case the write is refused with a dedupe conflict error.
  */
 export async function insertLogReturningId(
   client: { from: (table: "logs") => SelectIdBuilder },
@@ -182,6 +260,8 @@ export async function insertLogReturningId(
     return { id: null, error: checked.error };
   }
   if (hasDedupeKey(row)) {
+    const conflict = await checkDedupeConflicts(client, row);
+    if (conflict) return { id: conflict.existing_log_id, error: conflict };
     const builder = upsertBuilder(client, row);
     if (builder) {
       const { data, error } = await builder.select("id").maybeSingle();
@@ -199,4 +279,5 @@ export async function insertLogReturningId(
   const id = (data as { id?: string } | null)?.id ?? null;
   return { id, error };
 }
+
 
