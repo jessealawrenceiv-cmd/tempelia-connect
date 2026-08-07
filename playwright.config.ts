@@ -11,10 +11,25 @@ export default defineConfig({
   // .e2e.ts (not .spec.ts) so Vitest's default include never picks these up
   testMatch: /.*\.e2e\.ts/,
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  expect: {
+    timeout: 10_000,
+    /**
+     * Visual regression defaults: status dots and tooltips are small, so a tight
+     * threshold is affordable, but anti-aliasing on text needs a little slack.
+     */
+    toHaveScreenshot: {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.01,
+      scale: "css",
+    },
+  },
+  // One baseline per test file, shared across runs: e2e/__screenshots__/<file>/<name>
+  snapshotPathTemplate: "{testDir}/__screenshots__/{testFileName}/{arg}{ext}",
   fullyParallel: false,
   workers: 1,
   reporter: [["list"]],
+
   use: {
     baseURL: process.env["E2E_BASE_URL"] ?? "http://localhost:8080",
     trace: "retain-on-failure",
