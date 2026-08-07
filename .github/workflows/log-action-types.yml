@@ -17,30 +17,28 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install psql client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      # Preflight: DATABASE_URL must exist AND psql must be able to connect.
-      # Prints the exact failing command plus its output when it cannot.
-      - name: DB preflight (DATABASE_URL + psql connectivity)
+      # Preflight: the scoped CI token and the constraint endpoint must both be
+      # usable. No database credential is involved — the endpoint reads
+      # pg_constraint server-side and returns only the allowed value list.
+      - name: Enum endpoint preflight (token + reachability)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: bash scripts/ci-db-preflight.sh
-
+          LOG_ACTION_TYPES_URL: ${{ vars.LOG_ACTION_TYPES_URL || 'https://project--8e32f1fd-252b-4fe0-a35d-4ff20cd7fded.lovable.app/api/public/log-action-types/constraint' }}
+          CI_ENUM_CHECK_TOKEN: ${{ secrets.CI_ENUM_CHECK_TOKEN }}
+        run: bash scripts/ci-enum-endpoint-preflight.sh
 
       - name: Regenerate and check for drift
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: node scripts/generate-log-action-types.mjs --check
+          LOG_ACTION_TYPES_URL: ${{ vars.LOG_ACTION_TYPES_URL || 'https://project--8e32f1fd-252b-4fe0-a35d-4ff20cd7fded.lovable.app/api/public/log-action-types/constraint' }}
+          CI_ENUM_CHECK_TOKEN: ${{ secrets.CI_ENUM_CHECK_TOKEN }}
+        run: node scripts/generate-log-action-types.mjs --check --source=http
 
       - name: Show diff on failure
         if: failure()
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LOG_ACTION_TYPES_URL: ${{ vars.LOG_ACTION_TYPES_URL || 'https://project--8e32f1fd-252b-4fe0-a35d-4ff20cd7fded.lovable.app/api/public/log-action-types/constraint' }}
+          CI_ENUM_CHECK_TOKEN: ${{ secrets.CI_ENUM_CHECK_TOKEN }}
         run: |
-          node scripts/generate-log-action-types.mjs || true
+          node scripts/generate-log-action-types.mjs --source=http || true
           git --no-pager diff -- src/lib/log-action-types.generated.ts || true
 
   # Blocks merges when the action_type coverage test fails: every value in the
