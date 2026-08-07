@@ -16,6 +16,10 @@ import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
+  // ?logTypes=a,b keeps the Activity log's record-type filters across reloads.
+  validateSearch: (search: Record<string, unknown>) => ({
+    logTypes: typeof search["logTypes"] === "string" ? (search["logTypes"] as string) : undefined,
+  }),
   component: HomePage,
 });
 
@@ -42,7 +46,9 @@ function HomePage() {
   const qc = useQueryClient();
   const backfilled = useRef(false);
   const provisionFn = useServerFn(provisionTenantNumber);
-  const [logOpen, setLogOpen] = useState(false);
+  // Deep-linked/persisted record-type filters imply the user was looking at the log.
+  const { logTypes } = Route.useSearch();
+  const [logOpen, setLogOpen] = useState(Boolean(logTypes));
   const [awaySince] = useState(() => {
     if (typeof window === "undefined") return new Date(Date.now() - 86400000).toISOString();
     const prev = window.localStorage.getItem(AWAY_KEY);
