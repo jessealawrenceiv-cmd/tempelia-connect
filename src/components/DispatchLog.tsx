@@ -203,6 +203,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     q?: unknown;
     dateFrom?: unknown;
     dateTo?: unknown;
+    logCustomer?: unknown;
   };
 
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
@@ -211,6 +212,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [scope, setScope] = useState<"live" | "archive">("live");
   // The input stays local for responsive typing and is mirrored into ?q= (see below).
   const [searchQuery, setSearchQuery] = useState(typeof rawSearch.q === "string" ? rawSearch.q : "");
+  // Contact filter: an exact customer id (uuid) or a phone number. Mirrored into
+  // ?logCustomer= the same way as the free-text search.
+  const urlCustomer = typeof rawSearch.logCustomer === "string" ? rawSearch.logCustomer : "";
+  const [customerInput, setCustomerInput] = useState(urlCustomer);
+
   const urlFrom = parseDayParam(rawSearch.dateFrom);
   const urlTo = parseDayParam(rawSearch.dateTo);
   const dateRange: DateRangeValue | undefined = urlFrom
