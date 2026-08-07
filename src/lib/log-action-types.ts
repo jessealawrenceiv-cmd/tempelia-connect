@@ -16,8 +16,26 @@ import {
   LogAction,
   type LogActionType,
 } from "./log-action-types.generated";
+import {
+  logActionTypeSchema,
+  logActionTypeFilterSchema,
+  logActionTypeListSchema,
+  logRowSchema,
+  logRowsSchema,
+  parseLogActionType,
+  safeParseLogActionType,
+} from "./log-action-types.schema";
 
 export { LOG_ACTION_TYPES, LogAction };
+export {
+  logActionTypeSchema,
+  logActionTypeFilterSchema,
+  logActionTypeListSchema,
+  logRowSchema,
+  logRowsSchema,
+  parseLogActionType,
+  safeParseLogActionType,
+};
 export type { LogActionType };
 
 const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
@@ -29,12 +47,8 @@ export function isLogActionType(value: unknown): value is LogActionType {
 
 /** Throws on anything outside the whitelist. Case- and whitespace-sensitive, like the DB. */
 export function assertLogActionType(value: unknown): LogActionType {
-  if (!isLogActionType(value)) {
-    throw new Error(
-      `Invalid logs.action_type ${JSON.stringify(value)}. Allowed values: ${LOG_ACTION_TYPES.join(", ")}`,
-    );
-  }
-  return value;
+  // Single implementation: the Zod enum built from the generated whitelist.
+  return parseLogActionType(value);
 }
 
 /**

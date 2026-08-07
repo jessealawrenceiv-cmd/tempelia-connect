@@ -128,8 +128,30 @@
           "type": "object",
           "properties": {
             "action_type": {
-              "description": "Optional action_type filter, e.g. 'missed_call', 'auto_text_sent', 'voicemail_left'.",
-              "type": "string"
+              "description": "Optional action_type filter. Allowed values: missed_call_text, missed_call_autotext, missed_call_excluded, voicemail_notify, review_request, reactivation_text, customer_email_updated, quote_sms, quote_decline_followup, quote_decline_reason_captured, sms_inbound, customer_consent_preserved, quote_deposit_status, status_refresh, automation_status_change, invoice_balance_status, invoice_sms, opt_in_prompt, opt_in_prompt_test, number_provisioned.",
+              "type": "string",
+              "enum": [
+                "missed_call_text",
+                "missed_call_autotext",
+                "missed_call_excluded",
+                "voicemail_notify",
+                "review_request",
+                "reactivation_text",
+                "customer_email_updated",
+                "quote_sms",
+                "quote_decline_followup",
+                "quote_decline_reason_captured",
+                "sms_inbound",
+                "customer_consent_preserved",
+                "quote_deposit_status",
+                "status_refresh",
+                "automation_status_change",
+                "invoice_balance_status",
+                "invoice_sms",
+                "opt_in_prompt",
+                "opt_in_prompt_test",
+                "number_provisioned"
+              ]
             },
             "limit": {
               "description": "Max rows (default 50).",
