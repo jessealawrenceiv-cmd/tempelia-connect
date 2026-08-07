@@ -168,3 +168,25 @@ test.describe("E2E · Activity log deep link + pagination", () => {
   });
 });
 
+
+test.describe("debug", () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    const ok = await restoreSession(context, page, baseURL!);
+    test.skip(!ok, "no session");
+    await context.route(/\/rest\/v1\/logs(_archive)?\?/, async (route) => {
+      const url = new URL(route.request().url());
+      const body = serveLogs(url);
+      console.log("REQ", url.search, "->", body.length);
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    });
+  });
+  test("debug", async ({ page }) => {
+    await page.goto("/dashboard?logTypes=missed_call_text,sms_inbound", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("25 loaded")).toBeVisible({ timeout: 20000 });
+    await page.getByRole("button", { name: "Load 25 older" }).click();
+    await expect(page.getByText("50 loaded")).toBeVisible({ timeout: 20000 });
+    await page.getByRole("button", { name: /^REVIEW_REQUEST/ }).first().click();
+    await page.waitForTimeout(4000);
+    console.log("FOOTER", await page.locator("div").filter({ hasText: /loaded$/ }).last().innerText());
+  });
+});
