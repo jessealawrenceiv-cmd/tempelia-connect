@@ -283,8 +283,13 @@ describe("Activity log — opt_in_prompt and opt_in_prompt_test rows", () => {
     const promptLabel = logActionLabel(LogAction.opt_in_prompt);
     const testLabel = logActionLabel(LogAction.opt_in_prompt_test);
     const chips = screen.getByRole("group", { name: /record type/i });
-    await user.click(within(chips).getByRole("button", { name: new RegExp(`^${promptLabel}$`) }));
-    await user.click(within(chips).getByRole("button", { name: new RegExp(`^${testLabel}$`) }));
+    // Chip names carry a trailing match count, so compare on the label only.
+    const chipNamed = (label: string) =>
+      within(chips).getByRole("button", {
+        name: (accessibleName: string) => accessibleName.replace(/\s*\d+$/, "").trim() === label,
+      });
+    await user.click(chipNamed(promptLabel));
+    await user.click(chipNamed(testLabel));
 
     await waitFor(() => expect(screen.getByText("2 loaded")).toBeTruthy());
     const list = screen.getByRole("list");
