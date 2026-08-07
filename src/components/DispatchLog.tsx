@@ -3,8 +3,15 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { Filter, Search, Sparkles } from "lucide-react";
+import { Download, Filter, Search, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
+import {
+  EXPORT_ROW_CAP,
+  buildLogCsv,
+  downloadCsv,
+  type FilterableQuery,
+} from "@/lib/activity-log-csv";
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import {
   LOG_ACTION_FILTER_ORDER,
