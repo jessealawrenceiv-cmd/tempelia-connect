@@ -120,7 +120,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           .maybeSingle();
 
         if (excluded) {
-          const { id: excludedLogId } = await insertLogReturningId(supabaseAdmin, {
+          const { id: excludedLogId, conflict } = await writeLog({
             user_id: tenant.id,
             action_type: LogAction.missed_call_excluded,
             status: "skipped",
@@ -130,6 +130,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_excluded),
             message_sent: `Caller ${from} on exclusion list${excluded.label ? ` (${excluded.label})` : ""} — auto-text skipped.`,
           });
+          if (conflict) return conflict;
           await markWebhookCorrelated(supabaseAdmin, {
             eventId: webhookEventId,
             logId: excludedLogId,
@@ -142,6 +143,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
 
         const biz = tenant.business_name || "our team";
         let logId: string | null = null;
+        let logConflict: Response | null = null;
 
         // Fire the auto-text before returning the TwiML. The caller hears the
         // greeting while their phone buzzes with the follow-up.
@@ -164,7 +166,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             }).select("id").maybeSingle();
             customerId = inserted?.id ?? null;
           }
-          const { id } = await insertLogReturningId(supabaseAdmin, {
+          const { id, conflict } = await writeLog({
             user_id: tenant.id,
             customer_id: customerId,
             action_type: LogAction.missed_call_autotext,
@@ -175,8 +177,9 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext),
           });
           logId = id;
+          logConflict = conflict;
         } catch (e) {
-          const { id } = await insertLogReturningId(supabaseAdmin, {
+          const { id, conflict } = await writeLog({
             user_id: tenant.id,
             action_type: LogAction.missed_call_autotext,
             status: "failed",
@@ -185,7 +188,16 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext),
           });
           logId = id;
+          logConflict = conflict;
         }
+
+        // A conflicting redelivery gets the 409 instead of TwiML: the caller is
+        // long gone, and the stored row must not be silently contradicted.
+        if (logConflict) {
+          await markWebhookCorrelated(supabaseAdmin, { eventId: webhookEventId, logId });
+          return logConflict;
+        }
+
 
 
         // Close the correlation loop inline: the auto-text attempt (sent or
