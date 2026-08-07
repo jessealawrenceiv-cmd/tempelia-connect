@@ -33,11 +33,14 @@ export const resendLastMessage = createServerFn({ method: "POST" })
     if (!cust) throw new Error("Customer not found");
     if (!cust.opt_in_consent) throw new Error("This contact is not opted in to SMS.");
 
+    const { assertLogActionFilters } = await import("./log-action-filter.server");
+    const outboundFilter = assertLogActionFilters("resend_sms.last_outbound", OUTBOUND_LOG_TYPES);
+
     const { data: last, error: logErr } = await supabase
       .from("logs")
       .select("id, action_type, status, message_sent, twilio_message_sid, created_at")
       .eq("customer_id", cust.id)
-      .in("action_type", OUTBOUND_LOG_TYPES)
+      .in("action_type", outboundFilter)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

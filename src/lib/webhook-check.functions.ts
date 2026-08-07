@@ -122,12 +122,17 @@ export const runWebhookCheck = createServerFn({ method: "POST" })
     }
 
     // 4. Real traffic actually landing
+    // Server-side action_type guard: enforced here, not in the browser.
+    const { assertLogActionFilters } = await import("./log-action-filter.server");
+    const inboundFilter = assertLogActionFilters("webhook_check.inbound_sms", INBOUND_ACTIONS);
+    const missedFilter = assertLogActionFilters("webhook_check.missed_call", MISSED_CALL_ACTIONS);
+
     const [{ data: lastSms }, { data: lastCall }] = await Promise.all([
       supabase.from("logs").select("created_at, action_type")
-        .eq("user_id", userId).in("action_type", INBOUND_ACTIONS)
+        .eq("user_id", userId).in("action_type", inboundFilter)
         .order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("logs").select("created_at, action_type")
-        .eq("user_id", userId).in("action_type", MISSED_CALL_ACTIONS)
+        .eq("user_id", userId).in("action_type", missedFilter)
         .order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 

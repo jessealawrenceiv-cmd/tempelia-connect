@@ -1,4 +1,5 @@
 import { LogAction } from "./log-action-types.generated";
+import { assertLogActionFilters } from "./log-action-filter.server";
 // Server-only: proof-of-inbound-engagement check for the opt-in prompt.
 //
 // PERMANENT RULE: the manual opt-in prompt may only be sent to a contact who
@@ -48,7 +49,7 @@ export async function checkInboundEngagement(
     .select("id")
     .eq("user_id", userId)
     .eq("customer_id", customer.id)
-    .in("action_type", INBOUND_ENGAGEMENT_ACTIONS as unknown as string[])
+    .in("action_type", assertLogActionFilters("inbound_engagement.logs", INBOUND_ENGAGEMENT_ACTIONS))
     .limit(1)
     .maybeSingle();
   if (logErr) return { ok: false, reason: logErr.message };

@@ -75,10 +75,17 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
+    const { assertLogActionFilters } = await import("./log-action-filter.server");
+    const usageFilter = assertLogActionFilters("admin.numbers_usage", [
+      "review_request",
+      "reactivation_text",
+      "missed_call_autotext",
+    ]);
+
     const { data: logs, error: logErr } = await supabaseAdmin
       .from("logs")
       .select("user_id, action_type")
-      .in("action_type", ["review_request", "reactivation_text", "missed_call_autotext"])
+      .in("action_type", usageFilter)
       .eq("status", "sent")
       .gte("created_at", monthStart.toISOString());
     if (logErr) throw new Error(logErr.message);

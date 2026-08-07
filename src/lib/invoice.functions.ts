@@ -310,10 +310,12 @@ export const getInvoiceAudit = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ invoiceId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const { assertLogActionFilter } = await import("./log-action-filter.server");
+    const auditFilter = assertLogActionFilter("invoice.audit", INVOICE_AUDIT_ACTION);
     const { data: rows, error } = await supabase
       .from("logs")
       .select("id, status, message_sent, created_at")
-      .eq("action_type", INVOICE_AUDIT_ACTION)
+      .eq("action_type", auditFilter)
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);

@@ -7,6 +7,7 @@ import {
   promptVersionHash,
 } from "./opt-in-prompt";
 import { insertLog } from "@/lib/log-action-types";
+import { assertLogActionFilter } from "./log-action-filter.server";
 
 type Client = { from: (t: string) => any };
 
@@ -75,7 +76,7 @@ export async function sendPromptToCustomer(
     .from("logs")
     .select("id")
     .eq("customer_id", cust.id)
-    .eq("action_type", OPT_IN_PROMPT_ACTION)
+    .eq("action_type", assertLogActionFilter("opt_in_prompt_bulk.cooldown", OPT_IN_PROMPT_ACTION))
     .gte("created_at", since)
     .limit(1)
     .maybeSingle();

@@ -32,10 +32,23 @@ export default defineTool({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
+    // Server-side enforcement: the MCP endpoint is reachable without the app,
+    // so the filter is validated here rather than trusting any client guard.
+    let actionFilter: string | undefined;
     if (action_type !== undefined) {
       const parsed = safeParseLogActionType(action_type);
       if (!parsed.ok) {
         return { content: [{ type: "text", text: parsed.error }], isError: true };
+      }
+      const { assertOptionalLogActionFilter, LogActionFilterError } = await import(
+        "@/lib/log-action-filter.server"
+      );
+      try {
+        actionFilter = assertOptionalLogActionFilter("mcp.list_recent_activity", action_type);
+      } catch (err) {
+        const text =
+          err instanceof LogActionFilterError ? err.message : "Invalid action_type filter";
+        return { content: [{ type: "text", text }], isError: true };
       }
     }
     const rl = await checkAndRecord(ctx, "list_recent_activity");
@@ -46,7 +59,7 @@ export default defineTool({
       .select("id, action_type, status, message_sent, customer_id, voicemail_url, created_at")
       .order("created_at", { ascending: false })
       .limit(limit ?? 50);
-    if (action_type) q = q.eq("action_type", action_type);
+    if (actionFilter) q = q.eq("action_type", actionFilter);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     // Response-side validation: rows with an action_type outside the generated
