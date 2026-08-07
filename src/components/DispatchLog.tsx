@@ -31,6 +31,7 @@ import {
   describeLogRequestError,
   friendlyLogRequestError,
   validateActivityLogFilters,
+  type ActivityLogFilterIssue,
 } from "@/lib/activity-log-filters.schema";
 
 
