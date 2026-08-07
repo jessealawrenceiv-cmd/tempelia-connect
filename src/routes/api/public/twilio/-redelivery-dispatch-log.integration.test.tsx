@@ -796,6 +796,14 @@ describe("concurrent redeliveries stay idempotent", () => {
 // stored row and the rendered log untouched.
 // ---------------------------------------------------------------------------
 describe("conflicting redeliveries are refused and audited", () => {
+  /**
+   * The delivery-claim layer replays the cached response for a repeated
+   * delivery key, so it short-circuits before any log write. To exercise the
+   * *second* line of defense — the dedupe_key payload guard — the bookkeeping
+   * row is dropped first, exactly as pruning/expiry does in production.
+   */
+  const expireDeliveryCache = () => deliveries.clear();
+
   it("audits an inbound SMS whose body changed under the same MessageSid", async () => {
     const first = await inboundSms({
       From: CALLER,
@@ -807,6 +815,7 @@ describe("conflicting redeliveries are refused and audited", () => {
     expect(logs).toHaveLength(1);
     const storedId = String(logs[0]!["id"]);
 
+    expireDeliveryCache();
     const conflicting = await inboundSms({
       From: CALLER,
       To: TENANT_NUMBER,
@@ -814,6 +823,7 @@ describe("conflicting redeliveries are refused and audited", () => {
       MessageSid: "SM-audit",
     });
     expect(conflicting.status).toBe(409);
+
 
     // Audited exactly once, with the field that disagreed.
     expect(rejections).toHaveLength(1);
