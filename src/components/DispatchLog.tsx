@@ -426,16 +426,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const loadMoreRef = useRef<HTMLSpanElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  // Once many keyset pages are appended, rendering every row hurts scroll
-  // performance on mobile, so long lists switch to a windowed renderer.
-  const isVirtualized = filtered.length > VIRTUALIZE_THRESHOLD;
-  const virtualizer = useVirtualizer({
-    count: isVirtualized ? filtered.length : 0,
-    getScrollElement: () => listRef.current,
-    estimateSize: () => 60,
-    overscan: 10,
-    getItemKey: (index) => filtered[index]?.id ?? index,
-  });
 
 
   // Reset scroll position whenever filters change so the user always starts
