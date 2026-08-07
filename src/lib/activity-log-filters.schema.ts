@@ -90,6 +90,7 @@ export function validateActivityLogFilters(raw: {
         issues.push({
           field: "q",
           message: `Your search is too long. Please keep it under ${MAX_LOG_SEARCH_LENGTH} characters.`,
+          blocking: true,
         });
       } else if (field === "logTypes") {
         issues.push({
