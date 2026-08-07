@@ -16,12 +16,18 @@ import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
-  // ?logTypes=a,b and ?logSort=oldest keep the Activity log's filters and sort
-  // order across reloads and shared links.
-  validateSearch: (search: Record<string, unknown>): { logTypes?: string; logSort?: string } => ({
+  // ?logTypes=a,b, ?logSort=oldest, ?q=, and ?dateFrom=/?dateTo= keep the
+  // Activity log's filters, search, and date range across reloads and shared links.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { logTypes?: string; logSort?: string; q?: string; dateFrom?: string; dateTo?: string } => ({
     ...(typeof search["logTypes"] === "string" ? { logTypes: search["logTypes"] as string } : {}),
     ...(search["logSort"] === "oldest" ? { logSort: "oldest" as const } : {}),
+    ...(typeof search["q"] === "string" && search["q"] !== "" ? { q: search["q"] as string } : {}),
+    ...(typeof search["dateFrom"] === "string" ? { dateFrom: search["dateFrom"] as string } : {}),
+    ...(typeof search["dateTo"] === "string" ? { dateTo: search["dateTo"] as string } : {}),
   }),
+
 
   component: HomePage,
 });
