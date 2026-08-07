@@ -158,6 +158,7 @@ export function validateActivityLogFilters(raw: {
     issues.push({
       field: "dateRange",
       message: "Your start date is after your end date, so no records can match. Please swap them.",
+      blocking: true,
     });
   }
 
