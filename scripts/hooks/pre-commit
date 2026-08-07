@@ -1,0 +1,37 @@
+#!/bin/sh
+# Pre-commit hook: keeps src/lib/log-action-types.generated.ts in sync with the
+# public.logs `logs_action_type_check` database constraint.
+#
+# Install once with: npm run hooks:install
+#
+# Skips silently when the database is unreachable (offline work) unless
+# STRICT_LOG_ACTION_TYPES=1 is set. Skip entirely with SKIP_LOG_ACTION_TYPES=1.
+set -e
+
+if [ "$SKIP_LOG_ACTION_TYPES" = "1" ]; then
+  exit 0
+fi
+
+if ! command -v psql >/dev/null 2>&1; then
+  echo "pre-commit: psql not found, skipping log action type drift check"
+  exit 0
+fi
+
+if [ -z "$DATABASE_URL" ] && [ -z "$PGHOST" ]; then
+  echo "pre-commit: no DATABASE_URL/PGHOST, skipping log action type drift check"
+  exit 0
+fi
+
+if node scripts/generate-log-action-types.mjs --check; then
+  exit 0
+fi
+
+status=$?
+if [ "$STRICT_LOG_ACTION_TYPES" = "1" ]; then
+  echo "pre-commit: blocking commit — regenerate with 'npm run gen:log-action-types'"
+  exit "$status"
+fi
+
+echo "pre-commit: log action type enum is out of date."
+echo "  Run 'npm run gen:log-action-types' and commit the regenerated file."
+exit 1
