@@ -6,7 +6,13 @@ import {
   getActionTypeCoverage,
   type BusinessCoverage,
 } from "@/lib/log-action-coverage.functions";
-import type { GapSeverity } from "@/lib/log-action-coverage";
+import type { BusinessSignals, GapSeverity } from "@/lib/log-action-coverage";
+import {
+  describeGapDrilldown,
+  type CheckOutcome,
+  type SourceCheck,
+} from "@/lib/log-action-coverage-drilldown";
+import type { LogActionType } from "@/lib/log-action-types";
 import { LOG_ACTION_PRESENTATION } from "@/lib/log-action-presentation";
 
 const SEVERITY_LABEL: Record<GapSeverity, string> = {
@@ -191,5 +197,86 @@ export function ActionTypeCoveragePanel() {
         </>
       )}
     </section>
+  );
+}
+
+const OUTCOME_CLASS: Record<CheckOutcome, string> = {
+  "rows-exist": "border-orange/50 bg-orange/10 text-orange",
+  "no-rows": "border-steel/40 bg-steel/10 text-steel",
+  config: "border-border bg-muted/40 text-muted-foreground",
+};
+
+const OUTCOME_LABEL: Record<CheckOutcome, string> = {
+  "rows-exist": "rows exist",
+  "no-rows": "no rows",
+  config: "setting",
+};
+
+function CheckTable({ title, checks, businessId }: { title: string; checks: SourceCheck[]; businessId: string }) {
+  return (
+    <div className="mt-2">
+      <p className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{title}</p>
+      <ul className="mt-1 space-y-1.5">
+        {checks.map((c, i) => (
+          <li key={`${c.table}-${i}`} className="rounded-sm border border-border bg-background/40 px-2 py-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mono text-[11px] text-paper">{c.table}</span>
+              <span
+                className={`mono rounded-sm border px-1.5 py-0.5 text-[10px] uppercase tracking-widest ${OUTCOME_CLASS[c.outcome]}`}
+              >
+                {OUTCOME_LABEL[c.outcome]} · {c.observed}
+              </span>
+            </div>
+            <p className="mono mt-1 break-words text-[11px] text-muted-foreground">
+              {c.predicate.replace("<business id>", businessId)}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              <span className="uppercase tracking-widest">Window:</span> {c.window}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Expandable "how we decided there are no entries" view for one missing action type. */
+function GapDrilldown({
+  actionType,
+  signals,
+  businessId,
+}: {
+  actionType: LogActionType;
+  signals: BusinessSignals;
+  businessId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const detail = useMemo(() => describeGapDrilldown(actionType, signals), [actionType, signals]);
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        data-testid={`drilldown-toggle-${actionType}`}
+        onClick={() => setOpen((v) => !v)}
+        className="kb-focus mono flex items-center gap-1 rounded-sm border border-border bg-card px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-accent"
+      >
+        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+        {open ? "Hide checks" : "Show source checks"}
+      </button>
+
+      {open && (
+        <div data-testid={`drilldown-${actionType}`} className="mt-2">
+          <CheckTable title="Log presence checks" checks={detail.presence} businessId={businessId} />
+          <CheckTable title="Source-of-truth checks" checks={detail.sources} businessId={businessId} />
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-muted-foreground">
+            {detail.notes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
