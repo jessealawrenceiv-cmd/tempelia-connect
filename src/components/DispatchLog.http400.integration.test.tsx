@@ -10,7 +10,6 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { LOG_ACTION_TYPES } from "@/lib/log-action-types.generated";
 
 const PAGE = 25;
@@ -89,7 +88,6 @@ vi.mock("@tanstack/react-router", () => ({
         : ((opts.search as Record<string, unknown>) ?? {});
     const cleaned: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(next)) if (v !== undefined) cleaned[k] = v;
-    console.log("NAV", JSON.stringify(next), "->", JSON.stringify(cleaned));
     searchState = cleaned;
     subscribers.forEach((fn) => fn());
   },
@@ -169,19 +167,19 @@ describe("HTTP 400 from the logs API", () => {
   });
 
   it("offers a Clear filters shortcut that drops the offending filters and recovers", async () => {
-    const user = userEvent.setup();
     // An active record-type filter is what makes the shortcut meaningful.
     searchState = { logTypes: "quote_sms" };
     fail400 = true;
     renderLog();
 
-    const clear = await waitFor(() => within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
+    await waitFor(() => within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
     fail400 = false;
-    console.log("CLEAR HTML", clear.outerHTML, "PARENT", clear.parentElement?.className);
-    fireEvent.click(clear);
-    console.log("SEARCH AFTER CLICK", JSON.stringify(searchState));
-
-    await waitFor(() => expect(searchState.logTypes).toBeUndefined());
+    // The alert subtree remounts on each render, so re-query then click until
+    // the filters actually clear (avoids acting on a detached node).
+    await waitFor(() => {
+      fireEvent.click(within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
+      expect(searchState.logTypes).toBeUndefined();
+    });
     await waitFor(() => expect(screen.getByText("quote row 1")).toBeTruthy());
     expect(screen.queryByText(/That record type isn’t one we track/i)).toBeNull();
   });
