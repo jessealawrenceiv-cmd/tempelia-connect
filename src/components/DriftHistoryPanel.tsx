@@ -6,9 +6,10 @@
  * from the database CHECK constraint at that moment.
  */
 
-import { useState } from "react";
-import { Check, ChevronRight, History, RefreshCw, ShieldAlert } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, ChevronRight, History, RefreshCw, ShieldAlert, X } from "lucide-react";
 import type { DriftRun } from "@/lib/log-action-diagnostics.functions";
+import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 
 const fmtWhen = (iso: string) =>
   new Date(iso).toLocaleString(undefined, {
@@ -103,6 +104,18 @@ const ValueList = ({ label, values, tone }: { label: string; values: string[]; t
 );
 
 
+type StatusFilter = "all" | "pass" | "fail";
+
+function isRunInDateRange(run: DriftRun, range: DateRangeValue | undefined) {
+  if (!range?.from) return true;
+  const ranAt = new Date(run.ranAt);
+  const from = range.from.getTime();
+  const to = range.to ? range.to.getTime() : from;
+  const startOfFrom = new Date(from).setHours(0, 0, 0, 0);
+  const endOfTo = new Date(to).setHours(23, 59, 59, 999);
+  return ranAt.getTime() >= startOfFrom && ranAt.getTime() <= endOfTo;
+}
+
 export function DriftHistoryPanel({
   runs,
   onRunNow,
@@ -114,14 +127,55 @@ export function DriftHistoryPanel({
   isRunning?: boolean;
 }) {
   const [openIds, setOpenIds] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
+
+  const filteredRuns = useMemo(() => {
+    return runs.filter((run) => {
+      const statusMatch =
+        statusFilter === "all" ||
+        (statusFilter === "pass" && run.matched) ||
+        (statusFilter === "fail" && !run.matched);
+      const dateMatch = isRunInDateRange(run, dateRange);
+      return statusMatch && dateMatch;
+    });
+  }, [runs, statusFilter, dateRange]);
+
+  const hasFilters = statusFilter !== "all" || dateRange?.from;
+
   const toggle = (id: string) =>
     setOpenIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setDateRange(undefined);
+  };
+
+  const statusPill = (key: StatusFilter, label: string) => (
+    <button
+      key={key}
+      type="button"
+      data-testid={`drift-status-filter-${key}`}
+      onClick={() => setStatusFilter(key)}
+      aria-pressed={statusFilter === key}
+      aria-label={`Filter by ${label.toLowerCase()}`}
+      className={`kb-focus rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+        statusFilter === key
+          ? "bg-foreground text-background"
+          : "border border-border bg-card text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div className="panel p-5">
       <div className="flex flex-wrap items-center gap-2">
         <History size={16} className="text-steel" />
-        <div className="label-eyebrow">Drift history · last {runs.length} run{runs.length === 1 ? "" : "s"}</div>
+        <div className="label-eyebrow">
+          Drift history · {filteredRuns.length} of {runs.length} run{runs.length === 1 ? "" : "s"}
+        </div>
         {onRunNow && (
           <button
             type="button"
@@ -137,18 +191,59 @@ export function DriftHistoryPanel({
       <p className="mono mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
         Every recorded drift test, newest first — expand a run for the exact differences
       </p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Filter drift runs">
+        {statusPill("all", "All")}
+        {statusPill("pass", "Passed")}
+        {statusPill("fail", "Failed")}
+        <div className="h-4 w-px bg-border" aria-hidden="true" />
+        <DateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+          placeholder="Date range"
+          presets={[
+            { label: "Today", days: 0 },
+            { label: "7 days", days: 7 },
+            { label: "30 days", days: 30 },
+          ]}
+        />
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            aria-label="Clear filters"
+            className="kb-focus flex items-center gap-1 rounded-full px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            <X size={11} aria-hidden="true" />
+            Clear filters
+          </button>
+        )}
+      </div>
+
       <p role="status" aria-live="polite" className="sr-only">
-        {isRunning ? "Drift test running" : ""}
+        {isRunning ? "Drift test running" : `Showing ${filteredRuns.length} drift runs`}
       </p>
 
       {runs.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
           No drift checks recorded yet — run one with the button above.
         </p>
-
+      ) : filteredRuns.length === 0 ? (
+        <div className="mt-4 rounded-sm border border-border bg-background p-4">
+          <p className="text-sm text-muted-foreground">
+            No drift runs match the current filters.
+          </p>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="kb-focus mt-2 text-xs text-primary hover:underline"
+          >
+            Clear filters and show all runs
+          </button>
+        </div>
       ) : (
         <ul className="mt-4 divide-y divide-border border-t border-border">
-          {runs.map((run) => {
+          {filteredRuns.map((run) => {
             const isOpen = openIds.includes(run.id);
             const diff = driftRunDifferences(run);
             return (
