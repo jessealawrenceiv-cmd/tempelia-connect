@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LogAction } from "@/lib/log-action-types";
+import { logActionFilterValue } from "@/lib/log-action-query";
 
 type LogRow = {
   id: string;
@@ -95,7 +97,7 @@ export function ActiveChangeAuditPanel() {
       const { data, error } = await supabase
         .from("logs")
         .select("id, created_at, status, message_sent")
-        .eq("action_type", "automation_status_change")
+        .eq("action_type", logActionFilterValue(LogAction.automation_status_change))
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;

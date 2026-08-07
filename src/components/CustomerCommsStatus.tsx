@@ -65,7 +65,7 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
         .from("logs")
         .select("id, action_type, status, message_sent, created_at")
         .eq("customer_id", customerId!)
-        .in("action_type", INBOUND_TYPES as unknown as string[])
+        .in("action_type", logActionFilterValues(INBOUND_TYPES))
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -82,7 +82,7 @@ export function CustomerCommsStatus({ customerId, optInConsent, smsOptInAt }: Pr
         .from("logs")
         .select("id, action_type, status, message_sent, twilio_message_sid, created_at")
         .eq("customer_id", customerId!)
-        .in("action_type", OUTBOUND_TYPES as unknown as string[])
+        .in("action_type", logActionFilterValues(OUTBOUND_TYPES))
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();

@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Copy, Check } from "lucide-react";
 import { ContactImportPanel } from "@/components/ContactImportPanel";
+import { LogAction } from "@/lib/log-action-types";
+import { logActionFilterValue } from "@/lib/log-action-query";
 
 export const Route = createFileRoute("/_authenticated/dashboard/contacts")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -145,7 +147,7 @@ function ContactsPage() {
       const { data } = await supabase
         .from("logs")
         .select("customer_id, action_type, status, created_at")
-        .eq("action_type", "review_request")
+        .eq("action_type", logActionFilterValue(LogAction.review_request))
         .order("created_at", { ascending: false })
         .limit(500);
       const map = new Map<string, { status: string; at: string }>();
@@ -165,7 +167,7 @@ function ContactsPage() {
       const { data } = await supabase
         .from("logs")
         .select("customer_id, message_sent, created_at")
-        .eq("action_type", "customer_email_updated")
+        .eq("action_type", logActionFilterValue(LogAction.customer_email_updated))
         .order("created_at", { ascending: false })
         .limit(500);
       const map = new Map<string, { at: string; old: string | null; new: string | null }>();

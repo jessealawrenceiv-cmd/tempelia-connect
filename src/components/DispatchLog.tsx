@@ -15,6 +15,7 @@ import {
 } from "@/lib/activity-log-csv";
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
+import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
 import {
   MAX_LOG_SEARCH_LENGTH,
   friendlyLogRequestError,
@@ -152,9 +153,8 @@ function readStoredTypes(): LogActionType[] | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return null;
-    const valid = parsed.filter((t): t is LogActionType =>
-      Object.values(LogAction).includes(t as LogActionType),
-    );
+    // Stored values are untrusted too (older build, hand-edited storage).
+    const valid = pickLogActionTypes(parsed).valid;
     return valid.length > 0 ? valid : null;
   } catch {
     return null;
@@ -405,12 +405,13 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     if (cursor) out = sortDir === "oldest" ? out.gt(timeCol, cursor) : out.lt(timeCol, cursor);
 
     if (originFilter !== "all") {
-      out = out.eq("action_type", LogAction.automation_status_change);
+      out = out.eq("action_type", logActionFilterValue(LogAction.automation_status_change));
       if (originFilter !== "active") out = out.eq("status", originFilter);
     } else {
-      if (statusRefreshOnly) out = out.eq("action_type", LogAction.status_refresh);
-      if (failedOnly) out = out.eq("action_type", LogAction.status_refresh).eq("status", "failed");
-      if (selectedTypes.length > 0) out = out.in("action_type", selectedTypes);
+      if (statusRefreshOnly) out = out.eq("action_type", logActionFilterValue(LogAction.status_refresh));
+      if (failedOnly)
+        out = out.eq("action_type", logActionFilterValue(LogAction.status_refresh)).eq("status", "failed");
+      if (selectedTypes.length > 0) out = out.in("action_type", logActionFilterValues(selectedTypes));
     }
 
     // Free-text search runs in Postgres so pages stay full-size. Each term must
