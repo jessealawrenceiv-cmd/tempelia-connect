@@ -111,15 +111,34 @@ const REFRESH_OUTCOME: Record<string, { text: string; dot: string }> = {
   failed: { text: "refresh failed", dot: "bg-orange" },
 };
 
+/** Missing / malformed payload text must never render as blank or "null". */
+function messageText(message: string | null | undefined): string {
+  return typeof message === "string" && message.trim() ? message : "—";
+}
+
+/** Safe date parse: rows with a missing or malformed timestamp render a dash. */
+function safeDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatClock(value: string | null | undefined): string {
+  const d = safeDate(value);
+  return d
+    ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "—";
+}
+
 function describe(row: { action_type: string; status: string | null; message_sent: string | null }) {
   if (row.action_type !== LogAction.status_refresh && row.action_type !== LogAction.automation_status_change) {
-    return row.message_sent ?? "—";
+    return messageText(row.message_sent);
   }
   let payload: Record<string, unknown> = {};
   try {
     payload = row.message_sent ? (JSON.parse(row.message_sent) as Record<string, unknown>) : {};
   } catch {
-    return row.message_sent ?? "—";
+    return messageText(row.message_sent);
   }
   const parts: string[] = [];
   if (row.action_type === LogAction.status_refresh) {
@@ -132,19 +151,22 @@ function describe(row: { action_type: string; status: string | null; message_sen
     if (Array.isArray(changes) && changes.length > 0) parts.push(changes.join(" · "));
     if (typeof payload["trigger"] === "string") parts.push(String(payload["trigger"]));
   }
-  return parts.length > 0 ? parts.join(" — ") : (row.message_sent ?? "—");
+  return parts.length > 0 ? parts.join(" — ") : messageText(row.message_sent);
 }
 
 /** Formats a log row as a single dispatch line suitable for support notes. */
 function formatDispatchLine(row: LogRow): string {
-  const time = new Date(row.created_at).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const parsed = safeDate(row.created_at);
+  const time = parsed
+    ? parsed.toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : "unknown time";
   const origin =
     row.action_type === LogAction.automation_status_change && row.status && row.status in ORIGIN_LABEL
       ? ` [${ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}]`
@@ -1452,10 +1474,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const latest = filtered[0];
     if (!latest || latest.id === lastAnnouncedIdRef.current) return;
     lastAnnouncedIdRef.current = latest.id;
-    const time = new Date(latest.created_at).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const parsed = safeDate(latest.created_at);
+    const time = parsed
+      ? parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "an unknown time";
     setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
@@ -1505,12 +1527,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
           />
         </button>
-        <span className="text-muted-foreground">
-          {new Date(row.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          })}
+        <span className="text-muted-foreground" title={row.created_at ?? "timestamp unavailable"}>
+          {formatClock(row.created_at)}
         </span>
         <span
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
