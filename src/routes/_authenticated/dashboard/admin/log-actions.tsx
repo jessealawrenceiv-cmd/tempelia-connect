@@ -197,6 +197,8 @@ function AdminLogActionsPage() {
             {/* Full drift history */}
             <DriftHistoryPanel runs={data.history} />
 
+            <ActionTypeCoveragePanel />
+
             {/* Generated enum values */}
             <div className="panel p-5">
               <div className="flex items-center gap-2">
