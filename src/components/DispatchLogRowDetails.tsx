@@ -39,6 +39,47 @@ export function formatDispatchPayload(message: string | null): { text: string; i
   }
 }
 
+/**
+ * Case-insensitive, substring search over the payload's lines. Returns the
+ * matching lines with their 1-based line numbers so the view can show where in
+ * the payload each hit sits.
+ */
+export function searchPayloadLines(
+  text: string,
+  query: string,
+): { line: number; content: string }[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return text
+    .split("\n")
+    .map((content, i) => ({ line: i + 1, content }))
+    .filter((l) => l.content.toLowerCase().includes(q));
+}
+
+/** Renders `text` with every case-insensitive occurrence of `query` marked. */
+const Highlight = ({ text, query }: { text: string; query: string }) => {
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  const parts: React.ReactNode[] = [];
+  const lower = text.toLowerCase();
+  const needle = q.toLowerCase();
+  let cursor = 0;
+  let at = lower.indexOf(needle);
+  while (at !== -1) {
+    if (at > cursor) parts.push(text.slice(cursor, at));
+    parts.push(
+      <mark key={`${at}`} className="rounded bg-primary/30 text-foreground">
+        {text.slice(at, at + needle.length)}
+      </mark>,
+    );
+    cursor = at + needle.length;
+    at = lower.indexOf(needle, cursor);
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return <>{parts}</>;
+};
+
+
 const FieldRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
     <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
