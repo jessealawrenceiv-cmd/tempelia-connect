@@ -40,6 +40,7 @@ import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/tw
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio/recording'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksCoverageGapScanRouteImport } from './routes/api/public/hooks/coverage-gap-scan'
 import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_authenticated/dashboard/quotes.new'
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
 import { Route as AuthenticatedDashboardAdminLogActionsRouteImport } from './routes/_authenticated/dashboard/admin/log-actions'
@@ -216,6 +217,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksCoverageGapScanRoute =
+  ApiPublicHooksCoverageGapScanRouteImport.update({
+    id: '/api/public/hooks/coverage-gap-scan',
+    path: '/api/public/hooks/coverage-gap-scan',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedDashboardQuotesNewRoute =
   AuthenticatedDashboardQuotesNewRouteImport.update({
     id: '/dashboard/quotes/new',
@@ -281,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
+  '/api/public/hooks/coverage-gap-scan': typeof ApiPublicHooksCoverageGapScanRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
@@ -319,6 +327,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
+  '/api/public/hooks/coverage-gap-scan': typeof ApiPublicHooksCoverageGapScanRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
@@ -359,6 +368,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/_authenticated/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
+  '/api/public/hooks/coverage-gap-scan': typeof ApiPublicHooksCoverageGapScanRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/log-actions'
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
+    | '/api/public/hooks/coverage-gap-scan'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/log-actions'
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
+    | '/api/public/hooks/coverage-gap-scan'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
@@ -476,6 +488,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/admin/log-actions'
     | '/_authenticated/dashboard/admin/numbers'
     | '/_authenticated/dashboard/quotes/new'
+    | '/api/public/hooks/coverage-gap-scan'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
@@ -503,6 +516,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicLogActionTypesRoute: typeof ApiPublicLogActionTypesRoute
+  ApiPublicHooksCoverageGapScanRoute: typeof ApiPublicHooksCoverageGapScanRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
@@ -729,6 +743,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/coverage-gap-scan': {
+      id: '/api/public/hooks/coverage-gap-scan'
+      path: '/api/public/hooks/coverage-gap-scan'
+      fullPath: '/api/public/hooks/coverage-gap-scan'
+      preLoaderRoute: typeof ApiPublicHooksCoverageGapScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/dashboard/quotes/new': {
       id: '/_authenticated/dashboard/quotes/new'
       path: '/dashboard/quotes/new'
@@ -842,6 +863,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicLogActionTypesRoute: ApiPublicLogActionTypesRoute,
+  ApiPublicHooksCoverageGapScanRoute: ApiPublicHooksCoverageGapScanRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
