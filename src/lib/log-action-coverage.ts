@@ -225,3 +225,88 @@ export function sortGaps(gaps: CoverageGap[]): CoverageGap[] {
       a.actionType.localeCompare(b.actionType),
   );
 }
+
+/** One dated piece of evidence explaining why a gap exists. */
+export interface GapEvidenceItem {
+  /** What the timestamp refers to, phrased for an operator. */
+  label: string;
+  /** ISO timestamp, or null when that source has never produced anything. */
+  at: string | null;
+}
+
+type EvidenceKey = keyof BusinessEvidence;
+
+const EVIDENCE_LABEL: Record<EvidenceKey, string> = {
+  numberProvisionedAt: "Number provisioned",
+  latestLogAt: "Latest activity entry",
+  latestMissedCallWebhookAt: "Latest missed-call webhook",
+  latestInboundSmsWebhookAt: "Latest inbound-SMS webhook",
+  latestWebhookDeliveryAt: "Latest webhook delivery",
+  latestCustomerAt: "Newest contact",
+  latestOptInUpdateAt: "Latest opt-in update",
+  latestExcludedNumberAt: "Latest excluded number",
+  latestQuoteAt: "Newest quote",
+  latestDeclinedQuoteAt: "Latest quote decline",
+  latestDepositQuoteAt: "Newest deposit quote",
+  latestInvoiceAt: "Newest invoice",
+  latestContactImportAt: "Latest contact import",
+};
+
+/** Which source timestamps are the relevant evidence for a given action type. */
+function evidenceKeysFor(actionType: LogActionType): EvidenceKey[] {
+  switch (actionType) {
+    case LogAction.number_provisioned:
+      return ["numberProvisionedAt"];
+    case LogAction.missed_call_text:
+    case LogAction.missed_call_autotext:
+    case LogAction.voicemail_notify:
+      return ["latestMissedCallWebhookAt", "numberProvisionedAt"];
+    case LogAction.missed_call_excluded:
+      return ["latestExcludedNumberAt", "latestMissedCallWebhookAt"];
+    case LogAction.review_request:
+    case LogAction.reactivation_text:
+      return ["latestCustomerAt", "latestOptInUpdateAt"];
+    case LogAction.customer_email_updated:
+    case LogAction.quote_sms:
+      return ["latestQuoteAt"];
+    case LogAction.customer_consent_preserved:
+      return ["latestContactImportAt", "latestOptInUpdateAt"];
+    case LogAction.quote_decline_reason_captured:
+    case LogAction.quote_decline_followup:
+      return ["latestDeclinedQuoteAt", "latestQuoteAt"];
+    case LogAction.quote_deposit_status:
+      return ["latestDepositQuoteAt", "latestQuoteAt"];
+    case LogAction.invoice_balance_status:
+    case LogAction.invoice_sms:
+      return ["latestInvoiceAt"];
+    case LogAction.sms_inbound:
+      return ["latestInboundSmsWebhookAt", "numberProvisionedAt"];
+    case LogAction.opt_in_prompt:
+    case LogAction.opt_in_prompt_test:
+      return ["latestOptInUpdateAt", "numberProvisionedAt"];
+    case LogAction.webhook_delivery_status:
+      return ["latestWebhookDeliveryAt"];
+    case LogAction.status_refresh:
+    case LogAction.automation_status_change:
+      return ["latestLogAt"];
+  }
+}
+
+/**
+ * Dated evidence for one gap: the newest related source event plus the newest
+ * provisioning/opt-in touch, so an operator can see whether the gap is stale
+ * (source events long past, still nothing logged) or simply brand new.
+ */
+export function gapEvidence(
+  actionType: LogActionType,
+  signals: BusinessSignals,
+): GapEvidenceItem[] {
+  const evidence = signals.evidence;
+  if (!evidence) return [];
+  const keys = evidenceKeysFor(actionType);
+  if (!keys.includes("latestLogAt")) keys.push("latestLogAt");
+  const seen = new Set<EvidenceKey>();
+  return keys
+    .filter((k) => (seen.has(k) ? false : (seen.add(k), true)))
+    .map((k) => ({ label: EVIDENCE_LABEL[k], at: evidence[k] ?? null }));
+}
