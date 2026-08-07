@@ -202,7 +202,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const q = applyFilters(base as unknown as FilterableQuery, timeCol, cursor);
     const { data: rows, error } = await (q as unknown as typeof base).returns<RawLogRow[]>();
     if (error) throw error;
-    return (rows ?? []).map((r) => ({
+    // Validate on the way in: an action_type outside the generated whitelist
+    // is dropped here so no UI code can ever receive an unknown value.
+    const parsed = parseLogRowsResponse(rows ?? []);
+    if (parsed.droppedCount > 0) {
+      console.warn(
+        `[activity-log] dropped ${parsed.droppedCount} row(s) with unknown action_type: ${parsed.unknownActionTypes.join(", ")}`,
+      );
+    }
+    return parsed.rows.map((r) => ({
       id: r.id,
       action_type: r.action_type,
       message_sent: r.message_sent,
@@ -210,6 +218,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       status: r.status,
       customer_id: r.customer_id,
     }));
+
   };
 
   // Server-side keyset pagination: only one small page ships over mobile data.
