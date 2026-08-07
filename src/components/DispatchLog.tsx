@@ -366,6 +366,24 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterIssues, filtersBlocked]);
+
+  /**
+   * An invalid action_type is dropped before the request goes out. That used to
+   * be silent (the banner is below the fold on mobile), so also toast it once
+   * per distinct set of rejected values.
+   */
+  const logTypeIssue = filterIssues.find((i) => i.field === "logTypes")?.message;
+  const toastedLogTypeIssueRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!logTypeIssue) {
+      toastedLogTypeIssueRef.current = null;
+      return;
+    }
+    if (toastedLogTypeIssueRef.current === logTypeIssue) return;
+    toastedLogTypeIssueRef.current = logTypeIssue;
+    toast.error("Record type filter ignored", { description: logTypeIssue });
+  }, [logTypeIssue]);
+
   /**
    * Field-level helper text: the summary banner above says "some filters were
    * adjusted", but each control also needs to say what went wrong right where
