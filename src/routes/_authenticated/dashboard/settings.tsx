@@ -417,7 +417,7 @@ function SettingsPage() {
       if (retryTimer !== null) window.clearTimeout(retryTimer);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [qc, reconnectSignal]);
+  }, [qc, reconnectSignal, insertLogValidated]);
 
   useEffect(() => {
     if (profile) {
@@ -585,7 +585,7 @@ function SettingsPage() {
     if (cooldownMs <= 0) return;
     const id = window.setInterval(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
     return () => window.clearInterval(id);
-  }, [cooldownMs > 0]);
+  }, [isInCooldown]);
   const formatCooldown = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -709,7 +709,7 @@ function SettingsPage() {
         // logging must never block the refresh itself
       }
     },
-    [collectAffected, qc],
+    [collectAffected, qc, insertLogValidated],
   );
 
   // Synchronous in-flight flag + observable counters. The counters are exposed as
