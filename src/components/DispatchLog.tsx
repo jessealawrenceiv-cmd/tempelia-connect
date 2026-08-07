@@ -931,15 +931,61 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             ))}
           </div>
           {scope === "live" ? (
-            <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-moss" />
-              Live
-            </span>
+            <>
+              <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-moss" />
+                Live
+              </span>
+              <label className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                Auto-refresh
+                <select
+                  data-testid="log-auto-refresh"
+                  value={autoRefreshSeconds}
+                  onChange={(e) => {
+                    const next = Number(e.target.value) as AutoRefreshSeconds;
+                    setAutoRefreshSeconds(next);
+                    try {
+                      window.localStorage.setItem(LOG_AUTO_REFRESH_STORAGE_KEY, String(next));
+                    } catch {
+                      // best-effort persistence
+                    }
+                    setAnnouncement(
+                      next === 0
+                        ? "Activity auto-refresh off"
+                        : `Activity auto-refresh every ${next} seconds`,
+                    );
+                  }}
+                  aria-label="Auto-refresh the activity log"
+                  className="kb-focus rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground"
+                >
+                  {AUTO_REFRESH_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s === 0 ? "Off" : `${s}s`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  void refetch();
+                  setAnnouncement("Refreshing activity");
+                }}
+                disabled={isFetching}
+                aria-label="Refresh activity now"
+                title={updatedLabel ? `Updated ${updatedLabel}` : "Refresh activity now"}
+                className="kb-focus inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+              >
+                <RefreshCw size={10} className={isFetching ? "animate-spin" : ""} aria-hidden="true" />
+                {updatedLabel ?? "Refresh"}
+              </button>
+            </>
           ) : (
             <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
               Archived
             </span>
           )}
+
         </div>
       </div>
 
