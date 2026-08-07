@@ -340,6 +340,67 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     });
   };
 
+  /** Captures the current filter bar as a named preset. */
+  const savePreset = () => {
+    const name = presetName.trim().slice(0, 40);
+    if (!name) return;
+    const next: LogFilterPreset = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      scope,
+      types: selectedTypes,
+      sort: sortDir,
+      q: searchQuery.trim(),
+      customer: customerInput.trim(),
+      ...(dateRange?.from ? { dateFrom: toDayParam(dateRange.from) } : {}),
+      ...(dateRange?.from && dateRange.to ? { dateTo: toDayParam(dateRange.to) } : {}),
+      statusRefreshOnly,
+      failedOnly,
+      origin: originFilter,
+    };
+    // Saving under an existing name overwrites it instead of piling up duplicates.
+    const others = presets.filter((p) => p.name.toLowerCase() !== name.toLowerCase());
+    const updated = [next, ...others].slice(0, MAX_LOG_PRESETS);
+    setPresets(updated);
+    writeStoredPresets(updated);
+    setPresetName("");
+    setShowSavePreset(false);
+    setAnnouncement(`Saved filter view “${name}”`);
+  };
+
+  /** Reapplies every field a preset captured, clearing anything it didn't. */
+  const applyPreset = (preset: LogFilterPreset) => {
+    setScope(preset.scope);
+    setStatusRefreshOnly(preset.statusRefreshOnly);
+    setFailedOnly(preset.failedOnly);
+    setOriginFilter(preset.origin as typeof originFilter);
+    setSearchQuery(preset.q);
+    setCustomerInput(preset.customer);
+    writeStoredTypes(preset.types);
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        logTypes: preset.types.length > 0 ? preset.types.join(",") : undefined,
+        logSort: preset.sort === "oldest" ? "oldest" : undefined,
+        q: preset.q || undefined,
+        dateFrom: preset.dateFrom ?? undefined,
+        dateTo: preset.dateTo ?? undefined,
+        logCustomer: preset.customer || undefined,
+      }),
+      resetScroll: false,
+    });
+    setAnnouncement(`Applied filter view “${preset.name}”`);
+  };
+
+  const deletePreset = (preset: LogFilterPreset) => {
+    const updated = presets.filter((p) => p.id !== preset.id);
+    setPresets(updated);
+    writeStoredPresets(updated);
+    setAnnouncement(`Removed filter view “${preset.name}”`);
+  };
+
+
   // Mirror the contact filter into ?logCustomer= so a "just this contact" view is
   // shareable. Debounced and history-replacing, like the free-text search.
   useEffect(() => {
