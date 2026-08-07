@@ -35,6 +35,7 @@ import {
 
 import {
   LOG_ACTION_FILTER_ORDER,
+  availableLogActionOptions,
   isNewLogAction,
   logActionDescription,
   logActionDot,
@@ -819,6 +820,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   }, [rows]);
 
 
+  // Enum-derived options for the record-type picker, minus what is already on.
+  const typePickerOptions = availableLogActionOptions(selectedTypes);
+
   const toggleType = (t: LogActionType) =>
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((v) => v !== t) : [...prev, t]));
 
@@ -1436,6 +1440,43 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               </button>
             )}
           </legend>
+          {/* Compact picker for the same record types as the chips below: on a
+              phone the full chip row is long, so this adds one type at a time.
+              Options come from the generated enum, so the value can only ever
+              be an action_type the database accepts. */}
+          <div className="mt-2 flex items-center gap-2">
+            <label
+              htmlFor="log-type-picker"
+              className="mono text-[10px] uppercase tracking-widest text-muted-foreground"
+            >
+              Add type
+            </label>
+            <select
+              id="log-type-picker"
+              value=""
+              disabled={typePickerOptions.length === 0}
+              onChange={(e) => {
+                const picked = logActionFilterValue(e.target.value);
+                setSelectedTypes((prev) => (prev.includes(picked) ? prev : [...prev, picked]));
+                setAnnouncement(`Added record type filter ${typeLabel(picked)}`);
+              }}
+              aria-label="Add a record type filter"
+              className="kb-focus h-7 max-w-[14rem] flex-1 rounded-full border border-border bg-background px-2 text-xs text-foreground sm:flex-none sm:w-56"
+            >
+              <option value="" disabled>
+                {typePickerOptions.length === 0
+                  ? "All record types selected"
+                  : `Choose a record type (${typePickerOptions.length})`}
+              </option>
+              {typePickerOptions.map((o) => (
+                <option key={o.value} value={o.value} title={o.description}>
+                  {o.label}
+                  {o.isNew ? " · new" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="mt-2 flex flex-wrap gap-1.5">
             {LOG_ACTION_FILTER_ORDER.map((t) => {
               const selected = selectedTypes.includes(t);
