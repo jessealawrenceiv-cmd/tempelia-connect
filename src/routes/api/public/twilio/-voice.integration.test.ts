@@ -222,13 +222,15 @@ describe("Twilio missed-call webhook → logs.action_type", () => {
 
   it("every action_type the webhook can write is on the generated whitelist", async () => {
     const seen = new Set<unknown>();
-    await postWebhook(CALL);
+    // Distinct CallSids: same-SID reposts are deduped by design (idempotency).
+    await postWebhook({ ...CALL, CallSid: "CA-a" });
     state.smsShouldFail = true;
-    await postWebhook(CALL);
+    await postWebhook({ ...CALL, CallSid: "CA-b" });
     state.smsShouldFail = false;
     state.excluded = { id: "ex-1", label: null };
-    await postWebhook(CALL);
+    await postWebhook({ ...CALL, CallSid: "CA-c" });
     for (const row of logInserts) seen.add(row["action_type"]);
+
 
     expect(seen).toEqual(new Set(["missed_call_autotext", "missed_call_excluded"]));
     for (const t of seen) expect(LOG_ACTION_TYPES).toContain(t);
