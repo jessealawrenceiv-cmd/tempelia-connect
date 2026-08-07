@@ -160,6 +160,7 @@ describe("DispatchLog empty state distinguishes no activity from no matches", ()
     await waitFor(() => expect(screen.getByText(ROW_MESSAGE)).toBeTruthy());
 
     await user.click(screen.getByLabelText(/Failed only/i));
+    console.log("DBG search", JSON.stringify(searchState));
 
     await waitFor(() => expect(screen.getByText(EMPTY_FILTERED)).toBeTruthy());
     expect(screen.queryByText(EMPTY_ALL)).toBeNull();
