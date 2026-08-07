@@ -23,7 +23,7 @@ describe("log action_type whitelist", () => {
     "rejects %j",
     (v) => {
       expect(isLogActionType(v)).toBe(false);
-      expect(() => assertLogActionType(v)).toThrow(/Invalid logs\.action_type/);
+      expect(() => assertLogActionType(v)).toThrow(/logs_action_type_check/);
     },
   );
 });
@@ -42,19 +42,19 @@ describe("insertLog", () => {
 
   it("validates every row in a batch and never calls the database on failure", async () => {
     const { client, insert } = makeClient();
-    await expect(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      insertLog(client as never, [
-        { action_type: "quote_sms" },
-        { action_type: "not_allowed" },
-      ] as never),
-    ).rejects.toThrow(/Invalid logs\.action_type "not_allowed"/);
+    const res = await insertLog(
+      client as never,
+      [{ action_type: "quote_sms" }, { action_type: "not_allowed" }] as never,
+    );
+    expect((res.error as { constraint?: string }).constraint).toBe("logs_action_type_check");
+    expect((res.error as { rejectedActionType?: string }).rejectedActionType).toBe("not_allowed");
     expect(insert).not.toHaveBeenCalled();
   });
 
   it("rejects a missing action_type before insert", async () => {
     const { client, insert } = makeClient();
-    await expect(insertLog(client as never, { status: "x" } as never)).rejects.toThrow();
+    const res = await insertLog(client as never, { status: "x" } as never);
+    expect((res.error as { constraint?: string }).constraint).toBe("logs_action_type_check");
     expect(insert).not.toHaveBeenCalled();
   });
 
@@ -80,12 +80,10 @@ describe("insertLog", () => {
     "blocks invalid value %j before the database",
     async (bad) => {
       const { client, insert } = makeClient();
-      await expect(
-        insertLog(client as never, { action_type: bad } as never),
-      ).rejects.toThrow(/Invalid logs\.action_type/);
+      const res = await insertLog(client as never, { action_type: bad } as never);
+      expect((res.error as { constraint?: string }).constraint).toBe("logs_action_type_check");
       expect(client.from).not.toHaveBeenCalled();
       expect(insert).not.toHaveBeenCalled();
     },
   );
 });
-

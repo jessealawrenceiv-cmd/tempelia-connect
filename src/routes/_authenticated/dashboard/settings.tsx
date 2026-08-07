@@ -16,13 +16,13 @@ import { OPT_IN_PROMPT_REAL_SENDS_ENABLED } from "@/lib/opt-in-prompt-gate";
 import { runStatusRefresh } from "@/lib/status-refresh.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { AutomationBadge, TooltipCloseButton } from "@/components/AutomationBadge";
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
-import { insertLog, LogAction } from "@/lib/log-action-types";
+import { LogAction } from "@/lib/log-action-types";
+import { useValidatedLogInsert } from "@/hooks/useValidatedLogInsert";
 import { reportLogInsertError } from "@/lib/log-error";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
@@ -39,6 +39,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
+  const insertLogValidated = useValidatedLogInsert(supabase);
   const runStatusRefreshFn = useServerFn(runStatusRefresh);
 
   const { isStaff } = useTeamRole();
@@ -49,13 +50,20 @@ function SettingsPage() {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(15);
 
-
-  const { data: profile, refetch: refetchProfile, dataUpdatedAt: profileUpdatedAt } = useQuery({
+  const {
+    data: profile,
+    refetch: refetchProfile,
+    dataUpdatedAt: profileUpdatedAt,
+  } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return null;
-      const { data } = await supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle();
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", u.user.id)
+        .maybeSingle();
       return data;
     },
     refetchInterval: 60_000,
@@ -67,7 +75,11 @@ function SettingsPage() {
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return null;
-      const { data } = await supabase.from("integrations").select("*").eq("user_id", u.user.id).maybeSingle();
+      const { data } = await supabase
+        .from("integrations")
+        .select("*")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
       return data;
     },
   });
@@ -101,11 +113,13 @@ function SettingsPage() {
     // the "from this device" attribution is silently dropped.
     statusSnapshotRef.current = {
       voicemail:
-        prev && hasPendingLocalEdit("voicemail_enabled") ? prev.voicemail : !!profile.voicemail_enabled,
+        prev && hasPendingLocalEdit("voicemail_enabled")
+          ? prev.voicemail
+          : !!profile.voicemail_enabled,
       decline:
         prev && hasPendingLocalEdit("decline_followup_mode")
           ? prev.decline
-          : profile.decline_followup_mode ?? "off",
+          : (profile.decline_followup_mode ?? "off"),
       review:
         prev && hasPendingLocalEdit("review_requests_enabled")
           ? prev.review
@@ -114,9 +128,10 @@ function SettingsPage() {
         prev && hasPendingLocalEdit("intake_enabled") ? prev.intake : !!profile.intake_enabled,
     };
   }, [profile]);
-  const [lastUpdate, setLastUpdate] = useState<
-    { origin: "this-device" | "other-device" | "backend"; at: Date } | null
-  >(null);
+  const [lastUpdate, setLastUpdate] = useState<{
+    origin: "this-device" | "other-device" | "backend";
+    at: Date;
+  } | null>(null);
 
   // Live status: refresh the ACTIVE badge/tooltip the moment the profile row changes.
   // Auto-reconnects with backoff and surfaces a live/reconnecting/disconnected indicator.
@@ -202,7 +217,6 @@ function SettingsPage() {
     setStatusAnnouncement(`Connecting to live updates. ${time}`);
   }, [realtimeState, realtimeAttempt]);
 
-
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
@@ -249,8 +263,11 @@ function SettingsPage() {
         const at = localEditsRef.current.get(f);
         return at !== undefined && now - at < 15_000;
       });
-      const uiWritable = changedFields.every((f) =>
-        f === "voicemail_enabled" || f === "decline_followup_mode" || f === "review_requests_enabled",
+      const uiWritable = changedFields.every(
+        (f) =>
+          f === "voicemail_enabled" ||
+          f === "decline_followup_mode" ||
+          f === "review_requests_enabled",
       );
       const origin = isLocal ? "this-device" : uiWritable ? "other-device" : "backend";
       changedFields.forEach((f) => localEditsRef.current.delete(f));
@@ -307,7 +324,7 @@ function SettingsPage() {
 
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) return;
-        const { error } = await insertLog(supabase, {
+        const { error } = await insertLogValidated({
           user_id: u.user.id,
           action_type: LogAction.automation_status_change,
           status: entry.origin,
@@ -334,10 +351,7 @@ function SettingsPage() {
         // action_type is worth surfacing so it isn't silently swallowed.
         reportLogInsertError(err, { attempted: "automation_status_change" });
       }
-
     };
-
-
 
     const scheduleReconnect = () => {
       if (cancelled || retryTimer !== null) return;
@@ -403,10 +417,7 @@ function SettingsPage() {
       if (retryTimer !== null) window.clearTimeout(retryTimer);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [qc, reconnectSignal]);
-
-
-
+  }, [qc, reconnectSignal, insertLogValidated]);
 
   useEffect(() => {
     if (profile) {
@@ -418,20 +429,23 @@ function SettingsPage() {
   }, [profile]);
 
   const save = useMutation({
-
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase.from("integrations").upsert(
-        { user_id: u.user.id, google_review_url: reviewUrl || null },
-        { onConflict: "user_id" },
-      );
+      const { error } = await supabase
+        .from("integrations")
+        .upsert(
+          { user_id: u.user.id, google_review_url: reviewUrl || null },
+          { onConflict: "user_id" },
+        );
       if (error) throw error;
-      const { error: e2 } = await supabase.from("profiles")
+      const { error: e2 } = await supabase
+        .from("profiles")
         .update({
           owner_phone: ownerPhone.trim() || null,
           zip_code: zipCode.trim() === "" ? null : zipCode.trim(),
-        }).eq("id", u.user.id);
+        })
+        .eq("id", u.user.id);
       if (e2) throw e2;
     },
     onSuccess: () => {
@@ -447,11 +461,15 @@ function SettingsPage() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
       markLocalEdit("voicemail_enabled");
-      const { error } = await supabase.from("profiles")
-        .update({ voicemail_enabled: enabled }).eq("id", u.user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ voicemail_enabled: enabled })
+        .eq("id", u.user.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -460,11 +478,15 @@ function SettingsPage() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
       markLocalEdit("review_requests_enabled");
-      const { error } = await supabase.from("profiles")
-        .update({ review_requests_enabled: enabled }).eq("id", u.user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ review_requests_enabled: enabled })
+        .eq("id", u.user.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const setDeclineMode = useMutation({
@@ -472,11 +494,15 @@ function SettingsPage() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
       markLocalEdit("decline_followup_mode");
-      const { error } = await supabase.from("profiles")
-        .update({ decline_followup_mode: mode }).eq("id", u.user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ decline_followup_mode: mode })
+        .eq("id", u.user.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -484,7 +510,8 @@ function SettingsPage() {
     mutationFn: async (values: { enabled: boolean; intervalMinutes: number }) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase.from("profiles")
+      const { error } = await supabase
+        .from("profiles")
         .update({
           auto_refresh_enabled: values.enabled,
           auto_refresh_interval_minutes: values.intervalMinutes,
@@ -498,7 +525,6 @@ function SettingsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
 
   const declineMode = (profile?.decline_followup_mode ?? "off") as "off" | "manual" | "auto";
 
@@ -556,10 +582,10 @@ function SettingsPage() {
   const [cooldownMs, setCooldownMs] = useState(0);
   const isInCooldown = cooldownMs > 0;
   useEffect(() => {
-    if (cooldownMs <= 0) return;
+    if (!isInCooldown) return;
     const id = window.setInterval(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
     return () => window.clearInterval(id);
-  }, [cooldownMs > 0]);
+  }, [isInCooldown]);
   const formatCooldown = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -570,8 +596,10 @@ function SettingsPage() {
   const retryButtonRef = useRef<HTMLButtonElement | null>(null);
   // Ref to the ACTIVE badge so refresh can restore focus to the exact element
   // that was focused inside the tooltip before the button became disabled.
-  const advancedBadgeRef = useRef<{ contains: (el: Node | null) => boolean; restoreFocus: (el: HTMLElement | null) => void } | null>(null);
-
+  const advancedBadgeRef = useRef<{
+    contains: (el: Node | null) => boolean;
+    restoreFocus: (el: HTMLElement | null) => void;
+  } | null>(null);
 
   useEffect(() => {
     if (!refreshError || isRefreshingStatuses || isInCooldown) return;
@@ -582,7 +610,6 @@ function SettingsPage() {
     return () => window.cancelAnimationFrame(id);
   }, [refreshError, isRefreshingStatuses, isInCooldown]);
 
-
   // Snapshot of the fields that drive the automation status badges, so the
   // refresh toast can say whether anything actually changed.
   const statusSnapshot = useCallback(
@@ -590,7 +617,8 @@ function SettingsPage() {
       JSON.stringify({
         decline_followup_mode: p?.decline_followup_mode ?? "off",
         voicemail_enabled: p?.voicemail_enabled ?? null,
-        review_auto_enabled: (p as Record<string, unknown> | null | undefined)?.["review_auto_enabled"] ?? null,
+        review_auto_enabled:
+          (p as Record<string, unknown> | null | undefined)?.["review_auto_enabled"] ?? null,
         opt_in_prompt_template: p?.opt_in_prompt_template ?? null,
         opt_in_prompt_cooldown_minutes: p?.opt_in_prompt_cooldown_minutes ?? null,
         optInPromptActive,
@@ -631,7 +659,8 @@ function SettingsPage() {
           affected.push({
             type: "customer",
             id: p.id,
-            label: [p.first_name, p.last_name].filter(Boolean).join(" ") || p.phone_number || "Contact",
+            label:
+              [p.first_name, p.last_name].filter(Boolean).join(" ") || p.phone_number || "Contact",
           });
         });
       }
@@ -653,36 +682,35 @@ function SettingsPage() {
   const lastRefreshAtRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
   // Dispatch-style activity entry for each status re-check.
-  const logStatusRefresh = useCallback(async (
-    status: "already_current" | "updated" | "failed",
-    detail: Record<string, unknown>,
-  ) => {
-    try {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const windowStart = lastRefreshAtRef.current;
-      const affected = status === "failed" ? [] : await collectAffected(windowStart);
-      const { error } = await insertLog(supabase, {
-        user_id: u.user.id,
-        action_type: LogAction.status_refresh,
-        status,
-        message_sent: JSON.stringify({
-          source: "settings_active_badge",
-          at: new Date().toISOString(),
-          window_start: windowStart,
-          affected,
-          ...detail,
-        }),
-      });
-      if (error) throw error;
-      if (status !== "failed") lastRefreshAtRef.current = new Date().toISOString();
-      void qc.invalidateQueries({ queryKey: ["logs"] });
-      void qc.invalidateQueries({ queryKey: ["status-refresh"] });
-
-    } catch {
-      // logging must never block the refresh itself
-    }
-  }, [collectAffected, qc]);
+  const logStatusRefresh = useCallback(
+    async (status: "already_current" | "updated" | "failed", detail: Record<string, unknown>) => {
+      try {
+        const { data: u } = await supabase.auth.getUser();
+        if (!u.user) return;
+        const windowStart = lastRefreshAtRef.current;
+        const affected = status === "failed" ? [] : await collectAffected(windowStart);
+        const { error } = await insertLogValidated({
+          user_id: u.user.id,
+          action_type: LogAction.status_refresh,
+          status,
+          message_sent: JSON.stringify({
+            source: "settings_active_badge",
+            at: new Date().toISOString(),
+            window_start: windowStart,
+            affected,
+            ...detail,
+          }),
+        });
+        if (error) throw error;
+        if (status !== "failed") lastRefreshAtRef.current = new Date().toISOString();
+        void qc.invalidateQueries({ queryKey: ["logs"] });
+        void qc.invalidateQueries({ queryKey: ["status-refresh"] });
+      } catch {
+        // logging must never block the refresh itself
+      }
+    },
+    [collectAffected, qc, insertLogValidated],
+  );
 
   // Synchronous in-flight flag + observable counters. The counters are exposed as
   // data attributes on the Refresh now button so tests can prove that a keypress
@@ -691,125 +719,142 @@ function SettingsPage() {
   const [refreshRunsStarted, setRefreshRunsStarted] = useState(0);
   const [ignoredRefreshKeys, setIgnoredRefreshKeys] = useState(0);
 
-  const refreshStatuses = useCallback(async (trigger: "manual" | "auto" = "manual") => {
-    // Hard, synchronous re-entrancy guard. React state (isRefreshingStatuses)
-    // updates asynchronously, so two activations in the same tick could both
-    // pass a state-only check and queue a second refresh. This ref cannot.
-    if (refreshInFlightRef.current) return;
-    refreshInFlightRef.current = true;
-    setRefreshRunsStarted((n) => n + 1);
+  const refreshStatuses = useCallback(
+    async (trigger: "manual" | "auto" = "manual") => {
+      // Hard, synchronous re-entrancy guard. React state (isRefreshingStatuses)
+      // updates asynchronously, so two activations in the same tick could both
+      // pass a state-only check and queue a second refresh. This ref cannot.
+      if (refreshInFlightRef.current) return;
+      refreshInFlightRef.current = true;
+      setRefreshRunsStarted((n) => n + 1);
 
+      // Remember the exact element that had focus inside the ACTIVE tooltip so we
+      // can hand focus back to it after the refresh button flips from disabled.
+      const focusBefore = document.activeElement as HTMLElement | null;
+      const focusWasInTooltip = focusBefore
+        ? (advancedBadgeRef.current?.contains(focusBefore) ?? false)
+        : false;
 
-    // Remember the exact element that had focus inside the ACTIVE tooltip so we
-    // can hand focus back to it after the refresh button flips from disabled.
-    const focusBefore = document.activeElement as HTMLElement | null;
-    const focusWasInTooltip = focusBefore ? advancedBadgeRef.current?.contains(focusBefore) ?? false : false;
+      setRefreshTrigger(trigger);
+      setIsRefreshingStatuses(true);
 
-    setRefreshTrigger(trigger);
-    setIsRefreshingStatuses(true);
-
-    // NOTE: the previous error is intentionally kept until we know the outcome.
-    // Clearing it here unmounted the error alert — and with it the Retry button
-    // the user had just focused — dropping focus to <body> on every retry.
-    setStatusAnnouncement("Refreshing automation statuses. Please wait.");
-    const before = statusSnapshot(profile);
-    const startedAt = Date.now();
-    try {
-      // Server-side single-run lock: only one re-evaluation may execute at a
-      // time per business, no matter how many requests arrive.
-      const lock = await runStatusRefreshFn({ data: { trigger } });
-      if (!lock.ran) {
-        setStatusAnnouncement("A refresh is already running. Waiting for it to finish.");
-        if (trigger === "manual") {
-          toast.info("Refresh already running", {
-            description: "Another re-check is in progress — only one can run at a time.",
+      // NOTE: the previous error is intentionally kept until we know the outcome.
+      // Clearing it here unmounted the error alert — and with it the Retry button
+      // the user had just focused — dropping focus to <body> on every retry.
+      setStatusAnnouncement("Refreshing automation statuses. Please wait.");
+      const before = statusSnapshot(profile);
+      const startedAt = Date.now();
+      try {
+        // Server-side single-run lock: only one re-evaluation may execute at a
+        // time per business, no matter how many requests arrive.
+        const lock = await runStatusRefreshFn({ data: { trigger } });
+        if (!lock.ran) {
+          setStatusAnnouncement("A refresh is already running. Waiting for it to finish.");
+          if (trigger === "manual") {
+            toast.info("Refresh already running", {
+              description: "Another re-check is in progress — only one can run at a time.",
+            });
+          }
+          void logStatusRefresh("already_current", {
+            trigger,
+            outcome: "Skipped — another refresh was already running",
+            lock: "in_progress",
+            duration_ms: Date.now() - startedAt,
           });
+          return;
         }
-        void logStatusRefresh("already_current", {
-          trigger,
-          outcome: "Skipped — another refresh was already running",
-          lock: "in_progress",
-          duration_ms: Date.now() - startedAt,
-        });
-        return;
-      }
-      const result = await refetchProfile();
+        const result = await refetchProfile();
 
-      // TanStack Query surfaces fetch failures on the result rather than throwing.
-      if (result?.error) throw result.error as Error;
-      const nowDate = new Date();
-      setNow(nowDate);
-      setEvaluatedAt(nowDate);
-      setRefreshError(null);
-      setRefreshAttempts(0);
-      setCooldownMs(0);
-      const after = statusSnapshot(result?.data ?? profile);
-      const checkedAt = nowDate.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      const changed = before !== after;
-      announceTooltipStatus(
-        `Opt-in prompt & cooldown ${optInPromptActive ? "ACTIVE" : "ON HOLD"}. ` +
-          `${changed ? "Statuses updated" : "Statuses already current"} — re-checked at ${checkedAt}.`,
-      );
-      void logStatusRefresh(changed ? "updated" : "already_current", {
-        trigger,
-        outcome: changed ? "Statuses updated" : "Statuses already current",
-        duration_ms: Date.now() - startedAt,
-        checked_at_local: checkedAt,
-      });
-      if (trigger === "manual") {
-        if (!changed) {
-          setStatusAnnouncement(`Statuses already current. Re-checked at ${checkedAt}.`);
-          toast.success("Statuses already current", {
-            description: `No changes since the last check · re-checked at ${checkedAt}.`,
-          });
-        } else {
-          setStatusAnnouncement(`Statuses updated. Automation statuses changed and refreshed at ${checkedAt}.`);
+        // TanStack Query surfaces fetch failures on the result rather than throwing.
+        if (result?.error) throw result.error as Error;
+        const nowDate = new Date();
+        setNow(nowDate);
+        setEvaluatedAt(nowDate);
+        setRefreshError(null);
+        setRefreshAttempts(0);
+        setCooldownMs(0);
+        const after = statusSnapshot(result?.data ?? profile);
+        const checkedAt = nowDate.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        const changed = before !== after;
+        announceTooltipStatus(
+          `Opt-in prompt & cooldown ${optInPromptActive ? "ACTIVE" : "ON HOLD"}. ` +
+            `${changed ? "Statuses updated" : "Statuses already current"} — re-checked at ${checkedAt}.`,
+        );
+        void logStatusRefresh(changed ? "updated" : "already_current", {
+          trigger,
+          outcome: changed ? "Statuses updated" : "Statuses already current",
+          duration_ms: Date.now() - startedAt,
+          checked_at_local: checkedAt,
+        });
+        if (trigger === "manual") {
+          if (!changed) {
+            setStatusAnnouncement(`Statuses already current. Re-checked at ${checkedAt}.`);
+            toast.success("Statuses already current", {
+              description: `No changes since the last check · re-checked at ${checkedAt}.`,
+            });
+          } else {
+            setStatusAnnouncement(
+              `Statuses updated. Automation statuses changed and refreshed at ${checkedAt}.`,
+            );
+            toast.success("Statuses updated", {
+              description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
+            });
+          }
+        } else if (changed) {
+          setStatusAnnouncement(`Statuses updated automatically at ${checkedAt}.`);
           toast.success("Statuses updated", {
             description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
           });
+        } else {
+          setStatusAnnouncement(`Automation statuses re-checked at ${checkedAt}. No changes.`);
         }
-      } else if (changed) {
-        setStatusAnnouncement(`Statuses updated automatically at ${checkedAt}.`);
-        toast.success("Statuses updated", {
-          description: `Automation statuses changed and have been refreshed · ${checkedAt}.`,
+      } catch (e) {
+        const message = (e as Error)?.message || "Could not re-check automation statuses.";
+        const code = (e as { code?: string })?.code || (e as { error_code?: string })?.error_code;
+        const at = new Date();
+        setRefreshError({ message, code, at });
+        const nextAttempt = refreshAttempts + 1;
+        setRefreshAttempts(nextAttempt);
+        if (nextAttempt >= 3) {
+          const duration = Math.min(
+            COOLDOWN_BASE_MS * Math.pow(2, nextAttempt - 3),
+            COOLDOWN_MAX_MS,
+          );
+          setCooldownMs(duration);
+        }
+        void logStatusRefresh("failed", {
+          trigger,
+          outcome: "Refresh failed",
+          error: message,
+          error_code: code,
+          duration_ms: Date.now() - startedAt,
         });
-      } else {
-        setStatusAnnouncement(`Automation statuses re-checked at ${checkedAt}. No changes.`);
+        setStatusAnnouncement(`Refresh failed. ${message}`);
+        announceTooltipStatus(`Refresh failed — statuses unchanged. ${message}`);
+        toast.error("Refresh failed", { description: message });
+      } finally {
+        refreshInFlightRef.current = false;
+        setIsRefreshingStatuses(false);
+        if (focusWasInTooltip && focusBefore) {
+          advancedBadgeRef.current?.restoreFocus(focusBefore);
+        }
       }
-    } catch (e) {
-      const message = (e as Error)?.message || "Could not re-check automation statuses.";
-      const code = (e as { code?: string })?.code || (e as { error_code?: string })?.error_code;
-      const at = new Date();
-      setRefreshError({ message, code, at });
-      const nextAttempt = refreshAttempts + 1;
-      setRefreshAttempts(nextAttempt);
-      if (nextAttempt >= 3) {
-        const duration = Math.min(COOLDOWN_BASE_MS * Math.pow(2, nextAttempt - 3), COOLDOWN_MAX_MS);
-        setCooldownMs(duration);
-      }
-      void logStatusRefresh("failed", {
-        trigger,
-        outcome: "Refresh failed",
-        error: message,
-        error_code: code,
-        duration_ms: Date.now() - startedAt,
-      });
-      setStatusAnnouncement(`Refresh failed. ${message}`);
-      announceTooltipStatus(`Refresh failed — statuses unchanged. ${message}`);
-      toast.error("Refresh failed", { description: message });
-    } finally {
-      refreshInFlightRef.current = false;
-      setIsRefreshingStatuses(false);
-      if (focusWasInTooltip && focusBefore) {
-
-        advancedBadgeRef.current?.restoreFocus(focusBefore);
-      }
-    }
-  }, [profile, refetchProfile, statusSnapshot, logStatusRefresh, refreshAttempts, runStatusRefreshFn, announceTooltipStatus, optInPromptActive]);
+    },
+    [
+      profile,
+      refetchProfile,
+      statusSnapshot,
+      logStatusRefresh,
+      refreshAttempts,
+      runStatusRefreshFn,
+      announceTooltipStatus,
+      optInPromptActive,
+    ],
+  );
 
   // Optional auto-refresh: re-evaluate statuses on a configurable interval while
   // this Settings page is visible. Skips ticks when hidden, already refreshing,
@@ -844,7 +889,6 @@ function SettingsPage() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [profile?.auto_refresh_enabled, profile?.auto_refresh_interval_minutes]);
-
 
   const highlightTimersRef = useRef<Map<HTMLElement, number[]>>(new Map());
 
@@ -887,11 +931,18 @@ function SettingsPage() {
     }, 60);
   }, []);
 
-
   const advancedAutomations = useMemo(
     () => [
-      { name: "Opt-in prompt & cooldown", mode: optInPromptActive ? "ACTIVE" : "ON HOLD", anchorId: "adv-opt-in-prompt" },
-      { name: "Inbound webhook diagnostics", mode: "MANUAL TOOL", anchorId: "adv-webhook-diagnostics" },
+      {
+        name: "Opt-in prompt & cooldown",
+        mode: optInPromptActive ? "ACTIVE" : "ON HOLD",
+        anchorId: "adv-opt-in-prompt",
+      },
+      {
+        name: "Inbound webhook diagnostics",
+        mode: "MANUAL TOOL",
+        anchorId: "adv-webhook-diagnostics",
+      },
     ],
     [optInPromptActive],
   );
@@ -899,7 +950,9 @@ function SettingsPage() {
   const advancedTooltip = useMemo(
     () => (
       <div className="space-y-1">
-        <div className="text-foreground" id="adv-automations-heading">Advanced automations</div>
+        <div className="text-foreground" id="adv-automations-heading">
+          Advanced automations
+        </div>
         <ul className="space-y-1" aria-labelledby="adv-automations-heading">
           {advancedAutomations.map((a) => (
             <li key={a.name}>
@@ -932,12 +985,19 @@ function SettingsPage() {
                 {refreshError.message}
               </div>
               <div className="text-muted-foreground">
-                {refreshError.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                {refreshError.at.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
               </div>
             </div>
           ) : null}
           <div aria-live="polite" aria-atomic="true">
-            Last evaluated {relativeLabel} <span className="text-muted-foreground normal-case no-underline">({evaluatedLabel})</span>
+            Last evaluated {relativeLabel}{" "}
+            <span className="text-muted-foreground normal-case no-underline">
+              ({evaluatedLabel})
+            </span>
           </div>
           <div aria-live="polite" aria-atomic="true" className="text-muted-foreground">
             {lastUpdate
@@ -964,7 +1024,13 @@ function SettingsPage() {
             data-ignored-keys={ignoredRefreshKeys}
             aria-disabled={isRefreshingStatuses || isInCooldown}
             aria-busy={isRefreshingStatuses}
-            aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
+            aria-label={
+              isRefreshingStatuses
+                ? "Refreshing automation statuses"
+                : isInCooldown
+                  ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining`
+                  : "Refresh automation statuses now"
+            }
             onClick={() => {
               if (isRefreshingStatuses || isInCooldown) return;
               refreshStatuses("manual");
@@ -981,13 +1047,15 @@ function SettingsPage() {
             }}
             onKeyUp={(e) => {
               // Native buttons fire click on Space keyup — swallow that too.
-              if ((e.key === " " || e.key === "Spacebar") && (isRefreshingStatuses || isInCooldown)) {
+              if (
+                (e.key === " " || e.key === "Spacebar") &&
+                (isRefreshingStatuses || isInCooldown)
+              ) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.currentTarget.focus();
               }
             }}
-
             className={`relative mt-1 flex min-h-[26px] w-full items-center justify-between overflow-hidden rounded-sm border border-border bg-muted/20 px-2 py-1 text-left uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-muted/40"}`}
           >
             {/* Indeterminate progress bar: absolutely positioned so it never affects layout */}
@@ -1047,20 +1115,33 @@ function SettingsPage() {
                   type="button"
                   aria-disabled={isRefreshingStatuses || isInCooldown}
                   aria-busy={isRefreshingStatuses}
-                  aria-label={isRefreshingStatuses ? "Retrying refresh" : isInCooldown ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Retry refreshing automation statuses"}
+                  aria-label={
+                    isRefreshingStatuses
+                      ? "Retrying refresh"
+                      : isInCooldown
+                        ? `Retry on cooldown, ${formatCooldown(cooldownMs)} remaining`
+                        : "Retry refreshing automation statuses"
+                  }
                   onClick={() => {
                     if (isRefreshingStatuses || isInCooldown) return;
                     refreshStatuses("manual");
                   }}
                   onKeyDown={(e) => {
-                    if ((e.key === "Enter" || e.key === " ") && (isRefreshingStatuses || isInCooldown)) {
+                    if (
+                      (e.key === "Enter" || e.key === " ") &&
+                      (isRefreshingStatuses || isInCooldown)
+                    ) {
                       e.preventDefault();
                     }
                   }}
                   className={`flex items-center gap-1.5 rounded-sm border border-orange/70 px-2 py-0.5 uppercase tracking-widest text-foreground kb-focus ${isRefreshingStatuses || isInCooldown ? "pointer-events-none cursor-not-allowed opacity-40" : "hover:bg-orange/20"}`}
                 >
                   {isRefreshingStatuses ? <Spinner size={10} /> : null}
-                  {isRefreshingStatuses ? "Retrying…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Retry"}
+                  {isRefreshingStatuses
+                    ? "Retrying…"
+                    : isInCooldown
+                      ? `Retry in ${formatCooldown(cooldownMs)}`
+                      : "Retry"}
                 </button>
                 <button
                   key="refresh-dismiss-btn"
@@ -1085,7 +1166,6 @@ function SettingsPage() {
             </div>
           ) : null}
         </div>
-
       </div>
     ),
     [
@@ -1105,11 +1185,7 @@ function SettingsPage() {
       refreshRunsStarted,
       ignoredRefreshKeys,
     ],
-
   );
-
-
-
 
   if (isStaff) {
     return (
@@ -1190,442 +1266,487 @@ function SettingsPage() {
       )}
 
       {tab === "settings" && (
-      <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
-        <div className="panel p-6">
-          <div className="label-eyebrow">Integrations</div>
-          <h2 className="mt-1 text-xl">Google review link & Temaro number</h2>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Your dedicated line:{" "}
-            <span className="mono">{profile?.twilio_phone_number ?? "not provisioned yet — visit onboarding"}</span>
-          </p>
-          <div className="mt-4 space-y-3">
-            <label className="block">
-              <span className="label-eyebrow">Google Review URL</span>
-              <input
-                value={reviewUrl}
-                onChange={(e) => setReviewUrl(e.target.value)}
-                placeholder="https://g.page/r/…"
-                className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="block">
-              <span className="label-eyebrow">ZIP code (weather only)</span>
-              <input
-                value={zipCode}
-                onChange={(e) => setZipCode(sanitizeZipInput(e.target.value))}
-                inputMode="numeric"
-                maxLength={5}
-                placeholder="72201"
-                aria-label="ZIP code for weather"
-                data-testid="settings-zip-input"
-                className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
-              />
-              {zipCode !== "" && !isValidZip(zipCode) && (
-                <p className="mt-1 text-xs text-orange">Enter all 5 digits to see the forecast.</p>
-              )}
-              <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
-                Used only for today’s weather on Home. Press Save to store.
-              </p>
-            </label>
-            <button
-              onClick={() => save.mutate()}
-              disabled={save.isPending}
-              className="w-full rounded-sm bg-orange px-4 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90 disabled:opacity-50"
-            >{save.isPending ? "Saving…" : "Save"}</button>
-
-            <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-              <div>
-                <div className="label-eyebrow">Auto review requests</div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  When off, completed jobs are still recorded for revenue, but no review text is sent.
-                </p>
-              </div>
-              <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
+        <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
+          <div className="panel p-6">
+            <div className="label-eyebrow">Integrations</div>
+            <h2 className="mt-1 text-xl">Google review link & Temaro number</h2>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Your dedicated line:{" "}
+              <span className="mono">
+                {profile?.twilio_phone_number ?? "not provisioned yet — visit onboarding"}
+              </span>
+            </p>
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="label-eyebrow">Google Review URL</span>
                 <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-primary"
-                  checked={profile?.review_requests_enabled ?? true}
-                  disabled={toggleReviews.isPending}
-                  onChange={(e) => toggleReviews.mutate(e.target.checked)}
+                  value={reviewUrl}
+                  onChange={(e) => setReviewUrl(e.target.value)}
+                  placeholder="https://g.page/r/…"
+                  className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
                 />
-                {profile?.review_requests_enabled === false ? "Off" : "On"}
               </label>
-            </div>
+              <label className="block">
+                <span className="label-eyebrow">ZIP code (weather only)</span>
+                <input
+                  value={zipCode}
+                  onChange={(e) => setZipCode(sanitizeZipInput(e.target.value))}
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="72201"
+                  aria-label="ZIP code for weather"
+                  data-testid="settings-zip-input"
+                  className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+                />
+                {zipCode !== "" && !isValidZip(zipCode) && (
+                  <p className="mt-1 text-xs text-orange">
+                    Enter all 5 digits to see the forecast.
+                  </p>
+                )}
+                <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
+                  Used only for today’s weather on Home. Press Save to store.
+                </p>
+              </label>
+              <button
+                onClick={() => save.mutate()}
+                disabled={save.isPending}
+                className="w-full rounded-sm bg-orange px-4 py-3 text-sm font-medium uppercase tracking-wider text-orange-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {save.isPending ? "Saving…" : "Save"}
+              </button>
 
-
-            <div className="mt-6 border-t border-border pt-4">
-              <div className="flex items-center justify-between">
+              <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
                 <div>
-                  <div className="label-eyebrow">Voicemail on missed calls</div>
+                  <div className="label-eyebrow">Auto review requests</div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    When on, missed callers hear a short prompt and can leave a voicemail. Auto-text still fires either way.
+                    When off, completed jobs are still recorded for revenue, but no review text is
+                    sent.
                   </p>
                 </div>
                 <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
                   <input
                     type="checkbox"
                     className="h-4 w-4 accent-primary"
-                    checked={profile?.voicemail_enabled ?? false}
-                    disabled={toggleVoicemail.isPending}
-                    onChange={(e) => toggleVoicemail.mutate(e.target.checked)}
+                    checked={profile?.review_requests_enabled ?? true}
+                    disabled={toggleReviews.isPending}
+                    onChange={(e) => toggleReviews.mutate(e.target.checked)}
                   />
-                  {profile?.voicemail_enabled ? "On" : "Off"}
+                  {profile?.review_requests_enabled === false ? "Off" : "On"}
                 </label>
               </div>
-              <label className="mt-3 block">
-                <span className="label-eyebrow">Owner mobile (voicemail alerts)</span>
-                <input
-                  value={ownerPhone}
-                  onChange={(e) => setOwnerPhone(e.target.value)}
-                  placeholder="+15551234567"
-                  className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
-                />
-                {profile?.voicemail_enabled && !profile?.owner_phone && (
-                  <p className="mt-1 text-xs text-orange">
-                    ⚠ Voicemail is on but no owner phone is set — recordings are saved, but you won't get a text alert until you add a number and save.
-                  </p>
-                )}
-                <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
-                  Used only to text you when a voicemail lands. Press Save to store.
-                </p>
-              </label>
-            </div>
-          </div>
-        </div>
 
-
-
-        <div className="panel p-6">
-          <div className="label-eyebrow">Billing</div>
-          <h2 className="mt-1 text-xl">Subscription</h2>
-          <div className="mt-4 space-y-3 text-sm">
-            <Row k="Tier" v={<span className="mono uppercase">{profile?.subscription_tier ?? "starter"}</span>} />
-            <Row k="Status" v={<span className="mono uppercase">{profile?.subscription_status ?? "trialing"}</span>} />
-          </div>
-          <button
-            disabled
-            className="mt-6 w-full rounded-sm border border-border bg-card px-4 py-3 text-sm uppercase tracking-wider text-muted-foreground"
-            title="Available once Stripe billing is enabled"
-          >
-            Open Stripe customer portal (coming)
-          </button>
-          <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-            Stripe checkout & portal wire up in Phase 2.
-          </p>
-        </div>
-
-        <OnlinePaymentsPanel
-          stripe_connect_account_id={profile?.stripe_connect_account_id}
-          stripe_connect_status={profile?.stripe_connect_status}
-          platform_fee_percent={profile?.platform_fee_percent}
-          stripe_connect_connected_at={profile?.stripe_connect_connected_at}
-        />
-
-        <DepositDefaultsPanel
-          defaultType={profile?.default_deposit_type}
-          defaultFixedAmount={profile?.default_deposit_fixed_amount}
-          allowOverride={profile?.allow_deposit_override_per_quote}
-        />
-
-        <div className="panel p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="label-eyebrow">Automation</div>
-              <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
-            </div>
-            <AutomationBadge
-              state={declineMode === "auto" ? "active" : declineMode === "manual" ? "manual" : "off"}
-              tooltip={
-                <div className="space-y-2 normal-case tracking-normal">
-                  <div className="text-foreground">Declined-quote follow-up</div>
-                  <p className="text-muted-foreground">
-                    {declineMode === "auto"
-                      ? "Automatically texts the customer asking why they declined, then captures their reply on the quote."
-                      : declineMode === "manual"
-                        ? "Shows an Ask why button in the dashboard so you can request feedback manually."
-                        : "No follow-up is sent when a quote is declined."}
-                  </p>
-                  <TooltipCloseButton />
+              <div className="mt-6 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="label-eyebrow">Voicemail on missed calls</div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      When on, missed callers hear a short prompt and can leave a voicemail.
+                      Auto-text still fires either way.
+                    </p>
+                  </div>
+                  <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={profile?.voicemail_enabled ?? false}
+                      disabled={toggleVoicemail.isPending}
+                      onChange={(e) => toggleVoicemail.mutate(e.target.checked)}
+                    />
+                    {profile?.voicemail_enabled ? "On" : "Off"}
+                  </label>
                 </div>
-              }
-            />
-
-          </div>
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground">
-              When a customer declines a quote: <span className="mono">off</span> = do nothing;
-              <span className="mono"> manual</span> = show an "Ask why" button in the dashboard;
-              <span className="mono"> auto</span> = text them automatically asking for a reason.
-              Their reply is captured on the quote.
-            </p>
-            <select
-              aria-label="Declined-quote follow-up mode"
-              value={profile?.decline_followup_mode ?? "off"}
-              disabled={setDeclineMode.isPending}
-              onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
-              className="mono rounded-sm border border-border bg-background px-3 py-2 text-xs uppercase tracking-wider"
-            >
-              <option value="off">Off</option>
-              <option value="manual">Manual</option>
-              <option value="auto">Auto</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="panel p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="label-eyebrow">Advanced</div>
-              <h2 className="mt-1 text-xl">Automations in Advanced</h2>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <AutomationBadge
-                ref={advancedBadgeRef}
-                state={advancedActiveCount > 0 ? "active" : "off"}
-                activeCount={advancedActiveCount}
-                tooltip={advancedTooltip}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (isRefreshingStatuses || isInCooldown) return;
-                  refreshStatuses("manual");
-                }}
-
-                aria-disabled={isRefreshingStatuses || isInCooldown}
-                aria-busy={isRefreshingStatuses}
-                aria-label={isRefreshingStatuses ? "Refreshing automation statuses" : isInCooldown ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining` : "Refresh automation statuses now"}
-                className={`mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:text-foreground"}`}
-              >
-                {isRefreshingStatuses ? <Spinner size={10} /> : null}
-                {isRefreshingStatuses ? "Checking…" : isInCooldown ? `Retry in ${formatCooldown(cooldownMs)}` : "Refresh statuses"}
-              </button>
-              <div
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-                className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest"
-              >
-                <span
-                  aria-hidden="true"
-                  data-testid="realtime-indicator-dot"
-                  data-realtime-state={realtimeState}
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    realtimeState === "live"
-                      ? "bg-moss"
-                      : realtimeState === "reconnecting"
-                        ? "motion-safe:animate-pulse bg-orange"
-                        : realtimeState === "disconnected"
-                          ? "bg-orange"
-                          : "motion-safe:animate-pulse bg-muted-foreground"
-                  }`}
-                />
-                <span className={realtimeState === "live" ? "text-muted-foreground" : "text-orange"}>
-                  {realtimeState === "live"
-                    ? "Live"
-                    : realtimeState === "reconnecting"
-                      ? `Reconnecting${realtimeAttempt > 1 ? ` (try ${realtimeAttempt})` : ""}…`
-                      : realtimeState === "disconnected"
-                        ? `Disconnected (try ${realtimeAttempt})`
-                        : "Connecting…"}
-                </span>
-                <span className="text-muted-foreground/70 normal-case tracking-normal">
-                  {lastSyncAt
-                    ? `· synced ${lastSyncAt.toLocaleTimeString()}`
-                    : "· not yet synced"}
-                </span>
+                <label className="mt-3 block">
+                  <span className="label-eyebrow">Owner mobile (voicemail alerts)</span>
+                  <input
+                    value={ownerPhone}
+                    onChange={(e) => setOwnerPhone(e.target.value)}
+                    placeholder="+15551234567"
+                    className="mono mt-1 block w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+                  />
+                  {profile?.voicemail_enabled && !profile?.owner_phone && (
+                    <p className="mt-1 text-xs text-orange">
+                      ⚠ Voicemail is on but no owner phone is set — recordings are saved, but you
+                      won't get a text alert until you add a number and save.
+                    </p>
+                  )}
+                  <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground mono">
+                    Used only to text you when a voicemail lands. Press Save to store.
+                  </p>
+                </label>
               </div>
-
-              <button
-                type="button"
-                onClick={manualReconnect}
-                disabled={realtimeState === "connecting"}
-                aria-busy={realtimeState === "connecting"}
-                aria-label="Reconnect Realtime now"
-                className="mono kb-focus flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {realtimeState === "connecting" ? <Spinner size={10} /> : <span aria-hidden="true">↻</span>}
-                {realtimeState === "connecting" ? "Reconnecting…" : "Reconnect now"}
-              </button>
-
-              <button
-                type="button"
-                role="switch"
-                aria-checked={realtimeToasts}
-                aria-label="Toast me when live updates connect or drop"
-                onClick={() => setRealtimeToastPref(!realtimeToasts)}
-                className={`mono kb-focus rounded-sm border px-1.5 py-0.5 text-[10px] uppercase tracking-widest ${
-                  realtimeToasts
-                    ? "border-orange/60 text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {realtimeToasts ? "Toasts on" : "Toasts off"}
-              </button>
-
-
             </div>
           </div>
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
-              <span className="text-xs text-muted-foreground">Opt-in prompt & cooldown</span>
+
+          <div className="panel p-6">
+            <div className="label-eyebrow">Billing</div>
+            <h2 className="mt-1 text-xl">Subscription</h2>
+            <div className="mt-4 space-y-3 text-sm">
+              <Row
+                k="Tier"
+                v={
+                  <span className="mono uppercase">{profile?.subscription_tier ?? "starter"}</span>
+                }
+              />
+              <Row
+                k="Status"
+                v={
+                  <span className="mono uppercase">
+                    {profile?.subscription_status ?? "trialing"}
+                  </span>
+                }
+              />
+            </div>
+            <button
+              disabled
+              className="mt-6 w-full rounded-sm border border-border bg-card px-4 py-3 text-sm uppercase tracking-wider text-muted-foreground"
+              title="Available once Stripe billing is enabled"
+            >
+              Open Stripe customer portal (coming)
+            </button>
+            <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+              Stripe checkout & portal wire up in Phase 2.
+            </p>
+          </div>
+
+          <OnlinePaymentsPanel
+            stripe_connect_account_id={profile?.stripe_connect_account_id}
+            stripe_connect_status={profile?.stripe_connect_status}
+            platform_fee_percent={profile?.platform_fee_percent}
+            stripe_connect_connected_at={profile?.stripe_connect_connected_at}
+          />
+
+          <DepositDefaultsPanel
+            defaultType={profile?.default_deposit_type}
+            defaultFixedAmount={profile?.default_deposit_fixed_amount}
+            allowOverride={profile?.allow_deposit_override_per_quote}
+          />
+
+          <div className="panel p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="label-eyebrow">Automation</div>
+                <h2 className="mt-1 text-xl">Declined-quote follow-up</h2>
+              </div>
               <AutomationBadge
-                state={optInPromptActive ? "active" : "hold"}
+                state={
+                  declineMode === "auto" ? "active" : declineMode === "manual" ? "manual" : "off"
+                }
                 tooltip={
                   <div className="space-y-2 normal-case tracking-normal">
-                    <div className="text-foreground">Opt-in prompt & cooldown</div>
+                    <div className="text-foreground">Declined-quote follow-up</div>
                     <p className="text-muted-foreground">
-                      {optInPromptActive
-                        ? "Prompts can be sent to contacts with a genuine prior inbound engagement. A cooldown prevents duplicate prompts."
-                        : "Real sends to customer numbers are paused. You can still edit the template and send test messages to your own number."}
+                      {declineMode === "auto"
+                        ? "Automatically texts the customer asking why they declined, then captures their reply on the quote."
+                        : declineMode === "manual"
+                          ? "Shows an Ask why button in the dashboard so you can request feedback manually."
+                          : "No follow-up is sent when a quote is declined."}
                     </p>
                     <TooltipCloseButton />
                   </div>
                 }
               />
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-muted-foreground">Inbound webhook diagnostics</span>
-              <AutomationBadge
-                state="off"
-                label="Manual tool"
-                tooltip={
-                  <div className="space-y-2 normal-case tracking-normal">
-                    <div className="text-foreground">Inbound webhook diagnostics</div>
-                    <p className="text-muted-foreground">
-                      A manual diagnostic tool for checking Twilio webhook connectivity and recent payload history. It does not run automatically.
-                    </p>
-                    <TooltipCloseButton />
-                  </div>
-                }
-              />
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <p className="text-xs text-muted-foreground">
+                When a customer declines a quote: <span className="mono">off</span> = do nothing;
+                <span className="mono"> manual</span> = show an "Ask why" button in the dashboard;
+                <span className="mono"> auto</span> = text them automatically asking for a reason.
+                Their reply is captured on the quote.
+              </p>
+              <select
+                aria-label="Declined-quote follow-up mode"
+                value={profile?.decline_followup_mode ?? "off"}
+                disabled={setDeclineMode.isPending}
+                onChange={(e) => setDeclineMode.mutate(e.target.value as "off" | "manual" | "auto")}
+                className="mono rounded-sm border border-border bg-background px-3 py-2 text-xs uppercase tracking-wider"
+              >
+                <option value="off">Off</option>
+                <option value="manual">Manual</option>
+                <option value="auto">Auto</option>
+              </select>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setTab("advanced")}
-            className="mono mt-4 rounded-sm border border-border px-3 py-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
-          >
-            Open advanced
-          </button>
+
+          <div className="panel p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="label-eyebrow">Advanced</div>
+                <h2 className="mt-1 text-xl">Automations in Advanced</h2>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <AutomationBadge
+                  ref={advancedBadgeRef}
+                  state={advancedActiveCount > 0 ? "active" : "off"}
+                  activeCount={advancedActiveCount}
+                  tooltip={advancedTooltip}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isRefreshingStatuses || isInCooldown) return;
+                    refreshStatuses("manual");
+                  }}
+                  aria-disabled={isRefreshingStatuses || isInCooldown}
+                  aria-busy={isRefreshingStatuses}
+                  aria-label={
+                    isRefreshingStatuses
+                      ? "Refreshing automation statuses"
+                      : isInCooldown
+                        ? `Refresh on cooldown, ${formatCooldown(cooldownMs)} remaining`
+                        : "Refresh automation statuses now"
+                  }
+                  className={`mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground underline decoration-dotted underline-offset-2 ${isRefreshingStatuses || isInCooldown ? "cursor-not-allowed opacity-40" : "hover:text-foreground"}`}
+                >
+                  {isRefreshingStatuses ? <Spinner size={10} /> : null}
+                  {isRefreshingStatuses
+                    ? "Checking…"
+                    : isInCooldown
+                      ? `Retry in ${formatCooldown(cooldownMs)}`
+                      : "Refresh statuses"}
+                </button>
+                <div
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest"
+                >
+                  <span
+                    aria-hidden="true"
+                    data-testid="realtime-indicator-dot"
+                    data-realtime-state={realtimeState}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      realtimeState === "live"
+                        ? "bg-moss"
+                        : realtimeState === "reconnecting"
+                          ? "motion-safe:animate-pulse bg-orange"
+                          : realtimeState === "disconnected"
+                            ? "bg-orange"
+                            : "motion-safe:animate-pulse bg-muted-foreground"
+                    }`}
+                  />
+                  <span
+                    className={realtimeState === "live" ? "text-muted-foreground" : "text-orange"}
+                  >
+                    {realtimeState === "live"
+                      ? "Live"
+                      : realtimeState === "reconnecting"
+                        ? `Reconnecting${realtimeAttempt > 1 ? ` (try ${realtimeAttempt})` : ""}…`
+                        : realtimeState === "disconnected"
+                          ? `Disconnected (try ${realtimeAttempt})`
+                          : "Connecting…"}
+                  </span>
+                  <span className="text-muted-foreground/70 normal-case tracking-normal">
+                    {lastSyncAt
+                      ? `· synced ${lastSyncAt.toLocaleTimeString()}`
+                      : "· not yet synced"}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={manualReconnect}
+                  disabled={realtimeState === "connecting"}
+                  aria-busy={realtimeState === "connecting"}
+                  aria-label="Reconnect Realtime now"
+                  className="mono kb-focus flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {realtimeState === "connecting" ? (
+                    <Spinner size={10} />
+                  ) : (
+                    <span aria-hidden="true">↻</span>
+                  )}
+                  {realtimeState === "connecting" ? "Reconnecting…" : "Reconnect now"}
+                </button>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={realtimeToasts}
+                  aria-label="Toast me when live updates connect or drop"
+                  onClick={() => setRealtimeToastPref(!realtimeToasts)}
+                  className={`mono kb-focus rounded-sm border px-1.5 py-0.5 text-[10px] uppercase tracking-widest ${
+                    realtimeToasts
+                      ? "border-orange/60 text-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {realtimeToasts ? "Toasts on" : "Toasts off"}
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
+                <span className="text-xs text-muted-foreground">Opt-in prompt & cooldown</span>
+                <AutomationBadge
+                  state={optInPromptActive ? "active" : "hold"}
+                  tooltip={
+                    <div className="space-y-2 normal-case tracking-normal">
+                      <div className="text-foreground">Opt-in prompt & cooldown</div>
+                      <p className="text-muted-foreground">
+                        {optInPromptActive
+                          ? "Prompts can be sent to contacts with a genuine prior inbound engagement. A cooldown prevents duplicate prompts."
+                          : "Real sends to customer numbers are paused. You can still edit the template and send test messages to your own number."}
+                      </p>
+                      <TooltipCloseButton />
+                    </div>
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-muted-foreground">Inbound webhook diagnostics</span>
+                <AutomationBadge
+                  state="off"
+                  label="Manual tool"
+                  tooltip={
+                    <div className="space-y-2 normal-case tracking-normal">
+                      <div className="text-foreground">Inbound webhook diagnostics</div>
+                      <p className="text-muted-foreground">
+                        A manual diagnostic tool for checking Twilio webhook connectivity and recent
+                        payload history. It does not run automatically.
+                      </p>
+                      <TooltipCloseButton />
+                    </div>
+                  }
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTab("advanced")}
+              className="mono mt-4 rounded-sm border border-border px-3 py-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+            >
+              Open advanced
+            </button>
+          </div>
+
+          <ExcludedNumbersPanel />
+
+          <TeamMembersPanel tier={profile?.subscription_tier} />
         </div>
-
-        <ExcludedNumbersPanel />
-
-        <TeamMembersPanel tier={profile?.subscription_tier} />
-
-      </div>
       )}
 
       {tab === "advanced" && (
-      <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
-        <div className="panel p-6 md:col-span-2">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="label-eyebrow">Automation</div>
-              <h2 className="mt-1 text-xl">Auto-refresh statuses</h2>
+        <div className="grid gap-5 p-5 md:grid-cols-2 md:p-8">
+          <div className="panel p-6 md:col-span-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="label-eyebrow">Automation</div>
+                <h2 className="mt-1 text-xl">Auto-refresh statuses</h2>
+              </div>
+              <AutomationBadge
+                state={profile?.auto_refresh_enabled ? "active" : "off"}
+                tooltip={
+                  <div className="space-y-2 normal-case tracking-normal">
+                    <div className="text-foreground">Auto-refresh statuses</div>
+                    <p className="text-muted-foreground">
+                      {profile?.auto_refresh_enabled
+                        ? "Periodically refreshes automation status badges while this page is open."
+                        : "Status badges only refresh when you open the page or click Refresh statuses."}
+                    </p>
+                    <TooltipCloseButton />
+                  </div>
+                }
+              />
             </div>
-            <AutomationBadge
-              state={profile?.auto_refresh_enabled ? "active" : "off"}
-              tooltip={
-                <div className="space-y-2 normal-case tracking-normal">
-                  <div className="text-foreground">Auto-refresh statuses</div>
-                  <p className="text-muted-foreground">
-                    {profile?.auto_refresh_enabled
-                      ? "Periodically refreshes automation status badges while this page is open."
-                      : "Status badges only refresh when you open the page or click Refresh statuses."}
-                  </p>
-                  <TooltipCloseButton />
-                </div>
-              }
+            <p className="mt-2 text-xs text-muted-foreground">
+              Automatically re-check automation statuses while this Settings page is open. Manual
+              refresh and failure cooldown always take precedence.
+            </p>
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  checked={autoRefreshEnabled}
+                  disabled={updateAutoRefresh.isPending}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setAutoRefreshEnabled(enabled);
+                    updateAutoRefresh.mutate({ enabled, intervalMinutes: autoRefreshInterval });
+                  }}
+                />
+                {autoRefreshEnabled ? "Enabled" : "Disabled"}
+              </label>
+              <label className="flex flex-1 items-center gap-2">
+                <span className="label-eyebrow whitespace-nowrap">Every</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={autoRefreshInterval}
+                  disabled={updateAutoRefresh.isPending}
+                  onChange={(e) => {
+                    const raw = parseInt(e.target.value, 10);
+                    const intervalMinutes = Number.isNaN(raw) ? 1 : Math.max(1, Math.min(120, raw));
+                    setAutoRefreshInterval(intervalMinutes);
+                  }}
+                  onBlur={() => {
+                    if (profile?.auto_refresh_enabled) {
+                      updateAutoRefresh.mutate({
+                        enabled: autoRefreshEnabled,
+                        intervalMinutes: autoRefreshInterval,
+                      });
+                    }
+                  }}
+                  className="mono w-20 rounded-sm border border-border bg-background px-3 py-2 text-sm"
+                />
+                <span className="text-xs text-muted-foreground">minutes (1–120)</span>
+              </label>
+            </div>
+            {profile?.auto_refresh_enabled ? (
+              <p className="mono mt-3 text-[10px] uppercase tracking-widest text-moss">
+                Active · next refresh in {profile.auto_refresh_interval_minutes ?? 15} minutes while
+                this page is visible
+              </p>
+            ) : (
+              <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+                Off · enable above to schedule automatic re-checks
+              </p>
+            )}
+          </div>
+
+          <div id="adv-opt-in-prompt" className="scroll-mt-24 rounded-sm transition md:col-span-2">
+            <OptInPromptSettingsPanel
+              businessName={profile?.business_name}
+              template={profile?.opt_in_prompt_template}
+              cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
+              ownerPhone={profile?.owner_phone}
+              fromNumber={profile?.twilio_phone_number}
+              lastTestPhone={profile?.last_test_phone}
             />
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Automatically re-check automation statuses while this Settings page is open. Manual refresh and failure cooldown always take precedence.
-          </p>
-          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <label className="mono flex cursor-pointer items-center gap-2 text-xs uppercase tracking-wider">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-primary"
-                checked={autoRefreshEnabled}
-                disabled={updateAutoRefresh.isPending}
-                onChange={(e) => {
-                  const enabled = e.target.checked;
-                  setAutoRefreshEnabled(enabled);
-                  updateAutoRefresh.mutate({ enabled, intervalMinutes: autoRefreshInterval });
-                }}
-              />
-              {autoRefreshEnabled ? "Enabled" : "Disabled"}
-            </label>
-            <label className="flex flex-1 items-center gap-2">
-              <span className="label-eyebrow whitespace-nowrap">Every</span>
-              <input
-                type="number"
-                min={1}
-                max={120}
-                value={autoRefreshInterval}
-                disabled={updateAutoRefresh.isPending}
-                onChange={(e) => {
-                  const raw = parseInt(e.target.value, 10);
-                  const intervalMinutes = Number.isNaN(raw) ? 1 : Math.max(1, Math.min(120, raw));
-                  setAutoRefreshInterval(intervalMinutes);
-                }}
-                onBlur={() => {
-                  if (profile?.auto_refresh_enabled) {
-                    updateAutoRefresh.mutate({ enabled: autoRefreshEnabled, intervalMinutes: autoRefreshInterval });
-                  }
-                }}
-                className="mono w-20 rounded-sm border border-border bg-background px-3 py-2 text-sm"
-              />
-              <span className="text-xs text-muted-foreground">minutes (1–120)</span>
-            </label>
-          </div>
-          {profile?.auto_refresh_enabled ? (
-            <p className="mono mt-3 text-[10px] uppercase tracking-widest text-moss">
-              Active · next refresh in {profile.auto_refresh_interval_minutes ?? 15} minutes while this page is visible
-            </p>
-          ) : (
-            <p className="mono mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-              Off · enable above to schedule automatic re-checks
-            </p>
+
+          {!isStaff && (
+            <div
+              id="adv-webhook-diagnostics"
+              className="scroll-mt-24 space-y-5 rounded-sm transition md:col-span-2"
+            >
+              <WebhookCheckPanel />
+              <WebhookEventLogPanel />
+            </div>
           )}
-        </div>
 
-        <div id="adv-opt-in-prompt" className="scroll-mt-24 rounded-sm transition md:col-span-2">
-
-          <OptInPromptSettingsPanel
-            businessName={profile?.business_name}
-            template={profile?.opt_in_prompt_template}
-            cooldownMinutes={profile?.opt_in_prompt_cooldown_minutes}
-            ownerPhone={profile?.owner_phone}
-            fromNumber={profile?.twilio_phone_number}
-            lastTestPhone={profile?.last_test_phone}
-          />
-        </div>
-
-        {!isStaff && (
-          <div id="adv-webhook-diagnostics" className="scroll-mt-24 space-y-5 rounded-sm transition md:col-span-2">
-            <WebhookCheckPanel />
-            <WebhookEventLogPanel />
+          <div id="adv-active-audit" className="scroll-mt-24 md:col-span-2">
+            <ActiveChangeAuditPanel />
           </div>
-        )}
 
-
-        <div id="adv-active-audit" className="scroll-mt-24 md:col-span-2">
-          <ActiveChangeAuditPanel />
+          <div className="panel p-6 md:col-span-2">
+            <div className="label-eyebrow">Compliance</div>
+            <ul className="mono mt-3 space-y-2 text-xs text-muted-foreground">
+              <li>· Every outbound SMS ends with "Reply STOP to unsubscribe."</li>
+              <li>
+                · No text is sent unless opt_in_consent = true. Otherwise flagged as needs-consent.
+              </li>
+              <li>
+                · ToS accepted on signup:{" "}
+                {profile?.tos_accepted_at
+                  ? new Date(profile.tos_accepted_at).toLocaleString()
+                  : "—"}
+              </li>
+              <li>· No review gating — every completed job receives the same review request.</li>
+            </ul>
+          </div>
         </div>
-
-        <div className="panel p-6 md:col-span-2">
-          <div className="label-eyebrow">Compliance</div>
-          <ul className="mono mt-3 space-y-2 text-xs text-muted-foreground">
-            <li>· Every outbound SMS ends with "Reply STOP to unsubscribe."</li>
-            <li>· No text is sent unless opt_in_consent = true. Otherwise flagged as needs-consent.</li>
-            <li>· ToS accepted on signup: {profile?.tos_accepted_at ? new Date(profile.tos_accepted_at).toLocaleString() : "—"}</li>
-            <li>· No review gating — every completed job receives the same review request.</li>
-          </ul>
-        </div>
-      </div>
       )}
     </div>
   );
@@ -1661,10 +1782,6 @@ function Spinner({ size = 12, className = "" }: { size?: number; className?: str
   );
 }
 
-
-
-
-
 function formatRelativeTime(past: Date, current: Date): string {
   const seconds = Math.floor((current.getTime() - past.getTime()) / 1000);
   if (seconds < 60) return "just now";
@@ -1677,7 +1794,6 @@ function formatRelativeTime(past: Date, current: Date): string {
 }
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
-
   return (
     <div className="flex items-center justify-between border-b border-border pb-2">
       <span className="label-eyebrow">{k}</span>

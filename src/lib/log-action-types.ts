@@ -11,11 +11,7 @@
  * on a Postgres 23514 error after the fact.
  */
 
-import {
-  LOG_ACTION_TYPES,
-  LogAction,
-  type LogActionType,
-} from "./log-action-types.generated";
+import { LOG_ACTION_TYPES, LogAction, type LogActionType } from "./log-action-types.generated";
 import {
   logActionTypeSchema,
   LOG_ACTION_TYPE_CONSTRAINT,
@@ -51,7 +47,6 @@ export type { LogActionType, LogActionTypeViolation };
 
 const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
 
-
 export function isLogActionType(value: unknown): value is LogActionType {
   return typeof value === "string" && ALLOWED.has(value);
 }
@@ -68,7 +63,18 @@ export function assertLogActionType(value: unknown): LogActionType {
  * (or any value outside the whitelist) is a compile-time error here and is
  * re-checked at runtime by `assertLogActionType` below.
  */
-type LogRowInput = { action_type: LogActionType; [key: string]: unknown };
+export type LogRowInput = { action_type: LogActionType; [key: string]: unknown };
+
+/**
+ * Client-side pre-validation: rejects any row whose action_type is not in the
+ * generated LogAction whitelist. Call this before calling `insertLog` to keep
+ * invalid values from ever reaching the logs write API.
+ */
+export function validateLogInsertActionTypes(
+  rows: unknown,
+): { ok: true } | { ok: false; error: LogActionTypeViolation } {
+  return checkLogRowsActionTypes(rows);
+}
 
 /**
  * Validating insert for public.logs. Accepts a single row or an array and
@@ -109,9 +115,11 @@ export async function insertLogReturningId(
     console.error("[logs] blocked insert:", checked.error.message, checked.error.hint);
     return { id: null, error: checked.error };
   }
-  const { data, error } = await client.from("logs").insert(row as never).select("id").maybeSingle();
+  const { data, error } = await client
+    .from("logs")
+    .insert(row as never)
+    .select("id")
+    .maybeSingle();
   const id = (data as { id?: string } | null)?.id ?? null;
   return { id, error };
 }
-
-
