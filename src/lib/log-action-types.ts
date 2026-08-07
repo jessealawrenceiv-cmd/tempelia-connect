@@ -141,9 +141,14 @@ export async function insertLog(
   }
   const list = Array.isArray(rows) ? rows : [rows];
   if (list.some(hasDedupeKey)) {
+    // A redelivery with a different payload is a real problem, not a duplicate:
+    // refuse it loudly instead of letting ignoreDuplicates discard it.
+    const conflict = await checkDedupeConflicts(client, rows);
+    if (conflict) return { error: conflict };
     const builder = upsertBuilder(client, rows);
     if (builder) return (await builder) as { error: { message: string } | null };
   }
+
   return (await client.from("logs").insert(rows as never)) as { error: { message: string } | null };
 }
 
