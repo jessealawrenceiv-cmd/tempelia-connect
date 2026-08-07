@@ -847,6 +847,60 @@ export type Database = {
         }
         Relationships: []
       }
+      log_write_rejections: {
+        Row: {
+          actor_user_id: string | null
+          attempted_row: Json
+          blocked_at: string
+          constraint_name: string | null
+          correlation_id: string | null
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          occurred_at: string
+          rejected_action_type: string | null
+          rejected_action_types: string[]
+          request_path: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          attempted_row?: Json
+          blocked_at?: string
+          constraint_name?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          occurred_at?: string
+          rejected_action_type?: string | null
+          rejected_action_types?: string[]
+          request_path?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          attempted_row?: Json
+          blocked_at?: string
+          constraint_name?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          occurred_at?: string
+          rejected_action_type?: string | null
+          rejected_action_types?: string[]
+          request_path?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       logs: {
         Row: {
           action_type: string
@@ -1650,6 +1704,7 @@ export type Database = {
         }[]
       }
       log_reconciliation_runs_prune: { Args: never; Returns: undefined }
+      log_write_rejections_prune: { Args: never; Returns: undefined }
       logs_action_type_whitelist: {
         Args: never
         Returns: {

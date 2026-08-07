@@ -1,11 +1,43 @@
 import { useCallback, useState } from "react";
 
 import { insertLog, validateLogInsertActionTypes, type LogRowInput } from "@/lib/log-action-types";
+import { LOGS_ACTION_TYPE_CONSTRAINT } from "@/lib/log-action-types.generated";
+import { reportLogWriteRejection } from "@/lib/log-write-rejections.functions";
 import {
   describeLogActionTypeViolation,
   toastLogActionTypeViolation,
   type LogActionTypeViolationDisplay,
 } from "@/lib/log-action-violation";
+
+/** Best-effort: records the rejection for the operator diagnostics page. */
+function reportRejection(
+  rows: LogRowInput | LogRowInput[],
+  error: unknown,
+  blockedAt: "client" | "database",
+) {
+  const display = describeLogActionTypeViolation(error);
+  if (!display) return;
+  const list = Array.isArray(rows) ? rows : [rows];
+  const allowed = new Set<string>(display.allowed);
+  const rejected = list
+    .map((r) => String(r.action_type ?? ""))
+    .filter((v) => !allowed.has(v));
+
+  void reportLogWriteRejection({
+    data: {
+      rejectedActionType: display.rejected ?? rejected[0] ?? null,
+      rejectedActionTypes: rejected,
+      blockedAt,
+      constraintName: LOGS_ACTION_TYPE_CONSTRAINT,
+      errorCode: blockedAt === "database" ? "23514" : "client_prevalidation",
+      errorMessage: display.technical,
+      attemptedRow: (list[0] ?? {}) as Record<string, unknown>,
+      requestPath: typeof window === "undefined" ? null : window.location.pathname,
+    },
+  }).catch(() => {
+    /* diagnostics must never break the caller */
+  });
+}
 
 type Options = {
   /** Set false to suppress the automatic toast (e.g. when rendering inline only). */
@@ -36,10 +68,14 @@ export function useValidatedLogInsert(
           validation.error.hint,
         );
         if (toastOnViolation) toastLogActionTypeViolation(validation.error);
+        reportRejection(rows, validation.error, "client");
         return { error: validation.error };
       }
       const result = await insertLog(client, rows);
-      if (result?.error && toastOnViolation) toastLogActionTypeViolation(result.error);
+      if (result?.error) {
+        if (toastOnViolation) toastLogActionTypeViolation(result.error);
+        reportRejection(rows, result.error, "database");
+      }
       return result;
     },
     [client, toastOnViolation],
