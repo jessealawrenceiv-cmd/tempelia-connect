@@ -231,12 +231,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
-  // Record-type filters and sort live in the URL (?logTypes=a,b&logSort=oldest)
-  // so a reload, back/forward, or a shared link keeps the same view. Because
-  // that payload is untrusted, it is Zod-validated and any problem is surfaced
-  // to the user in plain language instead of silently dropped.
-  const navigate = useNavigate();
-  const rawSearch = useSearch({ strict: false }) as { logTypes?: unknown; logSort?: unknown };
   const rawLogTypes = rawSearch.logTypes;
   const validation = useMemo(
     () =>
@@ -249,6 +243,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       }),
     [rawLogTypes, rawSearch.logSort, searchQuery, dateRange?.from, dateRange?.to],
   );
+
   const filterIssues = validation.issues;
   const selectedTypes = validation.value.selectedTypes;
   const sortDir = validation.value.sortDir;
