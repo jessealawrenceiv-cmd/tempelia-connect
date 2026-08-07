@@ -3,8 +3,13 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { Filter, Search } from "lucide-react";
+import { Filter, Search, Sparkles } from "lucide-react";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
+import { LOG_ACTION_TYPES, type LogActionType } from "@/lib/log-action-types";
+
+/** Types added most recently — surfaced with a NEW marker in the filter list. */
+const NEW_ACTION_TYPES = new Set<LogActionType>(["status_refresh", "automation_status_change"]);
+
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
