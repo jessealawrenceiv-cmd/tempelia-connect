@@ -110,14 +110,17 @@ describe.skipIf(!hasDb)("logs API rejects invalid action_type over HTTP", () => 
       }),
     };
 
-    await expect(
-      insertLog(spyClient as never, {
-        user_id: userId,
-        action_type: "definitely_not_an_action_type" as never,
-        status: "api_test",
-      }),
-    ).rejects.toThrow();
+    const res = (await insertLog(spyClient as never, {
+      user_id: userId,
+      action_type: "definitely_not_an_action_type" as never,
+      status: "api_test",
+    })) as unknown as { error: { code: string; constraint: string; rejectedActionType: string } };
+
     expect(called).toBe(false);
+    expect(res.error.code).toBe("23514");
+    expect(res.error.constraint).toBe("logs_action_type_check");
+    expect(res.error.rejectedActionType).toBe("definitely_not_an_action_type");
+
   });
 
   it("accepts a whitelisted action_type through the same API path", async () => {
