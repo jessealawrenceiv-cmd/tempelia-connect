@@ -1,9 +1,5 @@
 import { useCallback } from "react";
-import {
-  insertLog,
-  validateLogInsertActionTypes,
-  type LogRowInput,
-} from "@/lib/log-action-types";
+import { insertLog, validateLogInsertActionTypes, type LogRowInput } from "@/lib/log-action-types";
 
 /**
  * React hook that wraps the logs write API with client-side validation.
@@ -12,9 +8,7 @@ import {
  * before `insertLog` is called, so the logs write API never receives an
  * invalid action_type from the client.
  */
-export function useValidatedLogInsert(
-  client: Parameters<typeof insertLog>[0],
-) {
+export function useValidatedLogInsert(client: Parameters<typeof insertLog>[0]) {
   return useCallback(
     async (rows: LogRowInput | LogRowInput[]) => {
       const validation = validateLogInsertActionTypes(rows);

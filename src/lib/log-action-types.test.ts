@@ -45,10 +45,7 @@ describe("insertLog", () => {
     const res = await insertLog(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       client as never,
-      [
-        { action_type: "quote_sms" },
-        { action_type: "not_allowed" },
-      ] as never,
+      [{ action_type: "quote_sms" }, { action_type: "not_allowed" }] as never,
     );
     expect((res.error as { constraint?: string }).constraint).toBe("logs_action_type_check");
     expect((res.error as { rejectedActionType?: string }).rejectedActionType).toBe("not_allowed");
@@ -91,4 +88,3 @@ describe("insertLog", () => {
     },
   );
 });
-

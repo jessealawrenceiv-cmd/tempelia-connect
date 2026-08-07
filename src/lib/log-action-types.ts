@@ -11,11 +11,7 @@
  * on a Postgres 23514 error after the fact.
  */
 
-import {
-  LOG_ACTION_TYPES,
-  LogAction,
-  type LogActionType,
-} from "./log-action-types.generated";
+import { LOG_ACTION_TYPES, LogAction, type LogActionType } from "./log-action-types.generated";
 import {
   logActionTypeSchema,
   LOG_ACTION_TYPE_CONSTRAINT,
@@ -50,7 +46,6 @@ export {
 export type { LogActionType, LogActionTypeViolation };
 
 const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
-
 
 export function isLogActionType(value: unknown): value is LogActionType {
   return typeof value === "string" && ALLOWED.has(value);
@@ -120,9 +115,11 @@ export async function insertLogReturningId(
     console.error("[logs] blocked insert:", checked.error.message, checked.error.hint);
     return { id: null, error: checked.error };
   }
-  const { data, error } = await client.from("logs").insert(row as never).select("id").maybeSingle();
+  const { data, error } = await client
+    .from("logs")
+    .insert(row as never)
+    .select("id")
+    .maybeSingle();
   const id = (data as { id?: string } | null)?.id ?? null;
   return { id, error };
 }
-
-
