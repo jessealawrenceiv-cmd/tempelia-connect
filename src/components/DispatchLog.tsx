@@ -1481,9 +1481,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const affected = parseAffected(row);
     const isCopied = copiedId === row.id;
     const isExpanded = expandedIds.includes(row.id);
+    const isShared = row.id === deepLinkId;
     return (
-      <div>
+      <div
+        id={`log-row-${row.id}`}
+        {...(isShared ? { "data-shared": "true" } : {})}
+        className={isShared ? "bg-primary/5 ring-1 ring-inset ring-primary/40" : undefined}
+      >
       <div className="group grid grid-cols-[auto_auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
+
         <button
           type="button"
           aria-expanded={isExpanded}
