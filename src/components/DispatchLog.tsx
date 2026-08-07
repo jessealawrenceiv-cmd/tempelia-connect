@@ -16,6 +16,7 @@ import {
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
+import { phoneDigits } from "@/lib/phone";
 import {
   MAX_LOG_SEARCH_LENGTH,
   describeLogRequestError,
@@ -183,6 +184,9 @@ function parseDayParam(value: unknown): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
+/** Matches a customer id pasted into the contact filter. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Serialises a Date to the yyyy-MM-dd form used in the URL. */
 function toDayParam(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -203,6 +207,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     q?: unknown;
     dateFrom?: unknown;
     dateTo?: unknown;
+    logCustomer?: unknown;
   };
 
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
@@ -211,6 +216,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [scope, setScope] = useState<"live" | "archive">("live");
   // The input stays local for responsive typing and is mirrored into ?q= (see below).
   const [searchQuery, setSearchQuery] = useState(typeof rawSearch.q === "string" ? rawSearch.q : "");
+  // Contact filter: an exact customer id (uuid) or a phone number. Mirrored into
+  // ?logCustomer= the same way as the free-text search.
+  const urlCustomer = typeof rawSearch.logCustomer === "string" ? rawSearch.logCustomer : "";
+  const [customerInput, setCustomerInput] = useState(urlCustomer);
+
   const urlFrom = parseDayParam(rawSearch.dateFrom);
   const urlTo = parseDayParam(rawSearch.dateTo);
   const dateRange: DateRangeValue | undefined = urlFrom
@@ -276,6 +286,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setFailedOnly(false);
     setOriginFilter("all");
     setSearchQuery("");
+    setCustomerInput("");
     writeStoredTypes([]);
     void navigate({
       to: ".",
@@ -286,10 +297,35 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         q: undefined,
         dateFrom: undefined,
         dateTo: undefined,
+        logCustomer: undefined,
       }),
       resetScroll: false,
     });
   };
+
+  // Mirror the contact filter into ?logCustomer= so a "just this contact" view is
+  // shareable. Debounced and history-replacing, like the free-text search.
+  useEffect(() => {
+    if (customerInput === urlCustomer) return;
+    const id = window.setTimeout(() => {
+      void navigate({
+        to: ".",
+        search: (prev: Record<string, unknown>) => ({
+          ...prev,
+          logCustomer: customerInput.trim() === "" ? undefined : customerInput.trim(),
+        }),
+        replace: true,
+        resetScroll: false,
+      });
+    }, 250);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerInput, urlCustomer]);
+
+  // Keep the contact input in step with back/forward navigation.
+  useEffect(() => {
+    setCustomerInput((prev) => (prev === urlCustomer ? prev : urlCustomer));
+  }, [urlCustomer]);
 
   // Mirror the search box into ?q= so the view is shareable and survives a
   // reload. Debounced and history-replacing so typing doesn't spam the stack.
@@ -359,6 +395,35 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const typeKey = [...selectedTypes].sort().join(",");
   const searchKey = searchTerms.join(" ");
 
+  // A contact filter is either an exact customer id or a phone number. Phone
+  // input is reduced to its last 10 digits so "(415) 555-0777", "4155550777",
+  // and "+14155550777" all narrow to the same contact.
+  const customerFilter = urlCustomer.trim().slice(0, 64);
+  const customerFilterIsId = UUID_RE.test(customerFilter);
+  const customerFilterDigits = customerFilterIsId ? "" : phoneDigits(customerFilter).slice(-10);
+  const hasPhoneFilter = customerFilterDigits.length >= 4;
+  const customerFilterActive = customerFilterIsId || hasPhoneFilter;
+  const customerFilterInvalid = customerFilter.length > 0 && !customerFilterActive;
+
+  // Phone numbers live on `customers`, so resolve the phone to customer ids and
+  // fold them into the log query alongside the logged recipient_phone.
+  const { data: phoneCustomerIds } = useQuery({
+    queryKey: ["log-customer-phone", customerFilterDigits],
+    enabled: hasPhoneFilter,
+    staleTime: 30_000,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select(sel("id"))
+        .ilike("phone_number", `%${customerFilterDigits}%`)
+        .limit(300)
+        .returns<{ id: string }[]>();
+      if (error) throw error;
+      return (data ?? []).map((r) => r.id);
+    },
+  });
+  const phoneCustomerKey = hasPhoneFilter ? (phoneCustomerIds ?? []).join(",") : "";
+
   const hasActiveFilters =
     selectedTypes.length > 0 ||
     searchQuery.trim().length > 0 ||
@@ -366,6 +431,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     failedOnly ||
     originFilter !== "all" ||
     dateRange?.from != null ||
+    customerFilter.length > 0 ||
     sortDir === "oldest";
 
   // A search term can also be a customer's name or phone number. Names live on
@@ -413,6 +479,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       if (failedOnly)
         out = out.eq("action_type", logActionFilterValue(LogAction.status_refresh)).eq("status", "failed");
       if (selectedTypes.length > 0) out = out.in("action_type", logActionFilterValues(selectedTypes));
+    }
+
+    // Contact filter: an exact customer id, or any record tied to that phone
+    // number (either through the customer record or the logged recipient).
+    if (customerFilterIsId) {
+      out = out.eq("customer_id", customerFilter);
+    } else if (hasPhoneFilter) {
+      const clauses = [`recipient_phone.ilike.%${customerFilterDigits}%`];
+      const ids = phoneCustomerIds ?? [];
+      if (ids.length > 0) clauses.push(`customer_id.in.(${ids.join(",")})`);
+      out = out.or(clauses.join(","));
     }
 
     // Free-text search runs in Postgres so pages stay full-size. Each term must
@@ -483,6 +560,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       typeKey,
       searchKey,
       customerMatchKey,
+      customerFilter,
+      phoneCustomerKey,
       statusRefreshOnly,
       failedOnly,
       originFilter,
@@ -494,7 +573,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     queryFn: ({ pageParam }) => fetchLogPage(limit, pageParam),
     // Wait for the customer-name lookup so a name search doesn't briefly show
     // only message/phone matches before the ids land.
-    enabled: searchTerms.length === 0 || termCustomerIds !== undefined,
+    enabled:
+      (searchTerms.length === 0 || termCustomerIds !== undefined) &&
+      (!hasPhoneFilter || phoneCustomerIds !== undefined),
   });
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
@@ -513,7 +594,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = 0;
     lastAnnouncedIdRef.current = null;
-  }, [scope, selectedTypes, searchKey, fromISO, toISO, statusRefreshOnly, failedOnly, originFilter, sortDir]);
+  }, [
+    scope,
+    selectedTypes,
+    searchKey,
+    customerFilter,
+    fromISO,
+    toISO,
+    statusRefreshOnly,
+    failedOnly,
+    originFilter,
+    sortDir,
+  ]);
 
   useEffect(() => {
     const node = loadMoreRef.current;
@@ -871,6 +963,39 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               </button>
             )}
           </div>
+
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              value={customerInput}
+              onChange={(e) => setCustomerInput(e.target.value)}
+              placeholder="Contact phone or ID…"
+              aria-label="Filter activity by customer phone number or customer ID"
+              aria-invalid={customerFilterInvalid || undefined}
+              aria-describedby="log-customer-filter-hint"
+              maxLength={64}
+              className="kb-focus h-7 w-40 rounded-full border border-border bg-background px-3 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-48"
+            />
+            {customerInput && (
+              <button
+                type="button"
+                aria-label="Clear contact filter"
+                onClick={() => setCustomerInput("")}
+                className="kb-focus absolute right-2 text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            )}
+            <span id="log-customer-filter-hint" className="sr-only">
+              Enter a full customer ID or at least four digits of a phone number.
+            </span>
+          </div>
+
+          {customerFilterInvalid && (
+            <span className="mono text-[10px] uppercase tracking-wider text-orange">
+              Enter a customer ID or 4+ phone digits
+            </span>
+          )}
 
           <DateRangePicker
             value={dateRange}
