@@ -15,8 +15,17 @@ import {
   type DepositCustomType,
   type DepositSelection,
 } from "@/lib/deposit";
+import { type Tables } from "@/integrations/supabase/types";
 
 type QuoteSearch = { edit?: string };
+
+type QuoteLineItem = {
+  key?: string;
+  amount?: number | string;
+  label?: string;
+  labor_mode?: string;
+  labor_input?: number | string;
+};
 
 export const Route = createFileRoute("/_authenticated/dashboard/quotes/new")({
   component: NewQuotePage,
