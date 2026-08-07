@@ -31,7 +31,20 @@ export type ActivityLogFilterIssue = {
   /** Which control the message belongs to, so the UI can point at it. */
   field: "logTypes" | "logSort" | "q" | "dateRange";
   message: string;
+  /**
+   * True when the value can't be safely corrected, so no request should be
+   * sent at all (e.g. a search longer than the schema allows, or an inverted
+   * date range that can never match). Non-blocking issues are auto-corrected
+   * (unknown record types are dropped, a bad sort falls back to newest first).
+   */
+  blocking?: boolean;
 };
+
+/** True when at least one issue means the request must not be sent. */
+export function hasBlockingFilterIssues(issues: ActivityLogFilterIssue[]): boolean {
+  return issues.some((i) => i.blocking === true);
+}
+
 
 export type ActivityLogFilterValidation = {
   /** Sanitised values that are safe to query with. */
@@ -77,6 +90,7 @@ export function validateActivityLogFilters(raw: {
         issues.push({
           field: "q",
           message: `Your search is too long. Please keep it under ${MAX_LOG_SEARCH_LENGTH} characters.`,
+          blocking: true,
         });
       } else if (field === "logTypes") {
         issues.push({
@@ -144,6 +158,7 @@ export function validateActivityLogFilters(raw: {
     issues.push({
       field: "dateRange",
       message: "Your start date is after your end date, so no records can match. Please swap them.",
+      blocking: true,
     });
   }
 
