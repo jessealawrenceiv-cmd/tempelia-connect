@@ -155,3 +155,38 @@ export const LOG_ACTION_FILTER_ORDER: readonly LogActionType[] = [
   ...LOG_ACTION_TYPES.filter((t) => isNewLogAction(t)),
   ...LOG_ACTION_TYPES.filter((t) => !isNewLogAction(t)),
 ];
+
+/**
+ * One option per allowed `action_type`, for select/dropdown filter controls.
+ *
+ * `value` is typed as `LogActionType` — never a bare string — so a control
+ * built from these options can only ever produce a value the database CHECK
+ * constraint accepts. Regenerating the enum automatically extends this list.
+ */
+export type LogActionFilterOption = {
+  value: LogActionType;
+  label: string;
+  description: string;
+  isNew: boolean;
+};
+
+export const LOG_ACTION_FILTER_OPTIONS: readonly LogActionFilterOption[] =
+  LOG_ACTION_FILTER_ORDER.map((value) => ({
+    value,
+    label: LOG_ACTION_PRESENTATION[value].label,
+    description: LOG_ACTION_PRESENTATION[value].description,
+    isNew: isNewLogAction(value),
+  }));
+
+/**
+ * Options a picker should still offer, given what is already selected. Returns
+ * every option when nothing is selected.
+ */
+export function availableLogActionOptions(
+  selected: readonly LogActionType[],
+): readonly LogActionFilterOption[] {
+  if (selected.length === 0) return LOG_ACTION_FILTER_OPTIONS;
+  const taken = new Set<string>(selected);
+  return LOG_ACTION_FILTER_OPTIONS.filter((o) => !taken.has(o.value));
+}
+
