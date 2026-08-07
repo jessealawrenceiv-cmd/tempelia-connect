@@ -9,7 +9,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LOG_ACTION_TYPES } from "@/lib/log-action-types.generated";
 
@@ -177,7 +177,7 @@ describe("HTTP 400 from the logs API", () => {
 
     const clear = await waitFor(() => within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
     fail400 = false;
-    await user.click(clear);
+    fireEvent.click(clear);
     console.log("SEARCH AFTER CLICK", JSON.stringify(searchState));
 
     await waitFor(() => expect(searchState.logTypes).toBeUndefined());
