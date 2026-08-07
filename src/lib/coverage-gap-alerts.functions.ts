@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import type { GapScanSummary } from "@/lib/coverage-gap-alerts.server";
 
 export type { GapScanSummary };
@@ -40,11 +42,9 @@ export interface CoverageGapInbox {
   } | null;
 }
 
-async function assertAdmin(
-  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> },
-  userId: string,
-  functionName: string,
-) {
+type AuthedClient = SupabaseClient<Database>;
+
+async function assertAdmin(supabase: AuthedClient, userId: string, functionName: string) {
   const { data: isAdmin, error } = await supabase.rpc("has_role", { _role: "admin" });
   if (error) throw new Error(error.message);
   const { recordAdminAccess, checkAdminRateLimit } = await import("@/lib/admin-audit.server");
