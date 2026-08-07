@@ -43,7 +43,6 @@ describe("insertLog", () => {
   it("validates every row in a batch and never calls the database on failure", async () => {
     const { client, insert } = makeClient();
     const res = await insertLog(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       client as never,
       [{ action_type: "quote_sms" }, { action_type: "not_allowed" }] as never,
     );
