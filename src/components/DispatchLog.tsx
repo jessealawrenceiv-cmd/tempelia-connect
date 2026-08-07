@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { Download, Filter, Search, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Filter, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
