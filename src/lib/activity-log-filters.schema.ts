@@ -245,12 +245,18 @@ export function rejectedActionTypeFromError(err: unknown): string | undefined {
   const blob = [message, details, hint].filter(Boolean).join(" ");
   const allowed = new Set<string>(LOG_ACTION_TYPES as readonly string[]);
   const candidates: string[] = [];
-  for (const m of blob.matchAll(/[“"']([a-z][a-z0-9_]{2,63})[”"']/g)) candidates.push(m[1]!);
+  // The failing tuple is the most reliable source, so read it first.
   for (const tuple of blob.matchAll(/Failing row contains \(([^)]*)\)/gi)) {
     for (const raw of tuple[1]!.split(",")) {
       const token = raw.trim().replace(/^[“"']|[”"']$/g, "");
       if (/^[a-z][a-z0-9_]{2,63}$/.test(token)) candidates.push(token);
     }
+  }
+  // Fall back to quoted values, skipping constraint/relation names.
+  for (const m of blob.matchAll(/[“"']([a-z][a-z0-9_]{2,63})[”"']/g)) {
+    const token = m[1]!;
+    if (/_check$/.test(token) || token === "logs" || token === "logs_archive") continue;
+    candidates.push(token);
   }
   return candidates.find((c) => !allowed.has(c) && c.includes("_")) ?? candidates.find((c) => !allowed.has(c));
 }
