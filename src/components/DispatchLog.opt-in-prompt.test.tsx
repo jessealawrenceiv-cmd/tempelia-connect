@@ -205,7 +205,7 @@ describe("Activity log — opt_in_prompt and opt_in_prompt_test rows", () => {
   });
 
   it("copies a dispatch-log line containing the date, label, and message", async () => {
-    const writeText = vi.fn(() => Promise.resolve());
+    const writeText = vi.fn((_text: string) => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
     const user = userEvent.setup();
 
