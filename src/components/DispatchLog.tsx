@@ -527,6 +527,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   };
   /** Clears every filter, including any invalid values that came from the URL. */
   const resetFilters = () => {
+    console.log("RESET FILTERS CALLED");
     setSearchQuery("");
     setCustomerInput("");
     writeStoredTypes([]);
