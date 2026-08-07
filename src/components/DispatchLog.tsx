@@ -20,6 +20,8 @@ import {
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
+import { isLogActionFilterRejection } from "@/lib/log-action-filter-rejection";
+
 import { phoneDigits } from "@/lib/phone";
 import {
   MAX_LOG_PRESETS,
