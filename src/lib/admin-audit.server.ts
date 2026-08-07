@@ -8,7 +8,7 @@ export async function recordAdminAccess(params: {
   actorUserId: string;
   functionName: string;
   rowCount?: number | null;
-  outcome: "allowed" | "rate_limited";
+  outcome: "allowed" | "rate_limited" | "forbidden";
   detail?: string | null;
 }): Promise<void> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
