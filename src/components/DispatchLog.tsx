@@ -243,6 +243,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<AutoRefreshSeconds>(0);
   useEffect(() => setAutoRefreshSeconds(readStoredAutoRefresh()), []);
 
+  // Saved filter combinations ("presets"): per-device shortcuts for the views the
+  // user keeps coming back to. Loaded after mount so SSR markup stays stable.
+  const [presets, setPresets] = useState<LogFilterPreset[]>([]);
+  const [presetName, setPresetName] = useState("");
+  const [showSavePreset, setShowSavePreset] = useState(false);
+  useEffect(() => setPresets(readStoredPresets()), []);
+
+
   // The input stays local for responsive typing and is mirrored into ?q= (see below).
   const [searchQuery, setSearchQuery] = useState(typeof rawSearch.q === "string" ? rawSearch.q : "");
   // Contact filter: an exact customer id (uuid) or a phone number. Mirrored into
