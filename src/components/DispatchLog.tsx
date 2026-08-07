@@ -815,8 +815,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
 
       <ul ref={listRef} className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
-        {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
-        {!isLoading && filtered.length === 0 && (
+        {isLoading && (
+          <>
+            <SkeletonRow key="s1" />
+            <SkeletonRow key="s2" />
+            <SkeletonRow key="s3" />
+            <SkeletonRow key="s4" />
+            <SkeletonRow key="s5" />
+          </>
+        )}
+        {!isLoading && logError && filtered.length === 0 && <ErrorRetry />}
+        {!isLoading && !logError && filtered.length === 0 && (
           <li className="p-5 text-muted-foreground">
             {hasRange
               ? "No entries in the selected date range. Try widening the range or clearing filters."
