@@ -14,6 +14,7 @@ import {
 } from "@/lib/log-action-coverage-drilldown";
 import type { LogActionType } from "@/lib/log-action-types";
 import { LOG_ACTION_PRESENTATION } from "@/lib/log-action-presentation";
+import { ActionTypeBackfillButton } from "@/components/ActionTypeBackfillButton";
 
 const SEVERITY_LABEL: Record<GapSeverity, string> = {
   attention: "Needs review",
@@ -184,6 +185,11 @@ export function ActionTypeCoveragePanel() {
                             actionType={g.actionType}
                             signals={b.signals}
                             businessId={b.userId}
+                          />
+                          <ActionTypeBackfillButton
+                            businessId={b.userId}
+                            businessName={b.businessName}
+                            actionType={g.actionType}
                           />
                         </li>
                       ))}

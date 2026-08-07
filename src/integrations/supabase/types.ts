@@ -796,7 +796,11 @@ export type Database = {
           missed_call_inserted: number
           provisioned_inserted: number
           ran_at: string
+          scope: string
           sms_inbound_inserted: number
+          target_action_type: string | null
+          target_user_id: string | null
+          triggered_by: string | null
         }
         Insert: {
           created_at?: string
@@ -806,7 +810,11 @@ export type Database = {
           missed_call_inserted?: number
           provisioned_inserted?: number
           ran_at?: string
+          scope?: string
           sms_inbound_inserted?: number
+          target_action_type?: string | null
+          target_user_id?: string | null
+          triggered_by?: string | null
         }
         Update: {
           created_at?: string
@@ -816,7 +824,11 @@ export type Database = {
           missed_call_inserted?: number
           provisioned_inserted?: number
           ran_at?: string
+          scope?: string
           sms_inbound_inserted?: number
+          target_action_type?: string | null
+          target_user_id?: string | null
+          triggered_by?: string | null
         }
         Relationships: []
       }
@@ -1720,6 +1732,16 @@ export type Database = {
           missed_call_inserted: number
           provisioned_inserted: number
           sms_inbound_inserted: number
+        }[]
+      }
+      reconcile_activity_logs_scoped: {
+        Args: { _action_type: string; _triggered_by?: string; _user_id: string }
+        Returns: {
+          detail: string
+          duration_ms: number
+          inserted_count: number
+          run_id: string
+          supported: boolean
         }[]
       }
       resolve_deposit_amount: {
