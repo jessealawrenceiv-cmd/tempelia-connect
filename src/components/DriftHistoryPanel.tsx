@@ -187,10 +187,12 @@ export function DriftHistoryPanel({
 
                 {isOpen && (
                   <div id={`drift-run-${run.id}`} className="space-y-3 pb-4 pl-8">
+                    <FailureSummary run={run} />
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       {run.dbValues.length} database value{run.dbValues.length === 1 ? "" : "s"} ·{" "}
                       {run.generatedValues.length} generated value{run.generatedValues.length === 1 ? "" : "s"}
                     </div>
+
                     {diff.missingInDb.length > 0 && (
                       <ValueList
                         label="In code, not in database"
