@@ -39,7 +39,11 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
-  const insertLogValidated = useValidatedLogInsert(supabase);
+  const {
+    insert: insertLogValidated,
+    violation: logWriteViolation,
+    clearViolation: clearLogWriteViolation,
+  } = useValidatedLogInsertWithError(supabase);
   const runStatusRefreshFn = useServerFn(runStatusRefresh);
 
   const { isStaff } = useTeamRole();
