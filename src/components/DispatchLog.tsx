@@ -246,12 +246,38 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     dateFrom?: unknown;
     dateTo?: unknown;
     logCustomer?: unknown;
+    logScope?: unknown;
+    logStatusOnly?: unknown;
+    logFailed?: unknown;
+    logOrigin?: unknown;
   };
 
-  const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
-  const [failedOnly, setFailedOnly] = useState(false);
-  const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
-  const [scope, setScope] = useState<"live" | "archive">("live");
+  /**
+   * The toggle-style filters (scope, status-refresh only, failures only, origin)
+   * also live in the URL so a copied link reproduces the exact same view. Each
+   * setter writes the param and the value is derived straight back from it —
+   * there is no local mirror to drift out of sync.
+   */
+  const setSearchParam = (key: string, value: string | undefined) => {
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({ ...prev, [key]: value }),
+      resetScroll: false,
+    });
+  };
+  type OriginFilter = "all" | "active" | "this-device" | "other-device" | "backend";
+  const ORIGIN_FILTERS: OriginFilter[] = ["all", "active", "this-device", "other-device", "backend"];
+  const statusRefreshOnly = rawSearch.logStatusOnly === "1";
+  const failedOnly = rawSearch.logFailed === "1";
+  const originFilter: OriginFilter = ORIGIN_FILTERS.includes(rawSearch.logOrigin as OriginFilter)
+    ? (rawSearch.logOrigin as OriginFilter)
+    : "all";
+  const scope: "live" | "archive" = rawSearch.logScope === "archive" ? "archive" : "live";
+  const setStatusRefreshOnly = (next: boolean) => setSearchParam("logStatusOnly", next ? "1" : undefined);
+  const setFailedOnly = (next: boolean) => setSearchParam("logFailed", next ? "1" : undefined);
+  const setOriginFilter = (next: OriginFilter) => setSearchParam("logOrigin", next === "all" ? undefined : next);
+  const setScope = (next: "live" | "archive") => setSearchParam("logScope", next === "archive" ? "archive" : undefined);
+
   // Auto-refresh polls the live log on an interval so newly captured automated
   // actions appear without a page reload. Paused in the archive scope and while
   // the tab is hidden so a backgrounded phone isn't quietly polling.
@@ -388,9 +414,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   };
   /** Clears every filter, including any invalid values that came from the URL. */
   const resetFilters = () => {
-    setStatusRefreshOnly(false);
-    setFailedOnly(false);
-    setOriginFilter("all");
     setSearchQuery("");
     setCustomerInput("");
     writeStoredTypes([]);
@@ -404,10 +427,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         dateFrom: undefined,
         dateTo: undefined,
         logCustomer: undefined,
+        logStatusOnly: undefined,
+        logFailed: undefined,
+        logOrigin: undefined,
       }),
       resetScroll: false,
     });
   };
+
 
   /** Captures the current filter bar as a named preset. */
   const savePreset = () => {
@@ -439,10 +466,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   /** Reapplies every field a preset captured, clearing anything it didn't. */
   const applyPreset = (preset: LogFilterPreset) => {
-    setScope(preset.scope);
-    setStatusRefreshOnly(preset.statusRefreshOnly);
-    setFailedOnly(preset.failedOnly);
-    setOriginFilter(preset.origin as typeof originFilter);
     setSearchQuery(preset.q);
     setCustomerInput(preset.customer);
     writeStoredTypes(preset.types);
@@ -456,11 +479,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         dateFrom: preset.dateFrom ?? undefined,
         dateTo: preset.dateTo ?? undefined,
         logCustomer: preset.customer || undefined,
+        logScope: preset.scope === "archive" ? "archive" : undefined,
+        logStatusOnly: preset.statusRefreshOnly ? "1" : undefined,
+        logFailed: preset.failedOnly ? "1" : undefined,
+        logOrigin: preset.origin === "all" ? undefined : preset.origin,
       }),
       resetScroll: false,
     });
     setAnnouncement(`Applied filter view “${preset.name}”`);
   };
+
 
   const deletePreset = (preset: LogFilterPreset) => {
     const updated = presets.filter((p) => p.id !== preset.id);
@@ -851,6 +879,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (scope !== "live" || sortDir !== "newest" || filtersBlocked) return;
+    // Realtime is optional: environments (and tests) without a channel-capable
+    // client simply fall back to polling.
+    if (typeof supabase.channel !== "function") return;
 
     let cancelled = false;
     const channel = supabase
@@ -1600,9 +1631,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               checked={statusRefreshOnly}
               disabled={originFilter !== "all"}
               onChange={(e) => {
-                setStatusRefreshOnly(e.target.checked);
-                if (!e.target.checked) setFailedOnly(false);
+                const on = e.target.checked;
+                void navigate({
+                  to: ".",
+                  search: (prev: Record<string, unknown>) => ({
+                    ...prev,
+                    logStatusOnly: on ? "1" : undefined,
+                    logFailed: on ? (prev.logFailed as string | undefined) : undefined,
+                  }),
+                  resetScroll: false,
+                });
               }}
+
             />
             STATUS_REFRESH only
           </label>
@@ -1635,12 +1675,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                   type="button"
                   aria-pressed={active}
                   onClick={() => {
-                    setOriginFilter(key);
-                    if (key !== "all") {
-                      setStatusRefreshOnly(false);
-                      setFailedOnly(false);
-                    }
+                    void navigate({
+                      to: ".",
+                      search: (prev: Record<string, unknown>) => ({
+                        ...prev,
+                        logOrigin: key === "all" ? undefined : key,
+                        logStatusOnly:
+                          key === "all" ? (prev.logStatusOnly as string | undefined) : undefined,
+                        logFailed: key === "all" ? (prev.logFailed as string | undefined) : undefined,
+                      }),
+                      resetScroll: false,
+                    });
                   }}
+
                   className={`kb-focus rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
                     active
                       ? "bg-primary text-paper"
