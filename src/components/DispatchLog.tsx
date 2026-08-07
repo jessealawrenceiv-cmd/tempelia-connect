@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { reportFilterRejection } from "@/lib/activity-log-validation.reporter";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
 import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { DispatchLogRowDetails } from "@/components/DispatchLogRowDetails";
@@ -321,7 +321,7 @@ function LogErrorRetry({
               <div
                 id={detailsId}
                 role="group"
-                aria-labelledby={`${detailsId}-toggle-label`}
+                aria-label="Technical details"
                 hidden={!detailsOpen}
                 onKeyDown={(event) => {
                   // Escape collapses and hands focus back to the toggle so
