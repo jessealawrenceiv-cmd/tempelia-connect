@@ -126,7 +126,7 @@ export const LOG_ACTION_PRESENTATION: Record<LogActionType, LogActionPresentatio
   [LogAction.webhook_delivery_status]: {
     label: "WEBHOOK_DELIVERY",
     description: "Webhook retry attempt or final delivery failure",
-    dot: "bg-violet",
+    dot: "bg-primary",
     isNew: true,
   },
 };
