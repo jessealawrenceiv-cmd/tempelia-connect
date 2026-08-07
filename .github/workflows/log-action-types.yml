@@ -62,3 +62,9 @@ jobs:
 
       - name: Run log action type coverage test
         run: bunx vitest run src/lib/log-action-types-coverage.test.ts --reporter=verbose
+
+      # Fails when app code hardcodes an action_type instead of importing the
+      # generated whitelist shared by the frontend and backend.
+      - name: Enforce single source of action types
+        run: bunx vitest run src/lib/log-action-types.single-source.test.ts --reporter=verbose
+
