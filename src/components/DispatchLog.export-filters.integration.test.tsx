@@ -219,7 +219,7 @@ describe("CSV export mirrors the Activity log filters", () => {
     await waitFor(() => expect(screen.getByText("roof job 0")).toBeTruthy());
 
     // Contact filter: an exact customer id must become an eq(customer_id) clause.
-    const contactInput = screen.getByLabelText(/Contact phone or ID/i);
+    const contactInput = screen.getByPlaceholderText(/Contact phone or ID/i);
     await user.type(contactInput, "c1c1c1c1-1111-4111-8111-111111111111");
     await waitFor(() =>
       expect(
