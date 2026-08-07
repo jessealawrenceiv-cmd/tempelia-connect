@@ -53,3 +53,65 @@ export function safeParseLogActionType(value: unknown) {
         error: `Invalid action_type ${JSON.stringify(value)}. Allowed values: ${LOG_ACTION_TYPES.join(", ")}`,
       });
 }
+
+/* ------------------------------------------------------------------ *
+ * Response-side schemas
+ *
+ * Reads are validated too: a row whose action_type is not in the
+ * generated whitelist never reaches client code. Unknown values are
+ * dropped and reported so drift is visible instead of silently typed
+ * as `string`.
+ * ------------------------------------------------------------------ */
+
+/** A log row as returned by the API: action_type narrowed to the enum. */
+export const logResponseRowSchema = z
+  .object({ action_type: logActionTypeSchema })
+  .passthrough();
+
+export type LogResponseRow<T> = Omit<T, "action_type"> & { action_type: LogActionType };
+
+export type ParsedLogRowsResult<T> = {
+  /** Rows whose action_type is a known LogAction value. */
+  rows: LogResponseRow<T>[];
+  /** Distinct unknown action_type values that were dropped. */
+  unknownActionTypes: string[];
+  /** Number of rows dropped because of an unknown action_type. */
+  droppedCount: number;
+};
+
+/**
+ * Narrows an API result set so `action_type` is a LogActionType everywhere.
+ * Rows carrying an unrecognised action_type are excluded from `rows`.
+ */
+export function parseLogRowsResponse<T extends { action_type: unknown }>(
+  rows: readonly T[] | null | undefined,
+): ParsedLogRowsResult<T> {
+  const kept: LogResponseRow<T>[] = [];
+  const unknown = new Set<string>();
+  let dropped = 0;
+
+  for (const row of rows ?? []) {
+    if (logActionTypeSchema.safeParse(row.action_type).success) {
+      kept.push(row as LogResponseRow<T>);
+    } else {
+      dropped += 1;
+      unknown.add(typeof row.action_type === "string" ? row.action_type : String(row.action_type));
+    }
+  }
+
+  return { rows: kept, unknownActionTypes: [...unknown], droppedCount: dropped };
+}
+
+/** Strict variant for boundaries that must fail loudly rather than drop rows. */
+export function parseLogRowsResponseStrict<T extends { action_type: unknown }>(
+  rows: readonly T[] | null | undefined,
+): LogResponseRow<T>[] {
+  const result = parseLogRowsResponse(rows);
+  if (result.droppedCount > 0) {
+    throw new Error(
+      `Unknown logs.action_type value(s) in API response: ${result.unknownActionTypes.join(", ")}. ` +
+        `Allowed values: ${LOG_ACTION_TYPES.join(", ")}`,
+    );
+  }
+  return result.rows;
+}

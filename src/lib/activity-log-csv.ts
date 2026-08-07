@@ -1,4 +1,5 @@
 import { logActionLabel } from "@/lib/log-action-presentation";
+import type { LogActionType } from "@/lib/log-action-types";
 
 export const EXPORT_ROW_CAP = 5000;
 
@@ -14,7 +15,7 @@ export type FilterableQuery = {
 
 export type ExportableLogRow = {
   id: string;
-  action_type: string;
+  action_type: LogActionType;
   message_sent: string | null;
   created_at: string;
   status: string | null;

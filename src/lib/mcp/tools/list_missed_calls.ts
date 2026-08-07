@@ -2,7 +2,11 @@ import { createClient } from "@supabase/supabase-js";
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { checkAndRecord, rateLimitError } from "../rate-limit";
-import { logActionTypeFilterSchema, safeParseLogActionType } from "@/lib/log-action-types.schema";
+import {
+  logActionTypeFilterSchema,
+  parseLogRowsResponse,
+  safeParseLogActionType,
+} from "@/lib/log-action-types.schema";
 import { LOG_ACTION_TYPES } from "@/lib/log-action-types.generated";
 
 function supabaseForUser(ctx: ToolContext) {
@@ -45,9 +49,18 @@ export default defineTool({
     if (action_type) q = q.eq("action_type", action_type);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    // Response-side validation: rows with an action_type outside the generated
+    // whitelist are never handed to a client.
+    const parsed = parseLogRowsResponse(data ?? []);
     return {
-      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
-      structuredContent: { activity: data ?? [] },
+      content: [{ type: "text", text: JSON.stringify(parsed.rows) }],
+      structuredContent: {
+        activity: parsed.rows,
+        allowed_action_types: LOG_ACTION_TYPES,
+        ...(parsed.droppedCount > 0
+          ? { dropped_unknown_action_types: parsed.unknownActionTypes }
+          : {}),
+      },
     };
   },
 });
