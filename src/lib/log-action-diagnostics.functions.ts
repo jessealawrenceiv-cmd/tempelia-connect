@@ -25,6 +25,8 @@ export interface LogActionDiagnostics {
   orderDiffers: boolean;
   lastSuccessfulRun: DriftRun | null;
   lastRun: DriftRun | null;
+  /** Most recent drift runs (newest first) for the history panel. */
+  history: DriftRun[];
 }
 
 interface WhitelistRow {
@@ -95,6 +97,7 @@ export const getLogActionDiagnostics = createServerFn({ method: "GET" })
       orderDiffers,
       lastRun: mapped[0] ?? null,
       lastSuccessfulRun: mapped.find((r) => r.matched) ?? null,
+      history: mapped,
     };
   });
 
@@ -164,5 +167,6 @@ export const runLogActionDriftCheck = createServerFn({ method: "POST" })
       orderDiffers,
       lastRun: mapped[0] ?? null,
       lastSuccessfulRun: mapped.find((r) => r.matched) ?? null,
+      history: mapped,
     };
   });
