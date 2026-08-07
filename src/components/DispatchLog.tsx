@@ -1558,29 +1558,45 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </span>
           )}
         </span>
-        <button
-          type="button"
-          aria-label={isCopied ? "Copied" : "Copy dispatch line"}
-          title={isCopied ? "Copied" : "Copy dispatch line"}
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(formatDispatchLine(row));
-              setCopiedId(row.id);
-              toast.success("Dispatch line copied");
-              window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
-            } catch {
-              toast.error("Copy failed", { description: "Clipboard access was denied." });
-            }
-          }}
-          className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
-        >
-          {isCopied ? (
-            <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
-          ) : (
-            <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
-          )}
-        </button>
+        <span className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Copy link to this dispatch"
+            title="Copy link to this dispatch"
+            onClick={() => void copyShareLink(row.id)}
+            className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+          >
+            <LinkIcon
+              size={12}
+              className={isShared ? "text-primary" : "text-muted-foreground hover:text-foreground"}
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            type="button"
+            aria-label={isCopied ? "Copied" : "Copy dispatch line"}
+            title={isCopied ? "Copied" : "Copy dispatch line"}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(formatDispatchLine(row));
+                setCopiedId(row.id);
+                toast.success("Dispatch line copied");
+                window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
+              } catch {
+                toast.error("Copy failed", { description: "Clipboard access was denied." });
+              }
+            }}
+            className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+          >
+            {isCopied ? (
+              <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
+            ) : (
+              <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
+            )}
+          </button>
+        </span>
       </div>
+
       {isExpanded && (
         <div id={`log-details-${row.id}`}>
           <DispatchLogRowDetails row={row} />
