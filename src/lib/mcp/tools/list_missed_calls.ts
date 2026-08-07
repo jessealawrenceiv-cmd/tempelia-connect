@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { checkAndRecord, rateLimitError } from "../rate-limit";
+import { LOG_ACTION_TYPES, logActionTypeFilterSchema, safeParseLogActionType } from "@/lib/log-action-types.schema";
 
 function supabaseForUser(ctx: ToolContext) {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -16,13 +17,21 @@ export default defineTool({
   description:
     "List recent dispatch log entries for the signed-in Temaro account (missed calls, auto-texts, voicemails, review requests, decline follow-ups). Filter by action_type when needed.",
   inputSchema: {
-    action_type: z.string().optional().describe("Optional action_type filter, e.g. 'missed_call', 'auto_text_sent', 'voicemail_left'."),
+    action_type: logActionTypeFilterSchema.describe(
+      `Optional action_type filter. Allowed values: ${LOG_ACTION_TYPES.join(", ")}.`,
+    ),
     limit: z.number().int().min(1).max(200).optional().describe("Max rows (default 50)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ action_type, limit }, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    if (action_type !== undefined) {
+      const parsed = safeParseLogActionType(action_type);
+      if (!parsed.ok) {
+        return { content: [{ type: "text", text: parsed.error }], isError: true };
+      }
     }
     const rl = await checkAndRecord(ctx, "list_recent_activity");
     if (!rl.ok) return rateLimitError(rl);
