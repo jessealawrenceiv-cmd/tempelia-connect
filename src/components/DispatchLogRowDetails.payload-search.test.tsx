@@ -57,7 +57,7 @@ describe("Activity log details drawer — payload search", () => {
     const list = screen.getByRole("list");
     // Only the CallSid line survives the filter.
     expect(within(list).getAllByRole("listitem")).toHaveLength(1);
-    expect(within(list).getByText("CallSid", { exact: false })).toBeTruthy();
+    expect(within(list).getAllByRole("listitem")[0]!.textContent).toContain("CallSid");
     expect(list.querySelector("mark")?.textContent?.toLowerCase()).toBe("sid");
     expect(screen.getByRole("status").textContent).toBe("1 matching line");
   });
