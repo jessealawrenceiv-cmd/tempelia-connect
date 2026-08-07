@@ -142,6 +142,21 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       resetScroll: false,
     });
   };
+  // Sort direction also lives in the URL (?logSort=oldest) so a shared link or
+  // reload keeps the same browsing order.
+  const rawLogSort = useSearch({ strict: false, select: (s) => (s as { logSort?: unknown }).logSort });
+  const sortDir: "newest" | "oldest" = rawLogSort === "oldest" ? "oldest" : "newest";
+  const setSortDir = (value: "newest" | "oldest") => {
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        logSort: value === "oldest" ? "oldest" : undefined,
+      }),
+      replace: true,
+      resetScroll: false,
+    });
+  };
   const [scope, setScope] = useState<"live" | "archive">("live");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
