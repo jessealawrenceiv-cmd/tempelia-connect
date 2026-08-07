@@ -21,6 +21,7 @@ import { createContext, forwardRef, memo, useCallback, useContext, useEffect, us
 import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
+import { insertLog } from "@/lib/log-action-types";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
   "this-device": "from this device",
@@ -317,7 +318,7 @@ function SettingsPage() {
 
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) return;
-        await supabase.from("logs").insert({
+        await insertLog(supabase, {
           user_id: u.user.id,
           action_type: "automation_status_change",
           status: entry.origin,
@@ -662,7 +663,7 @@ function SettingsPage() {
       if (!u.user) return;
       const windowStart = lastRefreshAtRef.current;
       const affected = status === "failed" ? [] : await collectAffected(windowStart);
-      const { error } = await supabase.from("logs").insert({
+      const { error } = await insertLog(supabase, {
         user_id: u.user.id,
         action_type: "status_refresh",
         status,
