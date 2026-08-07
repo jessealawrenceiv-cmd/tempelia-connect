@@ -9,7 +9,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LOG_ACTION_TYPES } from "@/lib/log-action-types.generated";
 
@@ -107,6 +107,15 @@ vi.mock("@tanstack/react-router", () => ({
 
 const { DispatchLog } = await import("./DispatchLog");
 
+/** The inline list-view error alert (there are other aria-live alerts on screen). */
+function errorAlert(): HTMLElement {
+  const match = screen
+    .getAllByRole("alert")
+    .find((el) => /record type isn’t one we track|Couldn’t load activity/i.test(el.textContent ?? ""));
+  if (!match) throw new Error("error alert not rendered");
+  return match;
+}
+
 function renderLog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -129,7 +138,7 @@ describe("HTTP 400 from the logs API", () => {
     fail400 = true;
     renderLog();
 
-    const alert = await waitFor(() => screen.getByRole("alert"));
+    const alert = await waitFor(() => errorAlert());
     expect(screen.getByText(/That record type isn’t one we track/i)).toBeTruthy();
     // The raw constraint text is never the headline.
     expect(alert.textContent ?? "").not.toMatch(/^new row for relation/);
@@ -151,7 +160,7 @@ describe("HTTP 400 from the logs API", () => {
     fail400 = true;
     renderLog();
 
-    await waitFor(() => screen.getByRole("alert"));
+    await waitFor(() => errorAlert());
     expect(screen.getByText(/Technical details \(HTTP 400\)/i)).toBeTruthy();
     const detail = screen.getByText(new RegExp(CONSTRAINT_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     expect(detail.textContent ?? "").toContain('check constraint "logs_action_type_check"');
@@ -165,7 +174,7 @@ describe("HTTP 400 from the logs API", () => {
     fail400 = true;
     renderLog();
 
-    const clear = await waitFor(() => screen.getByRole("button", { name: /Clear filters/i }));
+    const clear = await waitFor(() => within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
     fail400 = false;
     await user.click(clear);
 
@@ -178,8 +187,7 @@ describe("HTTP 400 from the logs API", () => {
     fail400 = true;
     renderLog();
 
-    await waitFor(() => screen.getByRole("alert"));
-    const alert = screen.getByRole("alert");
+    const alert = await waitFor(() => errorAlert());
     expect(alert.querySelector("button")?.textContent ?? "").toMatch(/Retry/i);
     expect(
       Array.from(alert.querySelectorAll("button")).some((b) => /Clear filters/i.test(b.textContent ?? "")),
