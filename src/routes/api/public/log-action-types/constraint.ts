@@ -64,7 +64,7 @@ export const Route = createFileRoute("/api/public/log-action-types/constraint")(
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data, error } = await supabaseAdmin.rpc("logs_action_type_whitelist");
+        const { data, error } = await supabaseAdmin.rpc("logs_action_type_whitelist_ci");
         if (error) {
           return Response.json(
             { error: "constraint_read_failed", detail: error.message },

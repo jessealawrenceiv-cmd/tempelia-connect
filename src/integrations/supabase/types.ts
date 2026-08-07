@@ -1830,6 +1830,14 @@ export type Database = {
           constraint_name: string
         }[]
       }
+      logs_action_type_whitelist_ci: {
+        Args: never
+        Returns: {
+          allowed_values: string[]
+          constraint_def: string
+          constraint_name: string
+        }[]
+      }
       mcp_rate_limits_prune: { Args: never; Returns: undefined }
       reconcile_activity_logs: {
         Args: never
