@@ -302,4 +302,70 @@ jobs:
           print("All third-party actions are pinned to full commit SHAs.")
           PY
 
+      - name: Enforce package.json engines.node is Node.js 24.x
+        run: |
+          # Keeps the declared runtime in lockstep with the setup-node pins:
+          # package.json must declare engines.node, and that range must be
+          # explicitly Node.js 24 (major 24 only). Accepted: 24, 24.x, ^24,
+          # ~24.0.0, >=24, >=24 <25, 24.4.1. Rejected: a missing engines or
+          # engines.node key, an empty value, wildcards (*, latest), and any
+          # range that admits a major other than 24 (e.g. >=20, ^22 || ^24,
+          # >=24 <26).
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, re, sys
+
+          def fail(msg):
+              print(f"::error file=package.json::{msg}")
+              sys.exit(1)
+
+          with open("package.json") as fh:
+              pkg = json.load(fh)
+
+          engines = pkg.get("engines")
+          if not isinstance(engines, dict):
+              fail("package.json is missing an \"engines\" object — add "
+                   "\"engines\": { \"node\": \"24.x\" }")
+          if "node" not in engines:
+              fail("package.json engines is missing the \"node\" key — add "
+                   "\"node\": \"24.x\"")
+
+          raw = engines["node"]
+          spec = str(raw).strip()
+          if not spec:
+              fail("package.json engines.node is empty — set it to \"24.x\"")
+          if spec == "*" or spec.lower() == "latest":
+              fail(f"package.json engines.node is '{spec}', which is not an "
+                   f"explicit Node.js 24.x range — set it to \"24.x\"")
+          if "||" in spec:
+              fail(f"package.json engines.node is '{spec}'; an OR range admits "
+                   f"majors other than 24 — set it to \"24.x\"")
+
+          # Every comparator in the range must reference major 24, except an
+          # upper bound of <25 / <=24.x which correctly closes the 24 range.
+          parts = re.split(r"[\s,]+", spec.replace(" - ", " "))
+          comparators = [p for p in parts if p]
+          majors = set()
+          for c in comparators:
+              m = re.match(r"^(>=|<=|>|<|\^|~|=|v)?\s*v?(\d+)"
+                           r"(?:\.(?:x|\*|\d+))?(?:\.(?:x|\*|\d+))?$", c)
+              if not m:
+                  fail(f"package.json engines.node contains '{c}', which is not "
+                       f"a recognizable version comparator — set engines.node "
+                       f"to \"24.x\"")
+              op, major = m.group(1) or "", int(m.group(2))
+              if op in ("<", "<=") and major in (24, 25):
+                  continue  # valid upper bound closing the 24.x range
+              majors.add(major)
+
+          if majors != {24}:
+              found = ", ".join(str(m) for m in sorted(majors)) or "none"
+              fail(f"package.json engines.node is '{spec}' (major version(s): "
+                   f"{found}) — it must be explicitly Node.js 24.x")
+
+          print(f"package.json engines.node is '{spec}' — explicitly Node.js "
+                f"24.x.")
+          PY
+
+
 
