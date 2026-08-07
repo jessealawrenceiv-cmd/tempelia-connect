@@ -66,7 +66,7 @@ export const getLogActionDiagnostics = createServerFn({ method: "GET" })
     const generatedValues = [...LOG_ACTION_TYPES];
 
     const dbSet = new Set(dbValues);
-    const genSet = new Set(generatedValues);
+    const genSet = new Set<string>(generatedValues);
     const missingInDb = generatedValues.filter((v) => !dbSet.has(v));
     const missingInGenerated = dbValues.filter((v) => !genSet.has(v));
     const orderDiffers =
@@ -115,7 +115,7 @@ export const runLogActionDriftCheck = createServerFn({ method: "POST" })
     const generatedValues = [...LOG_ACTION_TYPES];
 
     const dbSet = new Set(dbValues);
-    const genSet = new Set(generatedValues);
+    const genSet = new Set<string>(generatedValues);
     const missingInDb = generatedValues.filter((v) => !dbSet.has(v));
     const missingInGenerated = dbValues.filter((v) => !genSet.has(v));
     const sameSet = missingInDb.length === 0 && missingInGenerated.length === 0;
