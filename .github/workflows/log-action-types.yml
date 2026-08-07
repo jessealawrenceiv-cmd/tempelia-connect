@@ -22,15 +22,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Fail if DATABASE_URL is missing
+      # Preflight: DATABASE_URL must exist AND psql must be able to connect.
+      # Prints the exact failing command plus its output when it cannot.
+      - name: DB preflight (DATABASE_URL + psql connectivity)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "DATABASE_URL secret is not configured — the generated log action" \
-                 "type enum cannot be verified against the database constraint."
-            exit 1
-          fi
+        run: bash scripts/ci-db-preflight.sh
+
 
       - name: Regenerate and check for drift
         env:
