@@ -1424,7 +1424,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setExpandedIds((prev) => (prev.includes(deepLinkId) ? prev : [...prev, deepLinkId]));
     if (!deepLinkInList) return;
     const node = document.getElementById(`log-row-${deepLinkId}`);
-    node?.scrollIntoView({ block: "center" });
+    if (typeof node?.scrollIntoView === "function") node.scrollIntoView({ block: "center" });
   }, [deepLinkId, deepLinkInList]);
 
   /** Absolute, shareable URL for one dispatch, preserving the current view. */
