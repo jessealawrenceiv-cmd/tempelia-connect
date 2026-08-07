@@ -582,7 +582,7 @@ function SettingsPage() {
   const [cooldownMs, setCooldownMs] = useState(0);
   const isInCooldown = cooldownMs > 0;
   useEffect(() => {
-    if (cooldownMs <= 0) return;
+    if (!isInCooldown) return;
     const id = window.setInterval(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
     return () => window.clearInterval(id);
   }, [isInCooldown]);
