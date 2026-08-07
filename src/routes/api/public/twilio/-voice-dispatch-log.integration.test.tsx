@@ -19,12 +19,15 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   pretendToBeVisual: true,
 });
 const g = globalThis as unknown as Record<string, unknown>;
-g["window"] = dom.window;
-g["document"] = dom.window.document;
-g["navigator"] = dom.window.navigator;
+const define = (key: string, value: unknown) => {
+  Object.defineProperty(g, key, { value, configurable: true, writable: true });
+};
+define("window", dom.window);
+define("document", dom.window.document);
+define("navigator", dom.window.navigator);
 for (const key of Object.getOwnPropertyNames(dom.window)) {
   if (key.startsWith("_") || key in g) continue;
-  g[key] = (dom.window as unknown as Record<string, unknown>)[key];
+  define(key, (dom.window as unknown as Record<string, unknown>)[key]);
 }
 g["IS_REACT_ACT_ENVIRONMENT"] = true;
 
