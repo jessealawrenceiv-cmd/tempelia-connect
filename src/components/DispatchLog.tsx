@@ -921,6 +921,13 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           </li>
           );
         })}
+        {!isLoading && logError && filtered.length > 0 && <ErrorRetry />}
+        {isFetchingNextPage && (
+          <>
+            <SkeletonRow key="s-more-1" />
+            <SkeletonRow key="s-more-2" />
+          </>
+        )}
       </ul>
 
       {filtered.length > 0 && (
