@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
 import { insertLog } from "@/lib/log-action-types";
+import { reportLogInsertError } from "@/lib/log-error";
 import {
   DEPOSIT_SELECTIONS,
   describeCompanyDefault,
