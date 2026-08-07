@@ -246,12 +246,38 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     dateFrom?: unknown;
     dateTo?: unknown;
     logCustomer?: unknown;
+    logScope?: unknown;
+    logStatusOnly?: unknown;
+    logFailed?: unknown;
+    logOrigin?: unknown;
   };
 
-  const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
-  const [failedOnly, setFailedOnly] = useState(false);
-  const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
-  const [scope, setScope] = useState<"live" | "archive">("live");
+  /**
+   * The toggle-style filters (scope, status-refresh only, failures only, origin)
+   * also live in the URL so a copied link reproduces the exact same view. Each
+   * setter writes the param and the value is derived straight back from it —
+   * there is no local mirror to drift out of sync.
+   */
+  const setSearchParam = (key: string, value: string | undefined) => {
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({ ...prev, [key]: value }),
+      resetScroll: false,
+    });
+  };
+  type OriginFilter = "all" | "active" | "this-device" | "other-device" | "backend";
+  const ORIGIN_FILTERS: OriginFilter[] = ["all", "active", "this-device", "other-device", "backend"];
+  const statusRefreshOnly = rawSearch.logStatusOnly === "1";
+  const failedOnly = rawSearch.logFailed === "1";
+  const originFilter: OriginFilter = ORIGIN_FILTERS.includes(rawSearch.logOrigin as OriginFilter)
+    ? (rawSearch.logOrigin as OriginFilter)
+    : "all";
+  const scope: "live" | "archive" = rawSearch.logScope === "archive" ? "archive" : "live";
+  const setStatusRefreshOnly = (next: boolean) => setSearchParam("logStatusOnly", next ? "1" : undefined);
+  const setFailedOnly = (next: boolean) => setSearchParam("logFailed", next ? "1" : undefined);
+  const setOriginFilter = (next: OriginFilter) => setSearchParam("logOrigin", next === "all" ? undefined : next);
+  const setScope = (next: "live" | "archive") => setSearchParam("logScope", next === "archive" ? "archive" : undefined);
+
   // Auto-refresh polls the live log on an interval so newly captured automated
   // actions appear without a page reload. Paused in the archive scope and while
   // the tab is hidden so a backgrounded phone isn't quietly polling.
