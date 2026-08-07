@@ -466,13 +466,19 @@ function NewQuotePage() {
       if (priorSms && !smsOptIn) preserved.push("opt_in_consent");
       if (priorConsent && !consentSigned) preserved.push("consent_form_signed");
       if (preserved.length) {
-        await insertLog(supabase, {
+        const { error: consentLogErr } = await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: "customer_consent_preserved",
           status: "prevented_downgrade_via_quote",
           message_sent: JSON.stringify({ preserved, source: "quote" }),
         });
+        if (consentLogErr)
+          reportLogInsertError(consentLogErr, {
+            attempted: "customer_consent_preserved",
+            context: "consent audit",
+          });
+
       }
 
       const payload = {
