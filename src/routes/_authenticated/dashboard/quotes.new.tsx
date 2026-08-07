@@ -256,7 +256,7 @@ function NewQuotePage() {
     setJobSite(q.job_site_address ?? "");
     setBilling(q.billing_address ?? "");
     setDescription(q.description ?? "");
-    setJobType(q.job_type ?? "existing_building");
+    setJobType((q.job_type ?? "existing_building") as "existing_building" | "new_construction");
     setTaxExempt(!!q.tax_exempt);
     setTaxRateInput(q.tax_rate != null ? String(q.tax_rate) : "9.5");
     setValidUntil(q.valid_until ?? "");
