@@ -118,8 +118,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const toISO = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
   const hasRange = Boolean(fromISO && toISO);
 
+  const typeKey = [...selectedTypes].sort().join(",");
+
   const { data, isLoading } = useQuery({
-    queryKey: ["logs", scope, limit, fromISO, toISO],
+    queryKey: ["logs", scope, limit, fromISO, toISO, typeKey],
     queryFn: async () => {
       if (scope === "archive") {
         let q = supabase
@@ -128,6 +130,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           .order("original_created_at", { ascending: false });
         if (fromISO) q = q.gte("original_created_at", fromISO);
         if (toISO) q = q.lte("original_created_at", toISO);
+        if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
         if (!hasRange) q = q.limit(limit);
         else q = q.limit(500);
         const { data } = await q;
@@ -146,6 +149,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         .order("created_at", { ascending: false });
       if (fromISO) q = q.gte("created_at", fromISO);
       if (toISO) q = q.lte("created_at", toISO);
+      if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
       if (!hasRange) q = q.limit(limit);
       else q = q.limit(500);
       const { data } = await q;
@@ -153,7 +157,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     },
   });
 
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const row of data ?? []) counts[row.action_type] = (counts[row.action_type] ?? 0) + 1;
+    return counts;
+  }, [data]);
+
+  const toggleType = (t: LogActionType) =>
+    setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((v) => v !== t) : [...prev, t]));
+
   const filtered = (data ?? []).filter((row) => {
+    if (selectedTypes.length > 0 && !selectedTypes.includes(row.action_type as LogActionType)) return false;
     if (originFilter !== "all") {
       if (row.action_type !== "automation_status_change") return false;
       if (originFilter !== "active" && row.status !== originFilter) return false;
@@ -165,7 +179,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       if (row.status !== "failed") return false;
     }
     if (searchTerms.length > 0) {
-      const haystack = `${LABEL[row.action_type] ?? row.action_type} ${describe(row)}`.toLowerCase();
+      const haystack = `${typeLabel(row.action_type)} ${describe(row)}`.toLowerCase();
       if (!searchTerms.every((term) => haystack.includes(term))) return false;
     }
     if (hasRange) {
@@ -175,6 +189,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     }
     return true;
   });
+
 
 
   useEffect(() => {
