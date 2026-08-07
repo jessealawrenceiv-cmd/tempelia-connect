@@ -89,6 +89,10 @@ const FieldRow = ({ label, value }: { label: string; value: string }) => (
 
 export function DispatchLogRowDetails({ row }: { row: DispatchLogDetailRow }) {
   const payload = formatDispatchPayload(row.message_sent);
+  const searchId = useId();
+  const [query, setQuery] = useState("");
+  const matches = useMemo(() => searchPayloadLines(payload.text, query), [payload.text, query]);
+
 
   const fields: { label: string; value: string | null | undefined }[] = [
     { label: "log id", value: row.id },
