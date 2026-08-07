@@ -135,76 +135,88 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const hasRange = Boolean(fromISO && toISO);
 
   const typeKey = [...selectedTypes].sort().join(",");
+  const searchKey = searchTerms.join(" ");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["logs", scope, limit, fromISO, toISO, typeKey],
-    queryFn: async () => {
-      if (scope === "archive") {
-        let q = supabase
-          .from("logs_archive")
-          .select("id, action_type, message_sent, original_created_at, status, customer_id")
-          .order("original_created_at", { ascending: false });
-        if (fromISO) q = q.gte("original_created_at", fromISO);
-        if (toISO) q = q.lte("original_created_at", toISO);
-        if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
-        if (!hasRange) q = q.limit(limit);
-        else q = q.limit(500);
-        const { data } = await q;
-        return (data ?? []).map((r) => ({
-          id: r.id,
-          action_type: r.action_type,
-          message_sent: r.message_sent,
-          created_at: r.original_created_at,
-          status: r.status,
-          customer_id: r.customer_id,
-        }));
-      }
+  // Server-side keyset pagination: every filter is pushed down to Postgres so a
+  // large action_type result set only ever ships one small page over mobile data.
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: [
+      "logs",
+      scope,
+      limit,
+      fromISO,
+      toISO,
+      typeKey,
+      searchKey,
+      statusRefreshOnly,
+      failedOnly,
+      originFilter,
+    ],
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage: LogRow[]) =>
+      lastPage.length < limit ? undefined : (lastPage[lastPage.length - 1]?.created_at ?? undefined),
+    queryFn: async ({ pageParam }) => {
+      const archive = scope === "archive";
+      const timeCol = archive ? "original_created_at" : "created_at";
       let q = supabase
-        .from("logs")
-        .select("id, action_type, message_sent, created_at, status, customer_id")
-        .order("created_at", { ascending: false });
-      if (fromISO) q = q.gte("created_at", fromISO);
-      if (toISO) q = q.lte("created_at", toISO);
-      if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
-      if (!hasRange) q = q.limit(limit);
-      else q = q.limit(500);
-      const { data } = await q;
-      return data ?? [];
+        .from(archive ? "logs_archive" : "logs")
+        .select(sel(`id, action_type, message_sent, ${timeCol}, status, customer_id`))
+        .order(timeCol, { ascending: false })
+        .limit(limit);
+
+      if (fromISO) q = q.gte(timeCol, fromISO);
+      if (toISO) q = q.lte(timeCol, toISO);
+      if (pageParam) q = q.lt(timeCol, pageParam);
+
+      // Record-type + quick filters
+      if (originFilter !== "all") {
+        q = q.eq("action_type", LogAction.automation_status_change);
+        if (originFilter !== "active") q = q.eq("status", originFilter);
+      } else {
+        if (statusRefreshOnly) q = q.eq("action_type", LogAction.status_refresh);
+        if (failedOnly) q = q.eq("action_type", LogAction.status_refresh).eq("status", "failed");
+        if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
+      }
+
+      // Free-text search runs in Postgres so pages stay full-size.
+      for (const term of searchTerms) {
+        const safe = term.replace(/[%,()]/g, "");
+        if (!safe) continue;
+        q = q.or(`message_sent.ilike.%${safe}%,action_type.ilike.%${safe}%`);
+      }
+
+      const { data: rows, error } = await q.returns<RawLogRow[]>();
+      if (error) throw error;
+      return (rows ?? []).map((r) => ({
+        id: r.id,
+        action_type: r.action_type,
+        message_sent: r.message_sent,
+        created_at: (r.created_at ?? r.original_created_at) as string,
+        status: r.status,
+        customer_id: r.customer_id,
+      }));
     },
   });
 
+  const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
+
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const row of data ?? []) counts[row.action_type] = (counts[row.action_type] ?? 0) + 1;
+    for (const row of rows) counts[row.action_type] = (counts[row.action_type] ?? 0) + 1;
     return counts;
-  }, [data]);
+  }, [rows]);
 
   const toggleType = (t: LogActionType) =>
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((v) => v !== t) : [...prev, t]));
 
-  const filtered = (data ?? []).filter((row) => {
-    if (selectedTypes.length > 0 && !selectedTypes.includes(row.action_type as LogActionType)) return false;
-    if (originFilter !== "all") {
-      if (row.action_type !== LogAction.automation_status_change) return false;
-      if (originFilter !== "active" && row.status !== originFilter) return false;
-      return true;
-    }
-    if (statusRefreshOnly && row.action_type !== LogAction.status_refresh) return false;
-    if (failedOnly) {
-      if (row.action_type !== LogAction.status_refresh) return false;
-      if (row.status !== "failed") return false;
-    }
-    if (searchTerms.length > 0) {
-      const haystack = `${typeLabel(row.action_type)} ${describe(row)}`.toLowerCase();
-      if (!searchTerms.every((term) => haystack.includes(term))) return false;
-    }
-    if (hasRange) {
-      const t = new Date(row.created_at).getTime();
-      if (fromISO && t < new Date(fromISO).getTime()) return false;
-      if (toISO && t > new Date(toISO).getTime()) return false;
-    }
-    return true;
-  });
+  const filtered = rows;
+
 
 
 
