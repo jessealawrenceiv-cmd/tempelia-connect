@@ -2210,6 +2210,35 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           </div>
         )}
 
+        {/* Deep link to a dispatch the current filters exclude: pin it on top so a
+            shared link always opens the record it points at. */}
+        {deepLinkId && !deepLinkInList && (
+          <div role="listitem" className="border-b border-border bg-primary/5">
+            <div className="flex items-center justify-between gap-3 px-5 pt-3">
+              <span className="mono text-[10px] uppercase tracking-widest text-primary">
+                Shared dispatch
+              </span>
+              <button
+                type="button"
+                onClick={() => setDeepLinkId(undefined)}
+                className="kb-focus mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              >
+                Clear
+              </button>
+            </div>
+            {isPinnedLoading ? (
+              <div className="px-5 py-3 text-xs text-muted-foreground">Loading shared dispatch…</div>
+            ) : pinnedRow ? (
+              <RowBody row={pinnedRow} />
+            ) : (
+              <div className="px-5 py-3 text-xs text-muted-foreground">
+                That dispatch is no longer available, or you don’t have access to it.
+              </div>
+            )}
+          </div>
+        )}
+
+
         {/* Small lists render in full; long ones (many appended pages) switch to
             windowed rendering so scrolling stays smooth no matter how many
             keyset pages have been loaded. */}
