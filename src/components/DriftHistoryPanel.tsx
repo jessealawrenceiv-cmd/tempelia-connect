@@ -44,25 +44,49 @@ const ValueList = ({ label, values, tone }: { label: string; values: string[]; t
   </div>
 );
 
-export function DriftHistoryPanel({ runs }: { runs: DriftRun[] }) {
+export function DriftHistoryPanel({
+  runs,
+  onRunNow,
+  isRunning = false,
+}: {
+  runs: DriftRun[];
+  /** Triggers a fresh drift test; the panel refreshes when it completes. */
+  onRunNow?: () => void;
+  isRunning?: boolean;
+}) {
   const [openIds, setOpenIds] = useState<string[]>([]);
   const toggle = (id: string) =>
     setOpenIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
     <div className="panel p-5">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <History size={16} className="text-steel" />
         <div className="label-eyebrow">Drift history · last {runs.length} run{runs.length === 1 ? "" : "s"}</div>
+        {onRunNow && (
+          <button
+            type="button"
+            onClick={onRunNow}
+            disabled={isRunning}
+            className="kb-focus ml-auto flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-accent disabled:opacity-60"
+          >
+            <RefreshCw size={11} aria-hidden="true" className={isRunning ? "motion-safe:animate-spin" : ""} />
+            {isRunning ? "Running drift test…" : "Run drift test now"}
+          </button>
+        )}
       </div>
       <p className="mono mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
         Every recorded drift test, newest first — expand a run for the exact differences
+      </p>
+      <p role="status" aria-live="polite" className="sr-only">
+        {isRunning ? "Drift test running" : ""}
       </p>
 
       {runs.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
           No drift checks recorded yet — run one with the button above.
         </p>
+
       ) : (
         <ul className="mt-4 divide-y divide-border border-t border-border">
           {runs.map((run) => {
