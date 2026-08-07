@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { resendLastMessage } from "@/lib/resend-sms.functions";
 import { RESENDABLE_STATUSES } from "@/lib/resend-sms";
 import { LogAction } from "@/lib/log-action-types";
+import { logActionFilterValues } from "@/lib/log-action-query";
 
 
 /** Log action types that represent messages WE sent to the customer. */
