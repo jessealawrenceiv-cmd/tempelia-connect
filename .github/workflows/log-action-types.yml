@@ -103,14 +103,42 @@ jobs:
 
       - name: Enforce Node.js 24 on all setup-node steps
         run: |
-          # Matches only YAML keys (`^\s*node-version:`) so comment lines
-          # and inline references to this check don't false-positive.
+          # Parses each workflow's YAML structure (PyYAML, preinstalled on
+          # ubuntu-latest) and inspects setup-node steps' `with.node-version`
+          # value directly. Because it reads parsed YAML keys — not raw text —
+          # comments, examples, and inline references to this check can never
+          # cause a false positive.
           set -euo pipefail
-          offenders="$(grep -RInE --exclude-dir=node_modules '^\s*node-version:' .github/workflows | grep -v 'node-version: 24' || true)"
-          if [ -n "$offenders" ]; then
-            echo "::error::One or more setup-node steps are not pinned to Node.js 24:"
-            echo "$offenders"
-            exit 1
-          fi
-          echo "All setup-node steps are pinned to Node.js 24."
+          python3 - <<'PY'
+          import glob, sys
+          try:
+              import yaml
+          except ImportError:
+              print("::error::PyYAML is not available on this runner.")
+              sys.exit(2)
+          offenders = []
+          for path in sorted(glob.glob(".github/workflows/*.y*ml")):
+              with open(path) as fh:
+                  doc = yaml.safe_load(fh)
+              if not isinstance(doc, dict):
+                  continue
+              jobs = doc.get("jobs") or {}
+              for jname, job in jobs.items():
+                  for idx, step in enumerate((job or {}).get("steps") or []):
+                      uses = (step or {}).get("uses") or ""
+                      if "setup-node" not in uses:
+                          continue
+                      nv = ((step or {}).get("with") or {}).get("node-version")
+                      label = f"{path} (job '{jname}', step {idx + 1}: {uses})"
+                      if nv is None:
+                          offenders.append(f"{label}: node-version key is missing")
+                      elif str(nv).strip() != "24":
+                          offenders.append(f"{label}: node-version is '{nv}', expected 24")
+          if offenders:
+              print("::error::One or more setup-node steps are not pinned to Node.js 24:")
+              for o in offenders:
+                  print(f"::error::{o}")
+              sys.exit(1)
+          print("All setup-node steps are pinned to Node.js 24.")
+          PY
 
