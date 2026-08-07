@@ -12,6 +12,8 @@
 // The route file's server handlers are stripped in the client transform, so this
 // suite runs in the server (node) environment and installs a DOM by hand for the
 // React rendering half.
+// jsdom ships no bundled types in this project; the tiny surface used here is typed inline.
+// @ts-expect-error -- no type declarations for "jsdom"
 import { JSDOM } from "jsdom";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
