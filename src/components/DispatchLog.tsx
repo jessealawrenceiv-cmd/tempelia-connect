@@ -282,6 +282,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setFailedOnly(false);
     setOriginFilter("all");
     setSearchQuery("");
+    setCustomerInput("");
     writeStoredTypes([]);
     void navigate({
       to: ".",
@@ -292,10 +293,35 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         q: undefined,
         dateFrom: undefined,
         dateTo: undefined,
+        logCustomer: undefined,
       }),
       resetScroll: false,
     });
   };
+
+  // Mirror the contact filter into ?logCustomer= so a "just this contact" view is
+  // shareable. Debounced and history-replacing, like the free-text search.
+  useEffect(() => {
+    if (customerInput === urlCustomer) return;
+    const id = window.setTimeout(() => {
+      void navigate({
+        to: ".",
+        search: (prev: Record<string, unknown>) => ({
+          ...prev,
+          logCustomer: customerInput.trim() === "" ? undefined : customerInput.trim(),
+        }),
+        replace: true,
+        resetScroll: false,
+      });
+    }, 250);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerInput, urlCustomer]);
+
+  // Keep the contact input in step with back/forward navigation.
+  useEffect(() => {
+    setCustomerInput((prev) => (prev === urlCustomer ? prev : urlCustomer));
+  }, [urlCustomer]);
 
   // Mirror the search box into ?q= so the view is shareable and survives a
   // reload. Debounced and history-replacing so typing doesn't spam the stack.
@@ -365,6 +391,35 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const typeKey = [...selectedTypes].sort().join(",");
   const searchKey = searchTerms.join(" ");
 
+  // A contact filter is either an exact customer id or a phone number. Phone
+  // input is reduced to its last 10 digits so "(415) 555-0777", "4155550777",
+  // and "+14155550777" all narrow to the same contact.
+  const customerFilter = urlCustomer.trim().slice(0, 64);
+  const customerFilterIsId = UUID_RE.test(customerFilter);
+  const customerFilterDigits = customerFilterIsId ? "" : phoneDigits(customerFilter).slice(-10);
+  const hasPhoneFilter = customerFilterDigits.length >= 4;
+  const customerFilterActive = customerFilterIsId || hasPhoneFilter;
+  const customerFilterInvalid = customerFilter.length > 0 && !customerFilterActive;
+
+  // Phone numbers live on `customers`, so resolve the phone to customer ids and
+  // fold them into the log query alongside the logged recipient_phone.
+  const { data: phoneCustomerIds } = useQuery({
+    queryKey: ["log-customer-phone", customerFilterDigits],
+    enabled: hasPhoneFilter,
+    staleTime: 30_000,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select(sel("id"))
+        .ilike("phone_number", `%${customerFilterDigits}%`)
+        .limit(300)
+        .returns<{ id: string }[]>();
+      if (error) throw error;
+      return (data ?? []).map((r) => r.id);
+    },
+  });
+  const phoneCustomerKey = hasPhoneFilter ? (phoneCustomerIds ?? []).join(",") : "";
+
   const hasActiveFilters =
     selectedTypes.length > 0 ||
     searchQuery.trim().length > 0 ||
@@ -372,6 +427,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     failedOnly ||
     originFilter !== "all" ||
     dateRange?.from != null ||
+    customerFilter.length > 0 ||
     sortDir === "oldest";
 
   // A search term can also be a customer's name or phone number. Names live on
@@ -419,6 +475,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       if (failedOnly)
         out = out.eq("action_type", logActionFilterValue(LogAction.status_refresh)).eq("status", "failed");
       if (selectedTypes.length > 0) out = out.in("action_type", logActionFilterValues(selectedTypes));
+    }
+
+    // Contact filter: an exact customer id, or any record tied to that phone
+    // number (either through the customer record or the logged recipient).
+    if (customerFilterIsId) {
+      out = out.eq("customer_id", customerFilter);
+    } else if (hasPhoneFilter) {
+      const clauses = [`recipient_phone.ilike.%${customerFilterDigits}%`];
+      const ids = phoneCustomerIds ?? [];
+      if (ids.length > 0) clauses.push(`customer_id.in.(${ids.join(",")})`);
+      out = out.or(clauses.join(","));
     }
 
     // Free-text search runs in Postgres so pages stay full-size. Each term must
@@ -489,6 +556,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       typeKey,
       searchKey,
       customerMatchKey,
+      customerFilter,
+      phoneCustomerKey,
       statusRefreshOnly,
       failedOnly,
       originFilter,
@@ -500,7 +569,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     queryFn: ({ pageParam }) => fetchLogPage(limit, pageParam),
     // Wait for the customer-name lookup so a name search doesn't briefly show
     // only message/phone matches before the ids land.
-    enabled: searchTerms.length === 0 || termCustomerIds !== undefined,
+    enabled:
+      (searchTerms.length === 0 || termCustomerIds !== undefined) &&
+      (!hasPhoneFilter || phoneCustomerIds !== undefined),
   });
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
@@ -519,7 +590,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = 0;
     lastAnnouncedIdRef.current = null;
-  }, [scope, selectedTypes, searchKey, fromISO, toISO, statusRefreshOnly, failedOnly, originFilter, sortDir]);
+  }, [
+    scope,
+    selectedTypes,
+    searchKey,
+    customerFilter,
+    fromISO,
+    toISO,
+    statusRefreshOnly,
+    failedOnly,
+    originFilter,
+    sortDir,
+  ]);
 
   useEffect(() => {
     const node = loadMoreRef.current;
