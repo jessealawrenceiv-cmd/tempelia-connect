@@ -216,7 +216,7 @@ describe("Activity log — opt_in_prompt and opt_in_prompt_test rows", () => {
     await user.click(within(rowEl).getByRole("button", { name: "Copy dispatch line" }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    const line = writeText.mock.calls[0]![0] as unknown as string;
+    const line = writeText.mock.calls[0]![0];
     expect(line).toContain(logActionLabel(LogAction.opt_in_prompt));
     expect(line).toContain(PROMPT_BODY);
     expect(line).toContain(
