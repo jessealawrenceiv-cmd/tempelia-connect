@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { reportFilterRejection } from "@/lib/activity-log-validation.reporter";
