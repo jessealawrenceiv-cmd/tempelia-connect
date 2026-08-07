@@ -130,6 +130,7 @@ function chip(label: string) {
 
 beforeEach(() => {
   searchState = {};
+  window.localStorage.removeItem("temaro-activity-log-types");
 });
 
 afterEach(() => cleanup());

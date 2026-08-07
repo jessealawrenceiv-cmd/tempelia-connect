@@ -139,6 +139,37 @@ export function parseLogTypesParam(raw: unknown): LogActionType[] {
   return validateActivityLogFilters({ logTypes: raw }).value.selectedTypes;
 }
 
+const LOG_TYPES_STORAGE_KEY = "temaro-activity-log-types";
+
+function readStoredTypes(): LogActionType[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LOG_TYPES_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const valid = parsed.filter((t): t is LogActionType =>
+      Object.values(LogAction).includes(t as LogActionType),
+    );
+    return valid.length > 0 ? valid : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredTypes(types: LogActionType[]) {
+  if (typeof window === "undefined") return;
+  try {
+    if (types.length === 0) {
+      window.localStorage.removeItem(LOG_TYPES_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(LOG_TYPES_STORAGE_KEY, JSON.stringify(types));
+    }
+  } catch {
+    // Storage may be unavailable or full; persistence is best-effort.
+  }
+}
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
@@ -200,12 +231,34 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setOriginFilter("all");
     setSearchQuery("");
     setDateRange(undefined);
+    writeStoredTypes([]);
     void navigate({
       to: ".",
       search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: undefined, logSort: undefined }),
       resetScroll: false,
     });
   };
+
+  // Restore the last-used action-type filters from localStorage when the URL
+  // does not already specify ?logTypes=. URL params always win.
+  useEffect(() => {
+    if (rawLogTypes != null) return;
+    const stored = readStoredTypes();
+    if (stored && stored.length > 0) {
+      void navigate({
+        to: ".",
+        search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: stored.join(",") }),
+        replace: true,
+        resetScroll: false,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Remember action-type filter changes as the user makes them.
+  useEffect(() => {
+    writeStoredTypes(selectedTypes);
+  }, [selectedTypes]);
 
 
 
