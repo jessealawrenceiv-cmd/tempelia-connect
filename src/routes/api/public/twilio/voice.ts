@@ -256,8 +256,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         return completeWebhookDelivery(supabaseAdmin, {
           deliveryId: claim.deliveryId,
           userId: deliveryTenantId,
+          state: conflicted ? "failed" : "done",
           response,
         });
+
       },
     },
   },
