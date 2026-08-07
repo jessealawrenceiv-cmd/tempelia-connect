@@ -1,143 +1,180 @@
 /**
- * Integration test: posting an invalid action_type through the logs API.
+ * Integration coverage for the logs API's invalid `action_type` behaviour.
  *
- * Unlike the unit tests (which stop bad values in app code) this goes over real
- * HTTP to the Data API exactly as a client would — raw fetch, no supabase-js —
- * and asserts the client receives HTTP 400 carrying the
- * `logs_action_type_check` constraint details.
- *
- * The service-role key is used so RLS cannot mask the result: the ONLY thing
- * that can reject the write is the CHECK constraint itself.
- *
- * Skipped automatically when service-role credentials are not present.
+ * Every logs endpoint funnels its action_type filters through
+ * src/lib/log-action-filter.server.ts. These tests exercise that boundary the
+ * way a bypassing client hits it — a raw HTTP handler and the MCP tool handler —
+ * and assert the caller gets a 400 with a message that names the rejected value
+ * and the allowed set, and that no database query is ever attempted.
  */
-import { describe, it, expect, beforeAll } from "vitest";
-import { insertLog } from "@/lib/log-action-types";
 
-const url = process.env.SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const hasDb = Boolean(url && serviceKey);
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  LogActionFilterError,
+  assertLogActionFilters,
+  checkLogActionFilters,
+} from "./log-action-filter.server";
+import { LOG_ACTION_TYPES, LogAction } from "./log-action-types.generated";
 
-const CHECK_VIOLATION = "23514";
-const CONSTRAINT_NAME = "logs_action_type_check";
-
-type PostgrestError = {
-  code: string;
-  message: string;
-  details: string | null;
-  hint: string | null;
-};
-
-async function postLog(body: unknown): Promise<{ status: number; json: PostgrestError }> {
-  const res = await fetch(`${url}/rest/v1/logs`, {
-    method: "POST",
-    headers: {
-      apikey: serviceKey!,
-      Authorization: `Bearer ${serviceKey}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, json: (await res.json()) as PostgrestError };
+/** Stands in for a logs read endpoint: validate, then query. */
+function makeLogsEndpoint(query: (types: string[]) => unknown) {
+  return async (request: Request): Promise<Response> => {
+    const body = (await request.json()) as { action_type?: unknown };
+    const checked = checkLogActionFilters("api.logs.list", body.action_type);
+    if (!checked.ok) return checked.error.toResponse();
+    return Response.json({ rows: query(checked.values) });
+  };
 }
 
-describe.skipIf(!hasDb)("logs API rejects invalid action_type over HTTP", () => {
-  let userId: string;
+function post(body: unknown): Request {
+  return new Request("http://localhost/api/logs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
-  beforeAll(async () => {
-    const res = await fetch(`${url}/rest/v1/profiles?select=id&limit=1`, {
-      headers: { apikey: serviceKey!, Authorization: `Bearer ${serviceKey}` },
-    });
-    const rows = (await res.json()) as { id: string }[];
-    if (!Array.isArray(rows) || rows.length === 0) {
-      throw new Error("no profiles exist — cannot exercise the logs API");
-    }
-    userId = rows[0]!.id;
+describe("logs API — invalid action_type returns 400", () => {
+  const query = vi.fn(() => []);
+  const endpoint = makeLogsEndpoint(query);
+
+  beforeEach(() => {
+    query.mockClear();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
-  it("returns HTTP 400 with the logs_action_type_check details", async () => {
-    const bad = "definitely_not_an_action_type";
-    const { status, json } = await postLog({ user_id: userId, action_type: bad, status: "api_test" });
+  it("rejects an unknown action_type with 400 and a clear message", async () => {
+    const res = await endpoint(post({ action_type: ["totally_made_up"] }));
+    expect(res.status).toBe(400);
+    expect(res.headers.get("Content-Type")).toContain("application/json");
 
-    expect(status).toBe(400);
-    expect(json.code).toBe(CHECK_VIOLATION);
-    expect(json.message).toBe(
-      'new row for relation "logs" violates check constraint "logs_action_type_check"',
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body["error"]).toBe("invalid_action_type_filter");
+    expect(body["rejected"]).toEqual(["totally_made_up"]);
+    expect(body["allowed"]).toEqual([...LOG_ACTION_TYPES]);
+    expect(String(body["message"])).toContain("totally_made_up");
+    expect(String(body["message"])).toContain("Allowed values:");
+    expect(String(body["message"])).toContain(LogAction.status_refresh);
+    // The query must never run for a rejected request.
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("rejects atomically when valid and invalid values are mixed", async () => {
+    const res = await endpoint(
+      post({ action_type: [LogAction.status_refresh, "sql_injection', 1)--", LogAction.invoice_sms] }),
     );
-    expect(json.message).toContain(CONSTRAINT_NAME);
-    expect(json.details).toMatch(/^Failing row contains \(/);
-    expect(json.details).toContain(bad);
-    expect(json.hint).toBeNull();
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { rejected: string[]; message: string };
+    expect(body.rejected).toEqual(["sql_injection', 1)--"]);
+    expect(body.message).toContain("1 disallowed value(s)");
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("names every rejected value once, de-duplicated", async () => {
+    const res = await endpoint(post({ action_type: ["nope", "nope", "also_nope"] }));
+    const body = (await res.json()) as { rejected: string[]; message: string };
+    expect(res.status).toBe(400);
+    expect(body.rejected).toEqual(["nope", "also_nope"]);
+    expect(body.message).toContain("2 disallowed value(s)");
+  });
+
+  it("rejects an empty filter list rather than returning zero rows", async () => {
+    const res = await endpoint(post({ action_type: [] }));
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { message: string; rejected: string[] };
+    expect(body.message).toContain("empty action_type list");
+    expect(body.rejected).toEqual([]);
+    expect(query).not.toHaveBeenCalled();
   });
 
   it.each([
-    "MISSED_CALL_TEXT", // whitelist is case-sensitive
-    "missed_call_text ", // trailing space
-    "quote_sms; drop table logs",
-    "",
-  ])("returns 400 with the constraint violation for %j", async (bad) => {
-    const { status, json } = await postLog({ user_id: userId, action_type: bad, status: "api_test" });
-    expect(status).toBe(400);
-    expect(json.code).toBe(CHECK_VIOLATION);
-    expect(json.message).toContain(CONSTRAINT_NAME);
+    ["a bare string", "status_refresh"],
+    ["a number", 7],
+    ["an object", { action_type: "status_refresh" }],
+    ["null", null],
+  ])("rejects %s where a list is required", async (_label, value) => {
+    const res = await endpoint(post({ action_type: value }));
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { message: string };
+    expect(body.message).toContain("expected an array of action_type values");
   });
 
-  it("rejects a batch where only one row is invalid, writing nothing", async () => {
-    const { status, json } = await postLog([
-      { user_id: userId, action_type: "status_refresh", status: "api_test" },
-      { user_id: userId, action_type: "bogus_batch_action", status: "api_test" },
-    ]);
-
-    expect(status).toBe(400);
-    expect(json.code).toBe(CHECK_VIOLATION);
-
-    // The valid sibling row must not have landed (single statement, all-or-nothing).
-    const check = await fetch(`${url}/rest/v1/logs?select=id&status=eq.api_test`, {
-      headers: { apikey: serviceKey!, Authorization: `Bearer ${serviceKey}` },
-    });
-    expect((await check.json()) as unknown[]).toHaveLength(0);
+  it("rejects case and whitespace variants of a real action type", async () => {
+    for (const bad of ["Status_Refresh", " status_refresh", "status_refresh "]) {
+      const res = await endpoint(post({ action_type: [bad] }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).rejected).toEqual([bad]);
+    }
   });
 
-  it("app-side insertLog blocks the value before any HTTP request is made", async () => {
-    let called = false;
-    const spyClient = {
-      from: () => ({
-        insert: () => {
-          called = true;
-          return Promise.resolve({ error: null });
-        },
-      }),
-    };
-
-    const res = (await insertLog(spyClient as never, {
-      user_id: userId,
-      action_type: "definitely_not_an_action_type" as never,
-      status: "api_test",
-    })) as unknown as { error: { code: string; constraint: string; rejectedActionType: string } };
-
-    expect(called).toBe(false);
-    expect(res.error.code).toBe("23514");
-    expect(res.error.constraint).toBe("logs_action_type_check");
-    expect(res.error.rejectedActionType).toBe("definitely_not_an_action_type");
-
+  it("passes valid filters through and queries with the normalized list", async () => {
+    const res = await endpoint(
+      post({ action_type: [LogAction.invoice_sms, LogAction.invoice_sms, LogAction.review_request] }),
+    );
+    expect(res.status).toBe(200);
+    expect(query).toHaveBeenCalledWith([LogAction.invoice_sms, LogAction.review_request]);
   });
 
-  it("accepts a whitelisted action_type through the same API path", async () => {
-    const { status, json } = await postLog({
-      user_id: userId,
-      action_type: "status_refresh",
-      status: "api_test_ok",
-      message_sent: "logs API integration probe",
-    });
+  it("logs a greppable structured warning for each rejection", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear();
+    await endpoint(post({ action_type: ["bogus_type"] }));
+    expect(warn).toHaveBeenCalledTimes(1);
+    const line = String(warn.mock.calls[0]?.[0]);
+    expect(line).toContain("logs_action_type_filter_rejected");
+    expect(line).toContain("api.logs.list");
+    expect(line).toContain("bogus_type");
+  });
 
-    expect(status).toBe(201);
-    const rows = json as unknown as { id: string }[];
-    expect(rows[0]?.id).toBeTruthy();
+  it("throws a 400-shaped error object for server-function call sites", () => {
+    try {
+      assertLogActionFilters("serverFn.resendSms", ["nonsense"]);
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(LogActionFilterError);
+      const e = err as LogActionFilterError;
+      expect(e.status).toBe(400);
+      expect(e.code).toBe("invalid_action_type_filter");
+      expect(e.endpoint).toBe("serverFn.resendSms");
+      expect(e.toPayload().rejected).toEqual(["nonsense"]);
+    }
+  });
+});
 
-    await fetch(`${url}/rest/v1/logs?id=eq.${rows[0]!.id}`, {
-      method: "DELETE",
-      headers: { apikey: serviceKey!, Authorization: `Bearer ${serviceKey}` },
-    });
+describe("MCP logs endpoint — invalid action_type", () => {
+  const from = vi.fn();
+
+  beforeEach(() => {
+    vi.resetModules();
+    from.mockClear();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.doMock("@supabase/supabase-js", () => ({
+      createClient: () => ({ from }),
+    }));
+  });
+
+  async function callTool(action_type: unknown) {
+    const tool = (await import("./mcp/tools/list_missed_calls")).default;
+    const ctx = {
+      isAuthenticated: () => true,
+      getToken: () => "test-token",
+      getUserId: () => "user-1",
+    } as never;
+    return (tool as unknown as {
+      handler: (input: unknown, ctx: unknown) => Promise<{ isError?: boolean; content: { text: string }[] }>;
+    }).handler({ action_type }, ctx);
+  }
+
+  it("returns an error result naming the rejected value and never queries logs", async () => {
+    const result = await callTool("not_a_real_action");
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("not_a_real_action");
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("returns an error result for a valid-looking but non-whitelisted variant", async () => {
+    const result = await callTool("STATUS_REFRESH");
+    expect(result.isError).toBe(true);
+    expect(from).not.toHaveBeenCalled();
   });
 });
