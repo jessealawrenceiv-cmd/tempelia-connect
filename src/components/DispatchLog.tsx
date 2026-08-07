@@ -147,6 +147,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [announcement, setAnnouncement] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
   // Record-type filters and sort live in the URL (?logTypes=a,b&logSort=oldest)
