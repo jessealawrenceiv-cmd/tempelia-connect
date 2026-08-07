@@ -225,5 +225,7 @@ describe("Activity log row copy action", () => {
     expect(copied).toMatch(/quote link sent/);
     expect(copied).toMatch(/QUOTE_SMS/);
     expect(copied).toMatch(/\d{1,2}:\d{2}:\d{2}/);
+
+    if (original) Object.defineProperty(navigator, "clipboard", original);
   });
 });
