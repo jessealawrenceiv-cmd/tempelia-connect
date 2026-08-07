@@ -547,7 +547,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           : `Exported ${all.length} record${all.length === 1 ? "" : "s"}.`,
       );
     } catch (err) {
-      toast.error("Export failed", { description: err instanceof Error ? err.message : "Please try again." });
+      // Same treatment as the list view: a 400 from logs_action_type_check gets
+      // the friendly headline plus the exact constraint text, not a raw dump.
+      const info = describeLogRequestError(err);
+      toast.error(info.isActionTypeCheck ? info.title : "Export failed", {
+        description: [
+          info.message,
+          info.technicalDetail ? `${info.status ? `HTTP ${info.status}: ` : ""}${info.technicalDetail}` : null,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      });
     } finally {
       setIsExporting(false);
     }
