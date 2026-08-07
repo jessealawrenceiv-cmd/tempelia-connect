@@ -879,6 +879,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (scope !== "live" || sortDir !== "newest" || filtersBlocked) return;
+    // Realtime is optional: environments (and tests) without a channel-capable
+    // client simply fall back to polling.
+    if (typeof supabase.channel !== "function") return;
 
     let cancelled = false;
     const channel = supabase
