@@ -1628,9 +1628,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               checked={statusRefreshOnly}
               disabled={originFilter !== "all"}
               onChange={(e) => {
-                setStatusRefreshOnly(e.target.checked);
-                if (!e.target.checked) setFailedOnly(false);
+                const on = e.target.checked;
+                void navigate({
+                  to: ".",
+                  search: (prev: Record<string, unknown>) => ({
+                    ...prev,
+                    logStatusOnly: on ? "1" : undefined,
+                    logFailed: on ? prev.logFailed : undefined,
+                  }),
+                  resetScroll: false,
+                });
               }}
+
             />
             STATUS_REFRESH only
           </label>
