@@ -1,0 +1,46 @@
+name: Log action types
+
+# Fails the build when src/lib/log-action-types.generated.ts drifts from the
+# public.logs `logs_action_type_check` CHECK constraint in the database.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check-generated-enum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install psql client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Fail if DATABASE_URL is missing
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL secret is not configured — the generated log action" \
+                 "type enum cannot be verified against the database constraint."
+            exit 1
+          fi
+
+      - name: Regenerate and check for drift
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/generate-log-action-types.mjs --check
+
+      - name: Show diff on failure
+        if: failure()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          node scripts/generate-log-action-types.mjs || true
+          git --no-pager diff -- src/lib/log-action-types.generated.ts || true
