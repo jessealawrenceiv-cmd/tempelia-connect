@@ -231,12 +231,34 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setOriginFilter("all");
     setSearchQuery("");
     setDateRange(undefined);
+    writeStoredTypes([]);
     void navigate({
       to: ".",
       search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: undefined, logSort: undefined }),
       resetScroll: false,
     });
   };
+
+  // Restore the last-used action-type filters from localStorage when the URL
+  // does not already specify ?logTypes=. URL params always win.
+  useEffect(() => {
+    if (rawLogTypes != null) return;
+    const stored = readStoredTypes();
+    if (stored && stored.length > 0) {
+      void navigate({
+        to: ".",
+        search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: stored.join(",") }),
+        replace: true,
+        resetScroll: false,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Remember action-type filter changes as the user makes them.
+  useEffect(() => {
+    writeStoredTypes(selectedTypes);
+  }, [selectedTypes]);
 
 
 
