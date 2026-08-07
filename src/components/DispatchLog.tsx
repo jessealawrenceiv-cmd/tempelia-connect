@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { AlertTriangle, ArrowDown, ArrowUp, Copy, Download, Filter, Search, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Copy, Download, Filter, Search, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
@@ -230,6 +230,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const typeKey = [...selectedTypes].sort().join(",");
   const searchKey = searchTerms.join(" ");
+
+  const hasActiveFilters =
+    selectedTypes.length > 0 ||
+    searchQuery.trim().length > 0 ||
+    statusRefreshOnly ||
+    failedOnly ||
+    originFilter !== "all" ||
+    dateRange?.from != null ||
+    sortDir === "oldest";
 
   // A search term can also be a customer's name or phone number. Names live on
   // `customers`, not `logs`, so resolve each term to matching customer ids first
@@ -508,6 +517,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <Filter size={12} />
             Filter
           </span>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              aria-label="Clear all filters and reset sort"
+              title="Clear all filters and reset sort"
+              className="kb-focus inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <X size={10} aria-hidden="true" />
+              Clear filters
+            </button>
+          )}
 
           <div className="relative flex items-center">
             <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
