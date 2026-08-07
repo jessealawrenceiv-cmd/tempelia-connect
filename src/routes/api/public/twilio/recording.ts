@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
           if (tenant) {
             tenantId = tenant.id;
             deliveryTenantId = tenantId;
-            await insertLog(supabaseAdmin, {
+            const conflict = await writeLog({
               user_id: tenant.id,
               action_type: LogAction.missed_call_autotext,
               status: "sent",
@@ -105,6 +105,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
               // this synthesized row rather than adding another one.
               dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext, "voicemail"),
             });
+            if (conflict) return conflict;
           }
         }
 
@@ -117,11 +118,12 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
             .maybeSingle();
 
           if (profile?.owner_phone && profile.twilio_phone_number) {
+            let conflict: Response | null = null;
             try {
               const { sendTwilioSms } = await import("@/lib/twilio.server");
               const body = `Voicemail from ${from} (${durationStr}s): ${playbackUrl}`;
               const res = await sendTwilioSms(profile.twilio_phone_number, profile.owner_phone, body);
-              await insertLog(supabaseAdmin, {
+              conflict = await writeLog({
                 user_id: tenantId,
                 action_type: LogAction.voicemail_notify,
                 status: "sent",
@@ -132,7 +134,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
                 dedupe_key: logDedupeKey(deliveryKey, LogAction.voicemail_notify),
               });
             } catch (e) {
-              await insertLog(supabaseAdmin, {
+              conflict = await writeLog({
                 user_id: tenantId,
                 action_type: LogAction.voicemail_notify,
                 status: "failed",
@@ -142,6 +144,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
                 dedupe_key: logDedupeKey(deliveryKey, LogAction.voicemail_notify),
               });
             }
+            if (conflict) return conflict;
           }
         }
 
@@ -152,8 +155,10 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         return completeWebhookDelivery(supabaseAdmin, {
           deliveryId: claim.deliveryId,
           userId: deliveryTenantId,
+          state: conflicted ? "failed" : "done",
           response,
         });
+
       },
     },
   },
