@@ -196,7 +196,11 @@ function AdminLogActionsPage() {
             </div>
 
             {/* Full drift history */}
-            <DriftHistoryPanel runs={data.history} />
+            <DriftHistoryPanel
+              runs={data.history}
+              onRunNow={() => check.mutate()}
+              isRunning={check.isPending}
+            />
 
             <ActionTypeCoveragePanel />
 
