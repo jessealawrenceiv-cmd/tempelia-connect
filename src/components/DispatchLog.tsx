@@ -299,6 +299,24 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
 
+  // Infinite scroll: the sentinel near the end of the list requests the next
+  // keyset page, so older records stream in as the user scrolls instead of
+  // requiring a tap. The "Load more" button stays as an explicit fallback.
+  const loadMoreRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage || isFetchingNextPage) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void fetchNextPage();
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
+
   const [isExporting, setIsExporting] = useState(false);
 
   /** Exports every record matching the current filters (not just loaded pages). */
@@ -702,14 +720,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             {filtered.length} loaded
           </span>
           {hasNextPage ? (
-            <button
-              type="button"
-              onClick={() => void fetchNextPage()}
-              disabled={isFetchingNextPage}
-              className="kb-focus rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
-            >
-              {isFetchingNextPage ? "Loading…" : `Load ${limit} ${sortDir === "oldest" ? "newer" : "older"}`}
-            </button>
+            <>
+              {/* Sentinel: scrolling it into view pulls the next keyset page. */}
+              <span ref={loadMoreRef} aria-hidden="true" className="sr-only" />
+              <button
+                type="button"
+                onClick={() => void fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="kb-focus rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+              >
+                {isFetchingNextPage ? "Loading…" : `Load ${limit} ${sortDir === "oldest" ? "newer" : "older"}`}
+              </button>
+            </>
           ) : (
             <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
               End of log
@@ -717,6 +739,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           )}
         </div>
       )}
+
     </div>
 
   );
