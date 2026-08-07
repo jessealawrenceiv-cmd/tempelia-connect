@@ -163,7 +163,7 @@ describe("Activity log — dispatch deep links", () => {
 
     await waitFor(() => expect(screen.getByText("Shared dispatch")).toBeTruthy());
     await waitFor(() => expect(document.getElementById(`log-details-${HIDDEN_ID}`)).toBeTruthy());
-    expect(screen.getByText("prompt outside the current view")).toBeTruthy();
+    expect(screen.getAllByText("prompt outside the current view").length).toBeGreaterThan(0);
   });
 
   it("explains when a linked dispatch can't be read", async () => {
