@@ -56,21 +56,27 @@ export async function recordWebhookEvent(args: {
         ? "Signature present but did not match — request rejected"
         : "No X-Twilio-Signature header — request rejected";
 
-    await supabaseAdmin.from("webhook_events").insert({
-      user_id: userId,
-      source: args.source ?? "twilio",
-      event_kind: args.eventKind,
-      from_number: from,
-      to_number: to,
-      signature_valid: args.signatureValid,
-      signature_detail: detail,
-      payload: formToPayload(form),
-      request_path: new URL(args.request.url).pathname,
-    });
+    const { data: inserted } = await supabaseAdmin
+      .from("webhook_events")
+      .insert({
+        user_id: userId,
+        source: args.source ?? "twilio",
+        event_kind: args.eventKind,
+        from_number: from,
+        to_number: to,
+        signature_valid: args.signatureValid,
+        signature_detail: detail,
+        payload: formToPayload(form),
+        request_path: new URL(args.request.url).pathname,
+      })
+      .select("id")
+      .maybeSingle();
 
     // Opportunistic retention trim (30 days).
     if (Math.random() < 0.05) await supabaseAdmin.rpc("webhook_events_prune");
+    return inserted?.id ?? null;
   } catch (e) {
     console.error("recordWebhookEvent failed:", e);
+    return null;
   }
 }
