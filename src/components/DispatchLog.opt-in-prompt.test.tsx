@@ -205,9 +205,14 @@ describe("Activity log — opt_in_prompt and opt_in_prompt_test rows", () => {
   });
 
   it("copies a dispatch-log line containing the date, label, and message", async () => {
-    const writeText = vi.fn((_text: string) => Promise.resolve());
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
     const user = userEvent.setup();
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+      writable: true,
+    });
 
     renderLog();
     await waitFor(() => expect(screen.getByText("2 loaded")).toBeTruthy());
@@ -231,6 +236,8 @@ describe("Activity log — opt_in_prompt and opt_in_prompt_test rows", () => {
     );
     // Dispatch format: "<time> · <LABEL> · <detail>".
     expect(line.split(" · ").length).toBeGreaterThanOrEqual(3);
+
+    if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard);
   });
 
   it("exposes recipient, message SID, template, hash, and cooldown in the details drawer", async () => {
@@ -243,9 +250,11 @@ describe("Activity log — opt_in_prompt and opt_in_prompt_test rows", () => {
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     await user.click(toggle);
 
-    await waitFor(() => expect(toggle.getAttribute("aria-expanded")).toBe("true"));
-    const details = document.getElementById("log-details-row-opt-in-prompt") as HTMLElement;
-    expect(details).toBeTruthy();
+    const details = await waitFor(() => {
+      const el = document.getElementById("log-details-row-opt-in-prompt");
+      if (!el) throw new Error("details drawer not rendered");
+      return el;
+    });
     expect(details.textContent).toContain("+14155550123");
     expect(details.textContent).toContain("SM11111111111111111111111111111111");
     expect(details.textContent).toContain("abc123hash");
@@ -273,7 +282,7 @@ describe("Activity log — opt_in_prompt and opt_in_prompt_test rows", () => {
 
     const promptLabel = logActionLabel(LogAction.opt_in_prompt);
     const testLabel = logActionLabel(LogAction.opt_in_prompt_test);
-    const chips = screen.getByRole("group", { name: /filter/i });
+    const chips = screen.getByRole("group", { name: /record type/i });
     await user.click(within(chips).getByRole("button", { name: new RegExp(`^${promptLabel}$`) }));
     await user.click(within(chips).getByRole("button", { name: new RegExp(`^${testLabel}$`) }));
 
