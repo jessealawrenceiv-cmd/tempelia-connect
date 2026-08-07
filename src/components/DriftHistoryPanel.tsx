@@ -155,6 +155,7 @@ export function DriftHistoryPanel({
     <button
       key={key}
       type="button"
+      data-testid={`drift-status-filter-${key}`}
       onClick={() => setStatusFilter(key)}
       aria-pressed={statusFilter === key}
       aria-label={`Filter by ${label.toLowerCase()}`}
