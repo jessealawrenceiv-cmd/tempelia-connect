@@ -213,10 +213,10 @@ suite("DispatchLog row timestamp and message formatting", () => {
 
   it("renders ACTIVE changes joined with a middot plus the trigger and origin badge", async () => {
     renderLog();
-    await waitFor(() => expect(screen.getByText(/Another device/i)).toBeTruthy());
-    // eslint-disable-next-line no-console
-    console.log("ACTIVEROW:", document.body.textContent?.slice(-1500));
-    expect(screen.getByText(/Another device/i)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(rows[0]!.message_sent!)).toBeTruthy());
+    expect(screen.getByText("missed-call ON · reviews OFF — manual")).toBeTruthy();
+    // Origin badge on the row (the origin quick-filter chip shares the label).
+    expect(screen.getAllByText(/Another device/i).length).toBeGreaterThan(1);
   });
 
   it("labels every row with its action type", async () => {
