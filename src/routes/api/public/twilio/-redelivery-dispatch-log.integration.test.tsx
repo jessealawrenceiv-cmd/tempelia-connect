@@ -39,6 +39,7 @@ for (const key of Object.getOwnPropertyNames(dom.window)) {
 }
 g["IS_REACT_ACT_ENVIRONMENT"] = true;
 
+import { createHmac } from "crypto";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -50,6 +51,18 @@ type Row = Record<string, unknown>;
 const logs: Row[] = [];
 let logSeq = 0;
 const rejections: Row[] = [];
+
+// Signature verification runs for real (no module mock): every request below is
+// signed the way Twilio signs it. Mocking `verifyTwilioRequest` is not an option
+// here — concurrent dynamic imports of a mocked module can race and resolve the
+// unmocked original, which would fail the parallel-redelivery suites.
+process.env["TWILIO_AUTH_TOKEN"] = "test-auth-token";
+
+function twilioSignature(url: string, fields: Record<string, string>) {
+  let data = new URL(url).toString();
+  for (const key of Object.keys(fields).sort()) data += key + fields[key];
+  return createHmac("sha1", process.env["TWILIO_AUTH_TOKEN"]!).update(data).digest("base64");
+}
 
 const TENANT_NUMBER = "+14155559999";
 const CALLER = "+14155550123";
@@ -233,15 +246,6 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: { from: (table: string) => adminBuilder(table), rpc },
 }));
 
-vi.mock("@/lib/twilio-verify.server", () => ({
-  verifyTwilioRequest: async (request: Request) => {
-    const text = await request.text();
-    (globalThis as any).__verifyCalls = ((globalThis as any).__verifyCalls ?? 0) + 1;
-    console.log("VERIFY#", (globalThis as any).__verifyCalls, text.slice(0,30));
-    return { ok: true, form: new URLSearchParams(text) };
-  },
-}));
-
 vi.mock("@/lib/webhook-log.server", () => ({
   recordWebhookEvent: async () => "evt-1",
   formToPayload: () => ({}),
@@ -398,7 +402,10 @@ async function postHandler(mod: { Route: unknown }, url: string, fields: Record<
   return handler({
     request: new Request(url, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-twilio-signature": twilioSignature(url, fields),
+      },
       body: new URLSearchParams(fields).toString(),
     }),
   });
@@ -689,7 +696,6 @@ describe("concurrent redeliveries stay idempotent", () => {
   for (const type of WEBHOOK_TYPES) {
     it(`writes one set of rows for ${type.name} when 6 attempts race`, async () => {
       const responses = await Promise.all(Array.from({ length: 6 }, () => type.post()));
-      console.log("STATUSES", responses.map((r) => r.status).join(","), "hdrs", responses.map((r)=>r.headers.get("X-Temaro-Duplicate")).join(","));
       // Racing attempts are still answered, never dropped or 500'd.
       for (const res of responses) expect(res.status).toBe(200);
 

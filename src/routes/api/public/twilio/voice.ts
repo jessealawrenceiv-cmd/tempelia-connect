@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           signatureValid: ok,
           eventKind: "missed_call",
         });
-        if (!ok) { console.log("VOICE403", ok, String(verifyTwilioRequest).slice(0,80)); return new Response("Forbidden", { status: 403 }); }
+        if (!ok) return new Response("Forbidden", { status: 403 });
 
         // Idempotency: Twilio retries the same CallSid when we're slow or error
         // out. Claim the delivery first so a retry replays the original TwiML
