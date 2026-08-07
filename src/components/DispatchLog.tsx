@@ -460,6 +460,32 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
           <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
 
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sort order">
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Sort</span>
+            {(["newest", "oldest"] as const).map((key) => {
+              const active = sortDir === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setSortDir(key)}
+                  title={key === "newest" ? "Newest entries first" : "Oldest entries first"}
+                  className={`kb-focus inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    active
+                      ? "bg-primary text-paper"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {key === "newest" ? <ArrowDown size={11} aria-hidden="true" /> : <ArrowUp size={11} aria-hidden="true" />}
+                  {key === "newest" ? "Newest first" : "Oldest first"}
+                </button>
+              );
+            })}
+          </div>
+
+
+
           <button
             type="button"
             onClick={exportCsv}
