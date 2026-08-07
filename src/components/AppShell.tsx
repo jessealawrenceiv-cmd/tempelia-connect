@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getIsAdmin } from "@/lib/admin.functions";
 import { useTeamRole } from "@/hooks/useTeamRole";
+import { DriftAlertWatcher } from "@/components/DriftAlertWatcher";
 import {
   LayoutDashboard, PhoneMissed, Star, Snowflake, Settings, LogOut, Menu, X, Wrench, Shield, ClipboardList, Users, FileText, CalendarDays, Receipt,
 } from "lucide-react";
@@ -147,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Main */}
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1">{isAdmin ? <DriftAlertWatcher /> : null}{children}</main>
       </div>
     </div>
   );
