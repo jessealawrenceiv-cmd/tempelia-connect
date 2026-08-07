@@ -213,9 +213,10 @@ describe("Activity log row copy action", () => {
     });
 
     renderLog();
-    await waitFor(() => expect(screen.getByText("quote link sent")).toBeTruthy());
+    const quoteRow = await waitFor(() => screen.getByText("quote link sent").closest("li"));
+    expect(quoteRow).toBeTruthy();
 
-    const copyBtn = screen.getAllByRole("button", { name: /Copy dispatch line/i })[0];
+    const copyBtn = within(quoteRow as HTMLElement).getByRole("button", { name: /Copy dispatch line/i });
     expect(copyBtn).toBeTruthy();
 
     await user.click(copyBtn);
