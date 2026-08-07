@@ -4,7 +4,8 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { DispatchLogRowDetails } from "@/components/DispatchLogRowDetails";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
@@ -53,6 +54,14 @@ type LogRow = {
   created_at: string;
   status: string | null;
   customer_id: string | null;
+  recipient_phone: string | null;
+  twilio_message_sid: string | null;
+  voicemail_url: string | null;
+  recording_sid: string | null;
+  call_sid: string | null;
+  prompt_template: string | null;
+  prompt_template_hash: string | null;
+  prompt_cooldown_minutes: number | null;
 };
 
 type RawLogRow = Omit<LogRow, "created_at" | "action_type"> & {
@@ -277,6 +286,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const [announcement, setAnnouncement] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Rows the user has expanded to see the full dispatch payload.
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const toggleExpanded = (id: string) =>
+    setExpandedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
   const rawLogTypes = rawSearch.logTypes;
@@ -613,7 +626,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const timeCol = archive ? "original_created_at" : "created_at";
     const base = supabase
       .from(archive ? "logs_archive" : "logs")
-      .select(sel(`id, action_type, message_sent, ${timeCol}, status, customer_id`))
+      .select(
+        sel(
+          `id, action_type, message_sent, ${timeCol}, status, customer_id, recipient_phone, twilio_message_sid, voicemail_url, recording_sid, call_sid, prompt_template, prompt_template_hash, prompt_cooldown_minutes`,
+        ),
+      )
       .order(timeCol, { ascending: sortDir === "oldest" })
       .limit(pageSize);
 
@@ -635,7 +652,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       created_at: (r.created_at ?? r.original_created_at) as string,
       status: r.status,
       customer_id: r.customer_id,
+      recipient_phone: r.recipient_phone ?? null,
+      twilio_message_sid: r.twilio_message_sid ?? null,
+      voicemail_url: r.voicemail_url ?? null,
+      recording_sid: r.recording_sid ?? null,
+      call_sid: r.call_sid ?? null,
+      prompt_template: r.prompt_template ?? null,
+      prompt_template_hash: r.prompt_template_hash ?? null,
+      prompt_cooldown_minutes: r.prompt_cooldown_minutes ?? null,
     }));
+
 
   };
 
@@ -895,8 +921,25 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const RowBody = ({ row }: { row: LogRow }) => {
     const affected = parseAffected(row);
     const isCopied = copiedId === row.id;
+    const isExpanded = expandedIds.includes(row.id);
     return (
-      <div className="group grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
+      <div>
+      <div className="group grid grid-cols-[auto_auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
+        <button
+          type="button"
+          aria-expanded={isExpanded}
+          aria-controls={`log-details-${row.id}`}
+          aria-label={isExpanded ? "Hide dispatch details" : "Show dispatch details"}
+          title={isExpanded ? "Hide details" : "Show details"}
+          onClick={() => toggleExpanded(row.id)}
+          className="kb-focus mt-0.5 rounded text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronRight
+            size={13}
+            aria-hidden="true"
+            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+          />
+        </button>
         <span className="text-muted-foreground">
           {new Date(row.created_at).toLocaleTimeString([], {
             hour: "2-digit",
@@ -972,6 +1015,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
           )}
         </button>
+      </div>
+      {isExpanded && (
+        <div id={`log-details-${row.id}`}>
+          <DispatchLogRowDetails row={row} />
+        </div>
+      )}
       </div>
     );
   };
