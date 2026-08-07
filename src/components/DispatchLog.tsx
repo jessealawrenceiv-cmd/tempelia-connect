@@ -605,6 +605,36 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
 
+  // Poll on the chosen interval. A tick is skipped while another fetch is in
+  // flight (including "Load more") so slow connections never stack requests.
+  useEffect(() => {
+    if (autoRefreshSeconds === 0 || scope !== "live") return;
+    if (typeof window === "undefined") return;
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (isFetching || isFetchingNextPage) return;
+      void refetch();
+    };
+    const id = window.setInterval(tick, autoRefreshSeconds * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [autoRefreshSeconds, scope, isFetching, isFetchingNextPage, refetch]);
+
+  const updatedLabel = useMemo(
+    () =>
+      dataUpdatedAt
+        ? new Date(dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : null,
+    [dataUpdatedAt],
+  );
+
+
   // Infinite scroll: the sentinel near the end of the list requests the next
   // keyset page, so older records stream in as the user scrolls instead of
   // requiring a tap. The "Load more" button stays as an explicit fallback.
