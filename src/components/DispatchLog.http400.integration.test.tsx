@@ -172,14 +172,14 @@ describe("HTTP 400 from the logs API", () => {
     fail400 = true;
     renderLog();
 
-    await waitFor(() => within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
+    const clear = await waitFor(() =>
+      within(errorAlert()).getByRole("button", { name: /Clear filters/i }),
+    );
     fail400 = false;
-    // The alert subtree remounts on each render, so re-query then click until
-    // the filters actually clear (avoids acting on a detached node).
-    await waitFor(() => {
-      fireEvent.click(within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
-      expect(searchState.logTypes).toBeUndefined();
-    });
+    // Single click on the rendered button must be enough: the alert no longer
+    // remounts between render passes, so the node is still attached.
+    fireEvent.click(clear);
+    expect(searchState.logTypes).toBeUndefined();
     await waitFor(() => expect(screen.getByText("quote row 1")).toBeTruthy());
     expect(screen.queryByText(/That record type isn’t one we track/i)).toBeNull();
   });
