@@ -518,6 +518,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             Filter
           </span>
 
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              aria-label="Clear all filters and reset sort"
+              title="Clear all filters and reset sort"
+              className="kb-focus inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <X size={10} aria-hidden="true" />
+              Clear filters
+            </button>
+          )}
+
           <div className="relative flex items-center">
             <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
             <input
