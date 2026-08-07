@@ -499,6 +499,39 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
+  const SkeletonRow = ({ key }: { key?: string }) => (
+    <li key={key} className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3" aria-hidden="true">
+      <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
+      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
+      <div className="space-y-1.5">
+        <span className="block h-3.5 w-32 rounded bg-muted animate-pulse" />
+        <span className="block h-3 w-48 rounded bg-muted animate-pulse" />
+      </div>
+      <span className="h-3 w-6 rounded bg-muted animate-pulse" />
+    </li>
+  );
+
+  const ErrorRetry = () => (
+    <li className="px-5 py-6" role="alert" aria-live="polite">
+      <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">Couldn’t load activity</p>
+          <p className="text-xs text-muted-foreground">
+            {logError ? friendlyLogRequestError(logError) : "Something went wrong. Pull to retry or tap the button."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          disabled={isFetchingNextPage || isLoading}
+          className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+        >
+          {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
+        </button>
+      </div>
+    </li>
+  );
+
   return (
     <div className="panel">
       <div
