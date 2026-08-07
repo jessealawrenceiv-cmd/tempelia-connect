@@ -68,7 +68,18 @@ export function assertLogActionType(value: unknown): LogActionType {
  * (or any value outside the whitelist) is a compile-time error here and is
  * re-checked at runtime by `assertLogActionType` below.
  */
-type LogRowInput = { action_type: LogActionType; [key: string]: unknown };
+export type LogRowInput = { action_type: LogActionType; [key: string]: unknown };
+
+/**
+ * Client-side pre-validation: rejects any row whose action_type is not in the
+ * generated LogAction whitelist. Call this before calling `insertLog` to keep
+ * invalid values from ever reaching the logs write API.
+ */
+export function validateLogInsertActionTypes(
+  rows: unknown,
+): { ok: true } | { ok: false; error: LogActionTypeViolation } {
+  return checkLogRowsActionTypes(rows);
+}
 
 /**
  * Validating insert for public.logs. Accepts a single row or an array and
