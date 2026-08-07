@@ -15,6 +15,8 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const hasDb = Boolean(url && serviceKey);
 
 const CONSTRAINT_ERROR = "23514";
+const CONSTRAINT_NAME = "logs_action_type_check";
+
 
 describe.skipIf(!hasDb)("logs.action_type CHECK constraint", () => {
   let supabase: SupabaseClient;
@@ -50,6 +52,32 @@ describe.skipIf(!hasDb)("logs.action_type CHECK constraint", () => {
     expect(error!.message).toContain("logs_action_type_check");
   });
 
+  it("returns the constraint name and full 23514 error details", async () => {
+    const bad = "not_a_real_action_type";
+    const result = await supabase
+      .from("logs")
+      .insert({ user_id: userId, action_type: bad, status: "test" })
+      .select("id");
+
+    // No row written, and PostgREST surfaces the check violation as HTTP 400.
+    expect(result.data).toBeNull();
+    expect(result.status).toBe(400);
+    expect(result.error).not.toBeNull();
+
+    const error = result.error!;
+    // Exact Postgres error class for a CHECK violation.
+    expect(error.code).toBe(CONSTRAINT_ERROR);
+    // The named constraint — not a trigger, not RLS, not a generic 400.
+    expect(error.message).toBe(
+      'new row for relation "logs" violates check constraint "logs_action_type_check"',
+    );
+    expect(error.message).toContain(CONSTRAINT_NAME);
+    // Details echo the rejected row, including the offending action_type value.
+    expect(error.details).toMatch(/^Failing row contains \(/);
+    expect(error.details).toContain(bad);
+    expect(error.hint).toBeNull();
+  });
+
   it("still accepts a whitelisted action_type", async () => {
     const { data, error } = await supabase
       .from("logs")
@@ -69,3 +97,4 @@ describe.skipIf(!hasDb)("logs.action_type CHECK constraint", () => {
     if (data?.id) await supabase.from("logs").delete().eq("id", data.id);
   });
 });
+
