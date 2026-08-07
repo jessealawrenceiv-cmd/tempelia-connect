@@ -429,7 +429,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   // at the top of the newly-filtered result set and never sees pages from a
   // previous view mixed in below the fold.
   useEffect(() => {
-    listRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    if (listRef.current) listRef.current.scrollTop = 0;
     lastAnnouncedIdRef.current = null;
   }, [scope, selectedTypes, searchKey, fromISO, toISO, statusRefreshOnly, failedOnly, originFilter, sortDir]);
 
