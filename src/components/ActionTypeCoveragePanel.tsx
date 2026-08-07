@@ -186,6 +186,11 @@ export function ActionTypeCoveragePanel() {
                             signals={b.signals}
                             businessId={b.userId}
                           />
+                          <ActionTypeBackfillButton
+                            businessId={b.userId}
+                            businessName={b.businessName}
+                            actionType={g.actionType}
+                          />
                         </li>
                       ))}
                     </ul>
