@@ -54,7 +54,7 @@ function makeBuilder(table: string) {
     returns: () => Promise.resolve({ data: isLogs ? ROWS : [], error: null }),
     then: (resolve: (v: unknown) => unknown) => resolve({ data: [], error: null }),
   };
-  for (const fn of ["gte", "lte", "lt", "gt", "eq", "in", "or"]) {
+  for (const fn of ["gte", "lte", "lt", "gt", "eq", "in", "or", "ilike"]) {
     b[fn] = (...args: unknown[]) => {
       entry.ops.push({ fn, args });
       return b;
