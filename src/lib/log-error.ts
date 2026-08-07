@@ -40,7 +40,8 @@ const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
  * token in the row that is not part of the current whitelist.
  */
 export function extractRejectedActionType(error: unknown, attempted?: string | null): string | null {
-  if (attempted != null && attempted !== "") return attempted;
+  if (attempted != null) return attempted; // "" is itself a rejected value
+
   const details = asError(error)?.details ?? "";
   const inner = details.match(/^Failing row contains \((.*)\)\.?$/s)?.[1];
   if (!inner) return null;
