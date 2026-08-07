@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { AlertTriangle, ArrowDown, ArrowUp, Download, Filter, Search, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Copy, Download, Filter, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
@@ -104,7 +104,26 @@ function describe(row: { action_type: string; status: string | null; message_sen
   return parts.length > 0 ? parts.join(" — ") : (row.message_sent ?? "—");
 }
 
-
+/** Formats a log row as a single dispatch line suitable for support notes. */
+function formatDispatchLine(row: LogRow): string {
+  const time = new Date(row.created_at).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const origin =
+    row.action_type === LogAction.automation_status_change && row.status && row.status in ORIGIN_LABEL
+      ? ` [${ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}]`
+      : "";
+  const affected = parseAffected(row)
+    .map((a) => (a.type === "customer" ? `contact:${a.label}` : `intake:${a.label}`))
+    .join(", ");
+  const suffix = affected ? ` | affected: ${affected}` : "";
+  return `${time} · ${logActionLabel(row.action_type)}${origin} · ${describe(row)}${suffix}`;
+}
 
 const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
   "this-device": "This device",
@@ -128,6 +147,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [announcement, setAnnouncement] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const lastAnnouncedIdRef = useRef<string | null>(null);
 
   // Record-type filters and sort live in the URL (?logTypes=a,b&logSort=oldest)
@@ -658,8 +678,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
         {filtered.map((row) => {
           const affected = parseAffected(row);
+          const isCopied = copiedId === row.id;
           return (
-          <li key={row.id} className="grid grid-cols-[auto_auto_1fr] items-start gap-3 px-5 py-3">
+          <li key={row.id} className="group grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
             <span className="text-muted-foreground">
               {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
@@ -709,6 +730,28 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                 </span>
               )}
             </span>
+            <button
+              type="button"
+              aria-label={isCopied ? "Copied" : "Copy dispatch line"}
+              title={isCopied ? "Copied" : "Copy dispatch line"}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(formatDispatchLine(row));
+                  setCopiedId(row.id);
+                  toast.success("Dispatch line copied");
+                  window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
+                } catch {
+                  toast.error("Copy failed", { description: "Clipboard access was denied." });
+                }
+              }}
+              className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+            >
+              {isCopied ? (
+                <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
+              ) : (
+                <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
+              )}
+            </button>
           </li>
           );
         })}

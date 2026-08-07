@@ -200,3 +200,33 @@ describe("Activity log record-type chips", () => {
     expect(selectedMarker.className).toContain("text-paper");
   });
 });
+
+describe("Activity log row copy action", () => {
+  it("copies a formatted dispatch line to the clipboard", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+      writable: true,
+    });
+
+    renderLog();
+    const quoteRow = await waitFor(() => screen.getByText("quote link sent").closest("li"));
+    expect(quoteRow).toBeTruthy();
+
+    const copyBtn = within(quoteRow as HTMLElement).getByRole("button", { name: /Copy dispatch line/i });
+    expect(copyBtn).toBeTruthy();
+
+    await user.click(copyBtn);
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toMatch(/quote link sent/);
+    expect(copied).toMatch(/QUOTE_SMS/);
+    expect(copied).toMatch(/\d{1,2}:\d{2}:\d{2}/);
+
+    if (original) Object.defineProperty(navigator, "clipboard", original);
+  });
+});
