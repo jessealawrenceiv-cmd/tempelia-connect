@@ -1923,7 +1923,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             >
               <AlertTriangle size={10} className="mt-[1px] shrink-0" aria-hidden="true" />
               <span>
-                That record type isn’t one we track. Valid values:{" "}
+                Only these record types can be filtered. Valid values:{" "}
                 <span className="mono">{typeFilterAllowed.join(", ")}</span>
               </span>
             </p>
