@@ -166,8 +166,10 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
         return completeWebhookDelivery(supabaseAdmin, {
           deliveryId: claim.deliveryId,
           userId: deliveryTenantId,
+          state: conflicted ? "failed" : "done",
           response,
         });
+
       },
     },
   },
