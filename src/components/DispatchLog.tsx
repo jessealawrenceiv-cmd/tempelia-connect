@@ -1251,13 +1251,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         </div>
       </div>
 
-      {(filterIssues.length > 0 || logError) && (
+      {bannerVisible && (
         <div
+          ref={errorBannerRef}
           data-testid="log-filter-errors"
-          role="status"
-          aria-live="polite"
-          className="border-b border-border bg-destructive/10 px-5 py-3"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          tabIndex={-1}
+          aria-label="Activity filter problems"
+          className="kb-focus border-b border-border bg-destructive/10 px-5 py-3"
         >
+
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={14} className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
             <div className="min-w-0 flex-1">
