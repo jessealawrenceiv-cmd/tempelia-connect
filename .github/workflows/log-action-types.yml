@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       # Token verification: confirms CI and the deployed app hold the SAME
       # CI_ENUM_CHECK_TOKEN by comparing truncated sha256 fingerprints. Touches
