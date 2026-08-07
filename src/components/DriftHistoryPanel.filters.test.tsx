@@ -41,7 +41,7 @@ describe("DriftHistoryPanel filters", () => {
   it("filters to only passed runs", async () => {
     const user = userEvent.setup();
     render(<DriftHistoryPanel runs={baseRuns} />);
-    await user.click(screen.getByRole("button", { name: /passed/i, pressed: false }));
+    await user.click(screen.getByRole("button", { name: "Filter by passed", pressed: false }));
     expect(screen.getByText("Drift history · 2 of 3 runs")).toBeTruthy();
     expect(screen.queryByText("Drift detected")).toBeNull();
   });
@@ -49,7 +49,7 @@ describe("DriftHistoryPanel filters", () => {
   it("filters to only failed runs", async () => {
     const user = userEvent.setup();
     render(<DriftHistoryPanel runs={baseRuns} />);
-    await user.click(screen.getByRole("button", { name: /failed/i, pressed: false }));
+    await user.click(screen.getByRole("button", { name: "Filter by failed", pressed: false }));
     expect(screen.getByText("Drift history · 1 of 3 runs")).toBeTruthy();
     expect(screen.getByText("Drift detected")).toBeTruthy();
     expect(screen.queryByText("All values matched")).toBeNull();
@@ -75,10 +75,10 @@ describe("DriftHistoryPanel filters", () => {
   it("clears filters and restores all runs", async () => {
     const user = userEvent.setup();
     render(<DriftHistoryPanel runs={baseRuns} />);
-    await user.click(screen.getByRole("button", { name: /failed/i, pressed: false }));
+    await user.click(screen.getByRole("button", { name: "Filter by failed", pressed: false }));
     expect(screen.getByText("Drift history · 1 of 3 runs")).toBeTruthy();
 
-    const clearButton = screen.getByRole("button", { name: /clear filters/i });
+    const clearButton = screen.getByRole("button", { name: "Clear filters" });
     await user.click(clearButton);
 
     expect(screen.getByText("Drift history · 3 of 3 runs")).toBeTruthy();
@@ -87,7 +87,7 @@ describe("DriftHistoryPanel filters", () => {
   it("shows an empty state when filters exclude every run", async () => {
     const user = userEvent.setup();
     render(<DriftHistoryPanel runs={baseRuns} />);
-    await user.click(screen.getByRole("button", { name: /failed/i, pressed: false }));
+    await user.click(screen.getByRole("button", { name: "Filter by failed", pressed: false }));
 
     const dateButton = screen.getByRole("button", { name: /date range/i });
     await user.click(dateButton);
