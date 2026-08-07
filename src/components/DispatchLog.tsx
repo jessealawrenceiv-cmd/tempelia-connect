@@ -553,14 +553,29 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   useEffect(() => {
     if (rawLogTypes != null) return;
     const stored = readStoredTypes();
-    if (stored && stored.length > 0) {
+    // Values we had to drop are surfaced instead of disappearing quietly.
+    if (stored.invalid.length > 0) {
+      toast.error(
+        stored.invalid.length === 1
+          ? "A saved record-type filter is no longer valid"
+          : "Some saved record-type filters are no longer valid",
+        {
+          description: `Ignored: ${stored.invalid.join(", ")}.${
+            stored.valid.length > 0 ? ` Still filtering by ${stored.valid.map((t) => typeLabel(t)).join(", ")}.` : " Showing all record types."
+          }`,
+        },
+      );
+      writeStoredTypes(stored.valid);
+    }
+    if (stored.valid.length > 0) {
       void navigate({
         to: ".",
-        search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: stored.join(",") }),
+        search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: stored.valid.join(",") }),
         replace: true,
         resetScroll: false,
       });
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
