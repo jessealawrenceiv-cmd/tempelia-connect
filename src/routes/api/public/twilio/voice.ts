@@ -57,6 +57,18 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         }
         deliveryTenantId = tenant.id;
 
+        // Reliability trail: if the provider already delivered this key before,
+        // note the retry in the Activity log so a late-landing missed call is
+        // distinguishable from a clean first-pass delivery.
+        await logWebhookRetryAttempt(supabaseAdmin, {
+          userId: tenant.id,
+          eventKind: "missed_call",
+          deliveryKey: deliveryKey,
+          attemptCount: claim.attemptCount,
+          callSid: callSid || null,
+          fromNumber: from || null,
+        });
+
         // Check exclusion list — skip auto-text if caller is excluded
         const { data: excluded } = await supabaseAdmin
           .from("excluded_numbers")
