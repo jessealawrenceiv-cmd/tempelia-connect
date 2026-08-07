@@ -230,6 +230,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [scope, setScope] = useState<"live" | "archive">("live");
+  // Auto-refresh polls the live log on an interval so newly captured automated
+  // actions appear without a page reload. Paused in the archive scope and while
+  // the tab is hidden so a backgrounded phone isn't quietly polling.
+  const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<AutoRefreshSeconds>(0);
+  useEffect(() => setAutoRefreshSeconds(readStoredAutoRefresh()), []);
+
   // The input stays local for responsive typing and is mirrored into ?q= (see below).
   const [searchQuery, setSearchQuery] = useState(typeof rawSearch.q === "string" ? rawSearch.q : "");
   // Contact filter: an exact customer id (uuid) or a phone number. Mirrored into
