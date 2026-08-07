@@ -24,6 +24,21 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
         const { recordWebhookEvent } = await import("@/lib/webhook-log.server");
         await recordWebhookEvent({ request, form, signatureValid: ok, eventKind: "sms_inbound" });
         if (!ok) return new Response("Forbidden", { status: 403 });
+
+        // Idempotency: a redelivered MessageSid must not flip consent twice,
+        // re-capture a decline reason, or add a second sms_inbound log row.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { claimWebhookDelivery, completeWebhookDelivery, duplicateResponse, twilioDeliveryKey } =
+          await import("@/lib/webhook-idempotency.server");
+        const claim = await claimWebhookDelivery(supabaseAdmin, {
+          source: "twilio",
+          eventKind: "sms_inbound",
+          deliveryKey: twilioDeliveryKey("sms_inbound", form),
+        });
+        if (claim.duplicate) return duplicateResponse(claim, "twiml");
+
+        let deliveryTenantId: string | null = null;
+        const run = async (): Promise<Response> => {
         const from = String(form.get("From") ?? "").trim();
         const to = String(form.get("To") ?? "").trim();
         const body = String(form.get("Body") ?? "").trim();
@@ -31,12 +46,12 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
         if (!from || !to) return twiml("");
 
         const keyword = body.toUpperCase().split(/\s+/)[0] ?? "";
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Resolve tenant by the number that received the SMS.
         const { data: tenant } = await supabaseAdmin
           .from("profiles").select("id, business_name").eq("twilio_phone_number", to).maybeSingle();
         if (!tenant) return twiml("");
+        deliveryTenantId = tenant.id;
 
         // Find (or none) the customer row for this caller under this tenant.
         const { data: cust } = await supabaseAdmin
@@ -116,6 +131,14 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
 
         await insertLog(supabaseAdmin, logRow("received"));
         return twiml("");
+        };
+
+        const response = await run();
+        return completeWebhookDelivery(supabaseAdmin, {
+          deliveryId: claim.deliveryId,
+          userId: deliveryTenantId,
+          response,
+        });
       },
     },
   },

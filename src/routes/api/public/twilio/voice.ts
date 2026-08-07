@@ -23,6 +23,22 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         const { recordWebhookEvent } = await import("@/lib/webhook-log.server");
         await recordWebhookEvent({ request, form, signatureValid: ok, eventKind: "missed_call" });
         if (!ok) return new Response("Forbidden", { status: 403 });
+
+        // Idempotency: Twilio retries the same CallSid when we're slow or error
+        // out. Claim the delivery first so a retry replays the original TwiML
+        // instead of re-sending the auto-text and re-writing log rows.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { claimWebhookDelivery, completeWebhookDelivery, duplicateResponse, twilioDeliveryKey } =
+          await import("@/lib/webhook-idempotency.server");
+        const claim = await claimWebhookDelivery(supabaseAdmin, {
+          source: "twilio",
+          eventKind: "missed_call",
+          deliveryKey: twilioDeliveryKey("missed_call", form),
+        });
+        if (claim.duplicate) return duplicateResponse(claim, "twiml");
+
+        let deliveryTenantId: string | null = null;
+        const run = async (): Promise<Response> => {
         const from = String(form.get("From") ?? "").trim();
         const to = String(form.get("To") ?? "").trim();
         const callSid = String(form.get("CallSid") ?? "");
@@ -30,7 +46,6 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           return twiml("<Say>Sorry, this line is not configured.</Say><Hangup/>");
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: tenant } = await supabaseAdmin
           .from("profiles")
           .select("id, business_name, twilio_phone_number, voicemail_enabled, owner_phone")
@@ -40,6 +55,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         if (!tenant) {
           return twiml("<Say>Sorry, this line is not configured.</Say><Hangup/>");
         }
+        deliveryTenantId = tenant.id;
 
         // Check exclusion list — skip auto-text if caller is excluded
         const { data: excluded } = await supabaseAdmin
@@ -123,6 +139,14 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         return twiml(
           `<Say voice="alice">Thanks for calling ${xmlEscape(biz)}. We can't come to the phone right now, but we've just texted you — reply there and we'll be right with you.</Say><Hangup/>`,
         );
+        };
+
+        const response = await run();
+        return completeWebhookDelivery(supabaseAdmin, {
+          deliveryId: claim.deliveryId,
+          userId: deliveryTenantId,
+          response,
+        });
       },
     },
   },
