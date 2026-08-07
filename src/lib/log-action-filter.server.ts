@@ -20,6 +20,7 @@
 
 import { LOG_ACTION_TYPES, type LogActionType } from "./log-action-types.generated";
 import { logActionTypeSchema } from "./log-action-types.schema";
+import { LOG_REQUEST_ID_PREFIX, newLogRequestId } from "./log-request-id";
 
 /** Error thrown when a logs endpoint receives an action_type it must not run. */
 export class LogActionFilterError extends Error {
@@ -28,15 +29,23 @@ export class LogActionFilterError extends Error {
   readonly endpoint: string;
   readonly rejected: string[];
   readonly allowed: readonly string[] = LOG_ACTION_TYPES;
+  /**
+   * Correlation ID shared by the server log line, the 400 body, the
+   * `x-request-id` response header and the message text — so a user can read
+   * it off the screen and support can grep for the exact rejection.
+   */
+  readonly requestId: string;
 
-  constructor(endpoint: string, rejected: string[], reason: string) {
+  constructor(endpoint: string, rejected: string[], reason: string, requestId = newLogRequestId()) {
     super(
       `Invalid action_type filter for ${endpoint}: ${reason}. ` +
-        `Allowed values: ${LOG_ACTION_TYPES.join(", ")}`,
+        `Allowed values: ${LOG_ACTION_TYPES.join(", ")}. ` +
+        `${LOG_REQUEST_ID_PREFIX}${requestId}`,
     );
     this.name = "LogActionFilterError";
     this.endpoint = endpoint;
     this.rejected = rejected;
+    this.requestId = requestId;
   }
 
   /** JSON body for server routes / MCP responses. */
@@ -47,6 +56,7 @@ export class LogActionFilterError extends Error {
       endpoint: this.endpoint,
       rejected: this.rejected,
       allowed: this.allowed,
+      requestId: this.requestId,
     };
   }
 
@@ -54,7 +64,7 @@ export class LogActionFilterError extends Error {
   toResponse(): Response {
     return new Response(JSON.stringify(this.toPayload()), {
       status: 400,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-request-id": this.requestId },
     });
   }
 }
@@ -64,16 +74,19 @@ function asText(value: unknown): string {
 }
 
 function reject(endpoint: string, rejected: string[], reason: string): never {
-  // Single-line, greppable: logs_action_type_filter_rejected
+  const requestId = newLogRequestId();
+  // Single-line, greppable: logs_action_type_filter_rejected (includes requestId
+  // so a support ticket quoting the on-screen ID lands on this exact line).
   console.warn(
     `logs_action_type_filter_rejected ${JSON.stringify({
       endpoint,
       rejected,
       reason,
+      requestId,
       at: new Date().toISOString(),
     })}`,
   );
-  throw new LogActionFilterError(endpoint, rejected, reason);
+  throw new LogActionFilterError(endpoint, rejected, reason, requestId);
 }
 
 /**

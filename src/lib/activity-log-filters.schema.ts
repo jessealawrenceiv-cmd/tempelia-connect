@@ -14,6 +14,7 @@ import {
   type LogActionType,
 } from "./log-action-types.generated";
 import { logActionLabel } from "./log-action-presentation";
+import { logRequestIdFromError } from "./log-request-id";
 
 export const MAX_LOG_SEARCH_LENGTH = 120;
 
@@ -219,6 +220,11 @@ export type LogRequestErrorInfo = {
   rejectedValue?: string;
   /** Whether clearing filters is the likely fix. */
   suggestClearFilters: boolean;
+  /**
+   * Server correlation ID for this failure, when the API returned one. Shown in
+   * the UI so a support ticket can point at the exact server log line.
+   */
+  requestId?: string;
 };
 
 const ACTION_TYPE_CHECK = "logs_action_type_check";
@@ -278,6 +284,7 @@ export function rejectedActionTypeFromError(err: unknown): string | undefined {
 
 export function describeLogRequestError(err: unknown): LogRequestErrorInfo {
   const { message, details, hint, code, status } = errorParts(err);
+  const requestId = logRequestIdFromError(err);
   const blob = [message, details, hint].filter(Boolean).join(" ");
   const technicalDetail =
     [message, details, hint].filter((s): s is string => Boolean(s && s.trim())).join(" — ") || undefined;
@@ -298,6 +305,7 @@ export function describeLogRequestError(err: unknown): LogRequestErrorInfo {
       isActionTypeCheck: true,
       allowedTypes: LOG_ACTION_TYPES,
       suggestClearFilters: true,
+      requestId,
     };
   }
 
@@ -309,5 +317,6 @@ export function describeLogRequestError(err: unknown): LogRequestErrorInfo {
     status,
     isActionTypeCheck: false,
     suggestClearFilters: /filter/i.test(friendly),
+    requestId,
   };
 }
