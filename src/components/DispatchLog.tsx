@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { reportFilterRejection } from "@/lib/activity-log-validation.client";
+import { reportFilterRejection } from "@/lib/activity-log-validation.reporter";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -799,6 +799,45 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const loadMoreRef = useRef<HTMLSpanElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
+  /**
+   * Accessibility for validation errors: the banner is a focusable alert. When a
+   * new problem appears we move focus to it (so keyboard and screen-reader users
+   * land on the explanation instead of hunting for it) and announce a summary in
+   * the live region. Focus only moves when the message actually changes, so
+   * typing in a filter field is never interrupted twice for the same error.
+   */
+  const errorBannerRef = useRef<HTMLDivElement | null>(null);
+  const lastErrorSignatureRef = useRef<string | null>(null);
+  const bannerVisible = filterIssues.length > 0 || Boolean(logError);
+  const errorSignature = bannerVisible
+    ? [logError ? friendlyLogRequestError(logError) : "", ...filterIssues.map((i) => `${i.field}:${i.message}`)].join("|")
+    : null;
+
+  useEffect(() => {
+    if (!errorSignature) {
+      lastErrorSignatureRef.current = null;
+      return;
+    }
+    if (lastErrorSignatureRef.current === errorSignature) return;
+    lastErrorSignatureRef.current = errorSignature;
+
+    const count = filterIssues.length + (logError ? 1 : 0);
+    const heading = logError
+      ? "We couldn’t load these records"
+      : filtersBlocked
+        ? "Fix these filters to load records"
+        : "Some filters were adjusted";
+    setAnnouncement(`${heading}. ${count} ${count === 1 ? "issue" : "issues"}.`);
+
+    // Only pull focus for problems that stop the request; advisory adjustments
+    // are announced but must not steal focus mid-typing.
+    if (logError || filtersBlocked) {
+      errorBannerRef.current?.focus();
+    }
+  }, [errorSignature, filtersBlocked, filterIssues.length, logError]);
+
+
+
 
 
   // Reset scroll position whenever filters change so the user always starts
@@ -1212,13 +1251,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         </div>
       </div>
 
-      {(filterIssues.length > 0 || logError) && (
+      {bannerVisible && (
         <div
+          ref={errorBannerRef}
           data-testid="log-filter-errors"
-          role="status"
-          aria-live="polite"
-          className="border-b border-border bg-destructive/10 px-5 py-3"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          tabIndex={-1}
+          aria-label="Activity filter problems"
+          className="kb-focus border-b border-border bg-destructive/10 px-5 py-3"
         >
+
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={14} className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
             <div className="min-w-0 flex-1">
