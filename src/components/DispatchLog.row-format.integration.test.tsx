@@ -41,7 +41,7 @@ function expectedClock(iso: string): string {
 const rows: Row[] = [
   {
     id: "r-plain",
-    action_type: LogAction.missed_call,
+    action_type: LogAction.missed_call_text,
     message_sent: "Sorry we missed your call — text us back and we'll reply.",
     created_at: AT,
     status: "sent",
@@ -50,7 +50,7 @@ const rows: Row[] = [
   },
   {
     id: "r-empty",
-    action_type: LogAction.missed_call,
+    action_type: LogAction.missed_call_text,
     message_sent: null,
     created_at: "2026-06-01T09:00:01.000Z",
     status: "failed",
@@ -113,7 +113,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (table: string) => makeBuilder(table) },
 }));
 
-const clipboardWrite = vi.fn(async () => {});
+const clipboardWrite = vi.fn(async (_text: string) => {});
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), message: vi.fn(), warning: vi.fn() },
@@ -236,7 +236,7 @@ suite("DispatchLog row timestamp and message formatting", () => {
     await user.click(copyButtons[0]!);
 
     await waitFor(() => expect(clipboardWrite).toHaveBeenCalled());
-    const line = clipboardWrite.mock.calls[0]![0] as unknown as string;
+    const line = String(clipboardWrite.mock.calls[0]?.[0] ?? "");
     expect(line).toContain(logActionLabel(rows[0]!.action_type));
     expect(line).toContain(rows[0]!.message_sent!);
     // Full timestamp (not just the clock) with seconds.
