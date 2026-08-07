@@ -308,6 +308,28 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   );
 
   const filterIssues = validation.issues;
+  /**
+   * Field-level helper text: the summary banner above says "some filters were
+   * adjusted", but each control also needs to say what went wrong right where
+   * the user can fix it. Keyed by the Zod issue's field.
+   */
+  const issueFor = (field: ActivityLogFilterIssue["field"]): string | undefined =>
+    filterIssues.find((i) => i.field === field)?.message;
+  const helpId = (field: ActivityLogFilterIssue["field"]) => `log-filter-help-${field}`;
+  const FieldHelp = ({ field }: { field: ActivityLogFilterIssue["field"] }) => {
+    const message = issueFor(field);
+    if (!message) return null;
+    return (
+      <p
+        id={helpId(field)}
+        data-testid={`log-filter-help-${field}`}
+        className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-orange"
+      >
+        <AlertTriangle size={10} className="mt-[1px] shrink-0" aria-hidden="true" />
+        <span>{message}</span>
+      </p>
+    );
+  };
   const selectedTypes = validation.value.selectedTypes;
   const sortDir = validation.value.sortDir;
 
