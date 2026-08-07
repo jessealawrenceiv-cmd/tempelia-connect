@@ -21,6 +21,7 @@ import {
 import { DriftHistoryPanel } from "@/components/DriftHistoryPanel";
 import { LogWriteRejectionsPanel } from "@/components/LogWriteRejectionsPanel";
 import { ActionTypeCoveragePanel } from "@/components/ActionTypeCoveragePanel";
+import { CoverageGapInboxPanel } from "@/components/CoverageGapInboxPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/log-actions")({
   // Server-side role gate: the operator check happens on the server from the
@@ -202,6 +203,8 @@ function AdminLogActionsPage() {
               onRunNow={() => check.mutate()}
               isRunning={check.isPending}
             />
+
+            <CoverageGapInboxPanel />
 
             <ActionTypeCoveragePanel />
 
