@@ -861,7 +861,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                   className="absolute left-0 top-0 w-full border-b border-border"
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
-                  <LogRow row={row} />
+                  <RowBody row={row} />
                 </div>
               );
             })}
@@ -869,7 +869,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         ) : (
           filtered.map((row) => (
             <div key={row.id} role="listitem" className="w-full">
-              <LogRow row={row} />
+              <RowBody row={row} />
             </div>
           ))
         )}
