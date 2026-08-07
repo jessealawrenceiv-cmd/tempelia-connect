@@ -187,7 +187,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     let out = q;
     if (fromISO) out = out.gte(timeCol, fromISO);
     if (toISO) out = out.lte(timeCol, toISO);
-    if (cursor) out = out.lt(timeCol, cursor);
+    // Keyset cursor: strictly past the last row seen, in the active sort direction.
+    if (cursor) out = sortDir === "oldest" ? out.gt(timeCol, cursor) : out.lt(timeCol, cursor);
 
     if (originFilter !== "all") {
       out = out.eq("action_type", LogAction.automation_status_change);
