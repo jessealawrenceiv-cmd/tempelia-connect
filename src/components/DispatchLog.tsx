@@ -466,10 +466,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   /** Reapplies every field a preset captured, clearing anything it didn't. */
   const applyPreset = (preset: LogFilterPreset) => {
-    setScope(preset.scope);
-    setStatusRefreshOnly(preset.statusRefreshOnly);
-    setFailedOnly(preset.failedOnly);
-    setOriginFilter(preset.origin as typeof originFilter);
     setSearchQuery(preset.q);
     setCustomerInput(preset.customer);
     writeStoredTypes(preset.types);
@@ -483,11 +479,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         dateFrom: preset.dateFrom ?? undefined,
         dateTo: preset.dateTo ?? undefined,
         logCustomer: preset.customer || undefined,
+        logScope: preset.scope === "archive" ? "archive" : undefined,
+        logStatusOnly: preset.statusRefreshOnly ? "1" : undefined,
+        logFailed: preset.failedOnly ? "1" : undefined,
+        logOrigin: preset.origin === "all" ? undefined : preset.origin,
       }),
       resetScroll: false,
     });
     setAnnouncement(`Applied filter view “${preset.name}”`);
   };
+
 
   const deletePreset = (preset: LogFilterPreset) => {
     const updated = presets.filter((p) => p.id !== preset.id);
