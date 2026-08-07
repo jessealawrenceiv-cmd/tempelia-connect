@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { LogAction, type LogActionType } from "@/lib/log-action-types";
 
 export type CheckState = "pass" | "warn" | "fail";
 
@@ -19,12 +20,12 @@ export interface WebhookCheckResult {
   checks: CheckItem[];
 }
 
-const INBOUND_ACTIONS = ["sms_inbound"];
-const MISSED_CALL_ACTIONS = [
-  "missed_call_autotext",
-  "missed_call_excluded",
-  "missed_call_text",
-  "voicemail_recorded",
+const INBOUND_ACTIONS: LogActionType[] = [LogAction.sms_inbound];
+const MISSED_CALL_ACTIONS: LogActionType[] = [
+  LogAction.missed_call_autotext,
+  LogAction.missed_call_excluded,
+  LogAction.missed_call_text,
+  LogAction.voicemail_notify,
 ];
 
 function ago(iso: string) {

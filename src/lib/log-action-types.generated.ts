@@ -28,6 +28,9 @@ export const LOG_ACTION_TYPES = [
   "automation_status_change",
   "invoice_balance_status",
   "invoice_sms",
+  "opt_in_prompt",
+  "opt_in_prompt_test",
+  "number_provisioned",
 ] as const;
 
 export type LogActionType = (typeof LOG_ACTION_TYPES)[number];

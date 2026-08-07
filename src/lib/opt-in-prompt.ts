@@ -1,6 +1,8 @@
-export const OPT_IN_PROMPT_ACTION = "opt_in_prompt";
+import { LogAction } from "./log-action-types.generated";
+
+export const OPT_IN_PROMPT_ACTION = LogAction.opt_in_prompt;
 /** Owner-initiated test send of the opt-in prompt to their own mobile. */
-export const OPT_IN_PROMPT_TEST_ACTION = "opt_in_prompt_test";
+export const OPT_IN_PROMPT_TEST_ACTION = LogAction.opt_in_prompt_test;
 
 /** Default minutes to wait between opt-in prompts to the same contact. */
 export const OPT_IN_PROMPT_COOLDOWN_MINUTES = 60;

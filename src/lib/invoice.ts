@@ -1,3 +1,4 @@
+import { LogAction } from "./log-action-types.generated";
 /**
  * Invoice math + display helpers. Mirrors the database:
  *  - public.invoices.balance_due is a generated column:
@@ -64,4 +65,4 @@ export function contactToPayLine(businessName: string | null | undefined): strin
 }
 
 /** action_type used for invoice balance/status audit rows in public.logs. */
-export const INVOICE_AUDIT_ACTION = "invoice_balance_status";
+export const INVOICE_AUDIT_ACTION = LogAction.invoice_balance_status;

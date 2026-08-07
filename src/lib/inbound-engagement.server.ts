@@ -1,3 +1,4 @@
+import { LogAction } from "./log-action-types.generated";
 // Server-only: proof-of-inbound-engagement check for the opt-in prompt.
 //
 // PERMANENT RULE: the manual opt-in prompt may only be sent to a contact who
@@ -10,12 +11,12 @@ type Client = { from: (t: string) => any };
 
 /** logs.action_type values that only ever exist because the contact reached out. */
 export const INBOUND_ENGAGEMENT_ACTIONS = [
-  "sms_inbound",
-  "missed_call_autotext",
-  "missed_call_text",
-  "missed_call_excluded",
-  "voicemail_notify",
-  "quote_decline_reason_captured",
+  LogAction.sms_inbound,
+  LogAction.missed_call_autotext,
+  LogAction.missed_call_text,
+  LogAction.missed_call_excluded,
+  LogAction.voicemail_notify,
+  LogAction.quote_decline_reason_captured,
 ] as const;
 
 /** webhook_events.event_kind values that represent a real inbound contact. */

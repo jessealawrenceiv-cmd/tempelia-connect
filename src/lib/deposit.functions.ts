@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { LogAction } from "@/lib/log-action-types";
 
-export const DEPOSIT_AUDIT_ACTION = "quote_deposit_status";
+export const DEPOSIT_AUDIT_ACTION = LogAction.quote_deposit_status;
 
 const inputSchema = z.object({
   quoteId: z.string().uuid(),

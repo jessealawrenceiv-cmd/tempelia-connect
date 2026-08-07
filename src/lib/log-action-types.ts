@@ -37,7 +37,12 @@ export function assertLogActionType(value: unknown): LogActionType {
   return value;
 }
 
-type LogRowInput = { action_type: string; [key: string]: unknown };
+/**
+ * Callers MUST pass a value from the generated `LogAction` enum; a bare string
+ * (or any value outside the whitelist) is a compile-time error here and is
+ * re-checked at runtime by `assertLogActionType` below.
+ */
+type LogRowInput = { action_type: LogActionType; [key: string]: unknown };
 
 /**
  * Validating insert for public.logs. Accepts a single row or an array and
