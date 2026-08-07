@@ -841,6 +841,56 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     };
   }, [autoRefreshSeconds, scope, isFetching, isFetchingNextPage, refetch]);
 
+  // Live updates: new dispatch rows written by the server stream in over
+  // Realtime and are prepended to the top page instead of waiting for a poll.
+  // Each insert is re-read through the active filter chain so only records that
+  // belong in the current view (and are readable under RLS) are added, and
+  // newest-first is required so "prepend" is actually correct.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (scope !== "live" || sortDir !== "newest" || filtersBlocked) return;
+
+    let cancelled = false;
+    const channel = supabase
+      .channel("dispatch-log-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "logs" },
+        (payload) => {
+          const id = (payload.new as { id?: string } | null)?.id;
+          if (!id) return;
+          void (async () => {
+            try {
+              const row = await fetchLogRowById(id);
+              if (!row || cancelled) return;
+              queryClient.setQueryData<InfiniteData<LogRow[], string | null>>(
+                logsQueryKey,
+                (prev) => {
+                  if (!prev || prev.pages.length === 0) return prev;
+                  if (prev.pages.some((page) => page.some((r) => r.id === row.id))) return prev;
+                  const pages = prev.pages.slice();
+                  pages[0] = [row, ...(pages[0] ?? [])];
+                  return { ...prev, pages };
+                },
+              );
+            } catch {
+              // A transient failure just means this row shows up on the next poll.
+            }
+          })();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, sortDir, filtersBlocked, logsQueryKey, queryClient]);
+
+
+
   const updatedLabel = useMemo(
     () =>
       dataUpdatedAt
