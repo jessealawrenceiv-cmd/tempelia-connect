@@ -275,14 +275,46 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setFailedOnly(false);
     setOriginFilter("all");
     setSearchQuery("");
-    setDateRange(undefined);
     writeStoredTypes([]);
     void navigate({
       to: ".",
-      search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: undefined, logSort: undefined }),
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        logTypes: undefined,
+        logSort: undefined,
+        q: undefined,
+        dateFrom: undefined,
+        dateTo: undefined,
+      }),
       resetScroll: false,
     });
   };
+
+  // Mirror the search box into ?q= so the view is shareable and survives a
+  // reload. Debounced and history-replacing so typing doesn't spam the stack.
+  const urlQ = typeof rawSearch.q === "string" ? rawSearch.q : "";
+  useEffect(() => {
+    if (searchQuery === urlQ) return;
+    const id = window.setTimeout(() => {
+      void navigate({
+        to: ".",
+        search: (prev: Record<string, unknown>) => ({
+          ...prev,
+          q: searchQuery.trim() === "" ? undefined : searchQuery,
+        }),
+        replace: true,
+        resetScroll: false,
+      });
+    }, 250);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, urlQ]);
+
+  // Keep the input in step when the URL changes underneath it (back/forward).
+  useEffect(() => {
+    setSearchQuery((prev) => (prev === urlQ ? prev : urlQ));
+  }, [urlQ]);
+
 
   // Restore the last-used action-type filters from localStorage when the URL
   // does not already specify ?logTypes=. URL params always win.
