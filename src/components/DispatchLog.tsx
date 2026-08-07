@@ -118,24 +118,41 @@ const ALLOWED_TYPES = new Set<string>(LOG_ACTION_FILTER_ORDER);
 
 /** Reads ?logTypes=a,b — unknown or duplicate values are dropped. */
 export function parseLogTypesParam(raw: unknown): LogActionType[] {
-  if (typeof raw !== "string" || raw.trim() === "") return [];
-  const seen = new Set<LogActionType>();
-  for (const part of raw.split(",")) {
-    const value = part.trim();
-    if (ALLOWED_TYPES.has(value)) seen.add(value as LogActionType);
-  }
-  return [...seen];
+  return validateActivityLogFilters({ logTypes: raw }).value.selectedTypes;
 }
 
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
-  // Record-type filters live in the URL (?logTypes=a,b) so a reload, back/forward,
-  // or a shared link keeps the same view.
+  const [scope, setScope] = useState<"live" | "archive">("live");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
+  const [announcement, setAnnouncement] = useState("");
+  const lastAnnouncedIdRef = useRef<string | null>(null);
+
+  // Record-type filters and sort live in the URL (?logTypes=a,b&logSort=oldest)
+  // so a reload, back/forward, or a shared link keeps the same view. Because
+  // that payload is untrusted, it is Zod-validated and any problem is surfaced
+  // to the user in plain language instead of silently dropped.
   const navigate = useNavigate();
-  const rawLogTypes = useSearch({ strict: false, select: (s) => (s as { logTypes?: unknown }).logTypes });
-  const selectedTypes = useMemo(() => parseLogTypesParam(rawLogTypes), [rawLogTypes]);
+  const rawSearch = useSearch({ strict: false }) as { logTypes?: unknown; logSort?: unknown };
+  const rawLogTypes = rawSearch.logTypes;
+  const validation = useMemo(
+    () =>
+      validateActivityLogFilters({
+        logTypes: rawLogTypes,
+        logSort: rawSearch.logSort,
+        q: searchQuery,
+        dateFrom: dateRange?.from,
+        dateTo: dateRange?.to,
+      }),
+    [rawLogTypes, rawSearch.logSort, searchQuery, dateRange?.from, dateRange?.to],
+  );
+  const filterIssues = validation.issues;
+  const selectedTypes = validation.value.selectedTypes;
+  const sortDir = validation.value.sortDir;
+
   const setSelectedTypes = (next: LogActionType[] | ((prev: LogActionType[]) => LogActionType[])) => {
     const value = typeof next === "function" ? next(selectedTypes) : next;
     void navigate({
@@ -148,10 +165,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       resetScroll: false,
     });
   };
-  // Sort direction also lives in the URL (?logSort=oldest) so a shared link or
-  // reload keeps the same browsing order.
-  const rawSearch = useSearch({ strict: false }) as { logSort?: unknown };
-  const sortDir: "newest" | "oldest" = rawSearch.logSort === "oldest" ? "oldest" : "newest";
   const setSortDir = (value: "newest" | "oldest") => {
     void navigate({
       to: ".",
@@ -163,11 +176,21 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       resetScroll: false,
     });
   };
-  const [scope, setScope] = useState<"live" | "archive">("live");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
-  const [announcement, setAnnouncement] = useState("");
-  const lastAnnouncedIdRef = useRef<string | null>(null);
+  /** Clears every filter, including any invalid values that came from the URL. */
+  const resetFilters = () => {
+    setStatusRefreshOnly(false);
+    setFailedOnly(false);
+    setOriginFilter("all");
+    setSearchQuery("");
+    setDateRange(undefined);
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: undefined, logSort: undefined }),
+      replace: true,
+      resetScroll: false,
+    });
+  };
+
 
 
   const searchTerms = useMemo(
