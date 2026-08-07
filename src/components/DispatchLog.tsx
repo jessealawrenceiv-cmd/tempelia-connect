@@ -155,8 +155,55 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const typeKey = [...selectedTypes].sort().join(",");
   const searchKey = searchTerms.join(" ");
 
-  // Server-side keyset pagination: every filter is pushed down to Postgres so a
-  // large action_type result set only ever ships one small page over mobile data.
+  // Every active filter is pushed down to Postgres. Shared by the paginated
+  // list query and the CSV export so both always describe the same result set.
+  const applyFilters = (q: FilterableQuery, timeCol: string, cursor: string | null): FilterableQuery => {
+    let out = q;
+    if (fromISO) out = out.gte(timeCol, fromISO);
+    if (toISO) out = out.lte(timeCol, toISO);
+    if (cursor) out = out.lt(timeCol, cursor);
+
+    if (originFilter !== "all") {
+      out = out.eq("action_type", LogAction.automation_status_change);
+      if (originFilter !== "active") out = out.eq("status", originFilter);
+    } else {
+      if (statusRefreshOnly) out = out.eq("action_type", LogAction.status_refresh);
+      if (failedOnly) out = out.eq("action_type", LogAction.status_refresh).eq("status", "failed");
+      if (selectedTypes.length > 0) out = out.in("action_type", selectedTypes);
+    }
+
+    // Free-text search runs in Postgres so pages stay full-size.
+    for (const term of searchTerms) {
+      const safe = term.replace(/[%,()]/g, "");
+      if (!safe) continue;
+      out = out.or(`message_sent.ilike.%${safe}%,action_type.ilike.%${safe}%`);
+    }
+    return out;
+  };
+
+  const fetchLogPage = async (pageSize: number, cursor: string | null): Promise<LogRow[]> => {
+    const archive = scope === "archive";
+    const timeCol = archive ? "original_created_at" : "created_at";
+    const base = supabase
+      .from(archive ? "logs_archive" : "logs")
+      .select(sel(`id, action_type, message_sent, ${timeCol}, status, customer_id`))
+      .order(timeCol, { ascending: false })
+      .limit(pageSize);
+
+    const q = applyFilters(base as unknown as FilterableQuery, timeCol, cursor);
+    const { data: rows, error } = await (q as unknown as typeof base).returns<RawLogRow[]>();
+    if (error) throw error;
+    return (rows ?? []).map((r) => ({
+      id: r.id,
+      action_type: r.action_type,
+      message_sent: r.message_sent,
+      created_at: (r.created_at ?? r.original_created_at) as string,
+      status: r.status,
+      customer_id: r.customer_id,
+    }));
+  };
+
+  // Server-side keyset pagination: only one small page ships over mobile data.
   const {
     data,
     isLoading,
@@ -179,56 +226,41 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage: LogRow[]) =>
       lastPage.length < limit ? undefined : (lastPage[lastPage.length - 1]?.created_at ?? undefined),
-    queryFn: async ({ pageParam }) => {
-      const archive = scope === "archive";
-      const timeCol = archive ? "original_created_at" : "created_at";
-      let q = supabase
-        .from(archive ? "logs_archive" : "logs")
-        .select(sel(`id, action_type, message_sent, ${timeCol}, status, customer_id`))
-        .order(timeCol, { ascending: false })
-        .limit(limit);
-
-      if (fromISO) q = q.gte(timeCol, fromISO);
-      if (toISO) q = q.lte(timeCol, toISO);
-      if (pageParam) q = q.lt(timeCol, pageParam);
-
-      // Record-type + quick filters
-      if (originFilter !== "all") {
-        q = q.eq("action_type", LogAction.automation_status_change);
-        if (originFilter !== "active") q = q.eq("status", originFilter);
-      } else {
-        if (statusRefreshOnly) q = q.eq("action_type", LogAction.status_refresh);
-        if (failedOnly) q = q.eq("action_type", LogAction.status_refresh).eq("status", "failed");
-        if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
-      }
-
-      // Free-text search runs in Postgres so pages stay full-size.
-      for (const term of searchTerms) {
-        const safe = term.replace(/[%,()]/g, "");
-        if (!safe) continue;
-        q = q.or(`message_sent.ilike.%${safe}%,action_type.ilike.%${safe}%`);
-      }
-
-      const { data: rows, error } = await q.returns<RawLogRow[]>();
-      if (error) throw error;
-      return (rows ?? []).map((r) => ({
-        id: r.id,
-        action_type: r.action_type,
-        message_sent: r.message_sent,
-        created_at: (r.created_at ?? r.original_created_at) as string,
-        status: r.status,
-        customer_id: r.customer_id,
-      }));
-    },
+    queryFn: ({ pageParam }) => fetchLogPage(limit, pageParam),
   });
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  /** Exports every record matching the current filters (not just loaded pages). */
+  const exportCsv = async () => {
+    setIsExporting(true);
+    try {
+      const all = await fetchLogPage(EXPORT_ROW_CAP, null);
+      if (all.length === 0) {
+        toast.info("Nothing to export for the current filters.");
+        return;
+      }
+      downloadCsv(buildLogCsv(all), scope);
+      toast.success(
+        all.length === EXPORT_ROW_CAP
+          ? `Exported the newest ${EXPORT_ROW_CAP} matching records.`
+          : `Exported ${all.length} record${all.length === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      toast.error("Export failed", { description: err instanceof Error ? err.message : "Please try again." });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of rows) counts[row.action_type] = (counts[row.action_type] ?? 0) + 1;
     return counts;
   }, [rows]);
+
 
   const toggleType = (t: LogActionType) =>
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((v) => v !== t) : [...prev, t]));
