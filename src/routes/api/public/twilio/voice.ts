@@ -54,7 +54,25 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         if (claim.duplicate) return duplicateResponse(claim, "twiml");
 
         let deliveryTenantId: string | null = null;
+        // Set when a keyed log write is refused because the redelivered payload
+        // disagrees with the stored row; keeps the 409 out of the replay cache.
+        let conflicted = false;
+        /**
+         * Conflict-aware keyed write. Returns `{ conflict }` holding the shared
+         * 409 TwiML conflict response (fields listed in the response headers and
+         * an XML comment) when the write was refused.
+         */
+        const writeLog = async (
+          row: Parameters<typeof insertLogReturningId>[1],
+        ): Promise<{ id: string | null; conflict: Response | null }> => {
+          const { id, error } = await insertLogReturningId(supabaseAdmin, row);
+          const conflict = asDedupeConflict(error);
+          if (!conflict) return { id, conflict: null };
+          conflicted = true;
+          return { id, conflict: dedupeConflictResponse(conflict, "twiml") };
+        };
         const run = async (): Promise<Response> => {
+
         const from = String(form.get("From") ?? "").trim();
         const to = String(form.get("To") ?? "").trim();
         const callSid = String(form.get("CallSid") ?? "");
