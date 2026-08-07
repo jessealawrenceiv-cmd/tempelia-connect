@@ -89,6 +89,7 @@ vi.mock("@tanstack/react-router", () => ({
         : ((opts.search as Record<string, unknown>) ?? {});
     const cleaned: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(next)) if (v !== undefined) cleaned[k] = v;
+    if (process.env["DEBUG_NAV"]) console.log("NAV", JSON.stringify(next), "->", JSON.stringify(cleaned));
     searchState = cleaned;
     subscribers.forEach((fn) => fn());
   },
