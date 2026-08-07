@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { AlertTriangle, ArrowDown, ArrowUp, Copy, Download, Filter, Search, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
@@ -176,6 +176,22 @@ function writeStoredTypes(types: LogActionType[]) {
   }
 }
 
+/** Auto-refresh: 0 = off. Persisted so the choice survives reloads. */
+const LOG_AUTO_REFRESH_STORAGE_KEY = "temaro-activity-log-auto-refresh";
+const AUTO_REFRESH_OPTIONS = [0, 15, 30, 60] as const;
+type AutoRefreshSeconds = (typeof AUTO_REFRESH_OPTIONS)[number];
+
+function readStoredAutoRefresh(): AutoRefreshSeconds {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = Number(window.localStorage.getItem(LOG_AUTO_REFRESH_STORAGE_KEY));
+    return (AUTO_REFRESH_OPTIONS as readonly number[]).includes(raw) ? (raw as AutoRefreshSeconds) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+
 /** Parses a ?dateFrom=/?dateTo= day string (yyyy-MM-dd) into a local Date. */
 function parseDayParam(value: unknown): Date | undefined {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
@@ -214,6 +230,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [scope, setScope] = useState<"live" | "archive">("live");
+  // Auto-refresh polls the live log on an interval so newly captured automated
+  // actions appear without a page reload. Paused in the archive scope and while
+  // the tab is hidden so a backgrounded phone isn't quietly polling.
+  const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<AutoRefreshSeconds>(0);
+  useEffect(() => setAutoRefreshSeconds(readStoredAutoRefresh()), []);
+
   // The input stays local for responsive typing and is mirrored into ?q= (see below).
   const [searchQuery, setSearchQuery] = useState(typeof rawSearch.q === "string" ? rawSearch.q : "");
   // Contact filter: an exact customer id (uuid) or a phone number. Mirrored into
@@ -549,7 +571,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetching,
+    dataUpdatedAt,
     refetch,
+
   } = useInfiniteQuery({
     queryKey: [
       "logs",
@@ -579,6 +604,36 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   });
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
+
+  // Poll on the chosen interval. A tick is skipped while another fetch is in
+  // flight (including "Load more") so slow connections never stack requests.
+  useEffect(() => {
+    if (autoRefreshSeconds === 0 || scope !== "live") return;
+    if (typeof window === "undefined") return;
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (isFetching || isFetchingNextPage) return;
+      void refetch();
+    };
+    const id = window.setInterval(tick, autoRefreshSeconds * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [autoRefreshSeconds, scope, isFetching, isFetchingNextPage, refetch]);
+
+  const updatedLabel = useMemo(
+    () =>
+      dataUpdatedAt
+        ? new Date(dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : null,
+    [dataUpdatedAt],
+  );
+
 
   // Infinite scroll: the sentinel near the end of the list requests the next
   // keyset page, so older records stream in as the user scrolls instead of
@@ -876,15 +931,61 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             ))}
           </div>
           {scope === "live" ? (
-            <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-moss" />
-              Live
-            </span>
+            <>
+              <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-moss" />
+                Live
+              </span>
+              <label className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                Auto-refresh
+                <select
+                  data-testid="log-auto-refresh"
+                  value={autoRefreshSeconds}
+                  onChange={(e) => {
+                    const next = Number(e.target.value) as AutoRefreshSeconds;
+                    setAutoRefreshSeconds(next);
+                    try {
+                      window.localStorage.setItem(LOG_AUTO_REFRESH_STORAGE_KEY, String(next));
+                    } catch {
+                      // best-effort persistence
+                    }
+                    setAnnouncement(
+                      next === 0
+                        ? "Activity auto-refresh off"
+                        : `Activity auto-refresh every ${next} seconds`,
+                    );
+                  }}
+                  aria-label="Auto-refresh the activity log"
+                  className="kb-focus rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground"
+                >
+                  {AUTO_REFRESH_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s === 0 ? "Off" : `${s}s`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  void refetch();
+                  setAnnouncement("Refreshing activity");
+                }}
+                disabled={isFetching}
+                aria-label="Refresh activity now"
+                title={updatedLabel ? `Updated ${updatedLabel}` : "Refresh activity now"}
+                className="kb-focus inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+              >
+                <RefreshCw size={10} className={isFetching ? "animate-spin" : ""} aria-hidden="true" />
+                {updatedLabel ?? "Refresh"}
+              </button>
+            </>
           ) : (
             <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
               Archived
             </span>
           )}
+
         </div>
       </div>
 
