@@ -299,6 +299,24 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
 
+  // Infinite scroll: the sentinel near the end of the list requests the next
+  // keyset page, so older records stream in as the user scrolls instead of
+  // requiring a tap. The "Load more" button stays as an explicit fallback.
+  const loadMoreRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage || isFetchingNextPage) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void fetchNextPage();
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
+
   const [isExporting, setIsExporting] = useState(false);
 
   /** Exports every record matching the current filters (not just loaded pages). */
