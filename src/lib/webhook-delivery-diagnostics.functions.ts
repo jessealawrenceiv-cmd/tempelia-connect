@@ -162,7 +162,7 @@ export const getWebhookDeliveryAudit = createServerFn({ method: "GET" })
     await recordAdminAccess({
       actorUserId: userId,
       functionName: "getWebhookDeliveryAudit",
-      outcome: "success",
+      outcome: "allowed",
       rowCount: rows.length,
       detail: `window=${data.windowHours}h classification=${data.classification}`,
     });
