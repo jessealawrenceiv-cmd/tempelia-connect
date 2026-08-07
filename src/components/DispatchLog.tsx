@@ -3,8 +3,13 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { Filter, Search } from "lucide-react";
+import { Filter, Search, Sparkles } from "lucide-react";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
+import { LOG_ACTION_TYPES, type LogActionType } from "@/lib/log-action-types";
+
+/** Types added most recently — surfaced with a NEW marker in the filter list. */
+const NEW_ACTION_TYPES = new Set<LogActionType>(["status_refresh", "automation_status_change"]);
+
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
@@ -83,15 +88,21 @@ const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> =
   "backend": "Backend",
 };
 
+function typeLabel(actionType: string) {
+  return LABEL[actionType] ?? actionType.toUpperCase();
+}
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
+  const [selectedTypes, setSelectedTypes] = useState<LogActionType[]>([]);
   const [scope, setScope] = useState<"live" | "archive">("live");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
+
 
   const searchTerms = useMemo(
     () =>
@@ -107,8 +118,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const toISO = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
   const hasRange = Boolean(fromISO && toISO);
 
+  const typeKey = [...selectedTypes].sort().join(",");
+
   const { data, isLoading } = useQuery({
-    queryKey: ["logs", scope, limit, fromISO, toISO],
+    queryKey: ["logs", scope, limit, fromISO, toISO, typeKey],
     queryFn: async () => {
       if (scope === "archive") {
         let q = supabase
@@ -117,6 +130,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           .order("original_created_at", { ascending: false });
         if (fromISO) q = q.gte("original_created_at", fromISO);
         if (toISO) q = q.lte("original_created_at", toISO);
+        if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
         if (!hasRange) q = q.limit(limit);
         else q = q.limit(500);
         const { data } = await q;
@@ -135,6 +149,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         .order("created_at", { ascending: false });
       if (fromISO) q = q.gte("created_at", fromISO);
       if (toISO) q = q.lte("created_at", toISO);
+      if (selectedTypes.length > 0) q = q.in("action_type", selectedTypes);
       if (!hasRange) q = q.limit(limit);
       else q = q.limit(500);
       const { data } = await q;
@@ -142,7 +157,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     },
   });
 
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const row of data ?? []) counts[row.action_type] = (counts[row.action_type] ?? 0) + 1;
+    return counts;
+  }, [data]);
+
+  const toggleType = (t: LogActionType) =>
+    setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((v) => v !== t) : [...prev, t]));
+
   const filtered = (data ?? []).filter((row) => {
+    if (selectedTypes.length > 0 && !selectedTypes.includes(row.action_type as LogActionType)) return false;
     if (originFilter !== "all") {
       if (row.action_type !== "automation_status_change") return false;
       if (originFilter !== "active" && row.status !== originFilter) return false;
@@ -154,7 +179,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       if (row.status !== "failed") return false;
     }
     if (searchTerms.length > 0) {
-      const haystack = `${LABEL[row.action_type] ?? row.action_type} ${describe(row)}`.toLowerCase();
+      const haystack = `${typeLabel(row.action_type)} ${describe(row)}`.toLowerCase();
       if (!searchTerms.every((term) => haystack.includes(term))) return false;
     }
     if (hasRange) {
@@ -164,6 +189,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     }
     return true;
   });
+
 
 
   useEffect(() => {
@@ -318,7 +344,59 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           </div>
 
         </div>
+
+        <fieldset className="mt-3 border-t border-border pt-3">
+          <legend className="mono flex items-center gap-2 px-0 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Record type
+            {selectedTypes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedTypes([])}
+                className="kb-focus rounded-full border border-border px-2 py-0.5 text-[10px] normal-case tracking-normal text-foreground hover:border-primary hover:text-primary"
+              >
+                Clear {selectedTypes.length} selected
+              </button>
+            )}
+          </legend>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {LOG_ACTION_TYPES.map((t) => {
+              const selected = selectedTypes.includes(t);
+              const isNew = NEW_ACTION_TYPES.has(t);
+              const count = typeCounts[t] ?? 0;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => toggleType(t)}
+                  title={isNew ? `${typeLabel(t)} — newly added type` : typeLabel(t)}
+                  className={`kb-focus mono inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    selected
+                      ? "border-primary bg-primary text-paper"
+                      : isNew
+                        ? "border-primary/60 bg-primary/10 text-primary hover:bg-primary/20"
+                        : "border-border bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {isNew && <Sparkles size={10} aria-hidden="true" />}
+                  {typeLabel(t)}
+                  {isNew && (
+                    <span
+                      className={`rounded-sm px-1 text-[9px] tracking-widest ${
+                        selected ? "bg-paper/20 text-paper" : "bg-primary/20 text-primary"
+                      }`}
+                    >
+                      New
+                    </span>
+                  )}
+                  {count > 0 && <span className={selected ? "text-paper/80" : "text-foreground/60"}>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       </div>
+
 
       <ul className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
         {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
