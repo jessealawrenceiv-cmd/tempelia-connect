@@ -404,7 +404,7 @@ describe("DispatchLog realtime redelivery after disconnect/reconnect", () => {
     const user = userEvent.setup();
     renderLog();
     await waitForLoaded(PAGE);
-    await waitFor(() => expect(socket.handlers.length).toBeGreaterByOrEqual?.call(null) ?? expect(socket.handlers.length).toBeGreaterThan(0));
+    await waitFor(() => expect(socket.handlers.length).toBeGreaterThan(0));
 
     // Load an older page, then replay an INSERT for a row already on screen.
     const older = screen.queryByRole("button", { name: /Load \d+ older/i });
