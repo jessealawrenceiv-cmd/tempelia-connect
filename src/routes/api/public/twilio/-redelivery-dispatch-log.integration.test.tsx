@@ -986,8 +986,12 @@ describe("keyset pagination ordering survives redelivery", () => {
         MessageSid: `SM-page-${i}`,
       });
     }
-    for (const row of logs) socket.push(row);
+    // Realtime only ever delivers rows inside the loaded window, so replay the
+    // rows currently on screen — a redelivery inserts nothing new anyway.
+    const onScreen = new Set(firstPage);
+    for (const row of logs) if (onScreen.has(String(row["id"]))) socket.push(row);
     await settle();
+
 
     expect(logs).toHaveLength(distinct);
     expect(rowIds().slice(0, PAGE)).toEqual(firstPage);
