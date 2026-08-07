@@ -423,6 +423,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   // keyset page, so older records stream in as the user scrolls instead of
   // requiring a tap. The "Load more" button stays as an explicit fallback.
   const loadMoreRef = useRef<HTMLSpanElement | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
+
+  // Reset scroll position whenever filters change so the user always starts
+  // at the top of the newly-filtered result set and never sees pages from a
+  // previous view mixed in below the fold.
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    lastAnnouncedIdRef.current = null;
+  }, [scope, selectedTypes, searchKey, fromISO, toISO, statusRefreshOnly, failedOnly, originFilter, sortDir]);
+
   useEffect(() => {
     const node = loadMoreRef.current;
     if (!node || !hasNextPage || isFetchingNextPage) return;
