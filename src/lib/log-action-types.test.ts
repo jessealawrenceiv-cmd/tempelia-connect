@@ -50,15 +50,15 @@ describe("insertLog", () => {
         { action_type: "not_allowed" },
       ] as never,
     );
-    expect(res.error?.constraint).toBe("logs_action_type_check");
-    expect(res.error?.rejectedActionType).toBe("not_allowed");
+    expect((res.error as { constraint?: string }).constraint).toBe("logs_action_type_check");
+    expect((res.error as { rejectedActionType?: string }).rejectedActionType).toBe("not_allowed");
     expect(insert).not.toHaveBeenCalled();
   });
 
   it("rejects a missing action_type before insert", async () => {
     const { client, insert } = makeClient();
     const res = await insertLog(client as never, { status: "x" } as never);
-    expect(res.error?.constraint).toBe("logs_action_type_check");
+    expect((res.error as { constraint?: string }).constraint).toBe("logs_action_type_check");
     expect(insert).not.toHaveBeenCalled();
   });
 
