@@ -780,7 +780,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       </div>
 
 
-      <ul className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
+      <ul ref={listRef} className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
         {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
         {!isLoading && filtered.length === 0 && (
           <li className="p-5 text-muted-foreground">
