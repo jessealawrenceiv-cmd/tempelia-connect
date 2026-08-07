@@ -172,9 +172,8 @@ describe("HTTP 400 from the logs API", () => {
     fail400 = true;
     renderLog();
 
-    const clear = await waitFor(() =>
-      within(errorAlert()).getByRole("button", { name: /Clear filters/i }),
-    );
+    const clear = await waitFor(() => screen.getByTestId("log-error-clear-filters"));
+    console.log("IN DOC", document.body.contains(clear));
     fail400 = false;
     // Single click on the rendered button must be enough: the alert no longer
     // remounts between render passes, so the node is still attached.
