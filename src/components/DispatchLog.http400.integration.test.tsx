@@ -185,7 +185,7 @@ describe("HTTP 400 from the logs API", () => {
     renderLog();
 
     const alert = await waitFor(() => errorAlert());
-    expect(alert.querySelector("button")?.textContent ?? "").toMatch(/Retry/i);
+    expect(within(alert).getByRole("button", { name: /^Retry$/i })).toBeTruthy();
     expect(
       Array.from(alert.querySelectorAll("button")).some((b) => /Clear filters/i.test(b.textContent ?? "")),
     ).toBe(false);
