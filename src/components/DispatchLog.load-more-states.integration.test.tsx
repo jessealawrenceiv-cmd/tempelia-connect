@@ -237,7 +237,9 @@ describe("Load 25 older states across a mid-pagination server error", () => {
     await user.click(retryButton());
 
     await waitFor(() => expect(screen.getByRole("button", { name: /Retrying…/i })).toBeTruthy());
-    expect(screen.getByRole("button", { name: /Retrying…/i })).toBeDisabled();
+    expect(
+      (screen.getByRole("button", { name: /Retrying…/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
 
     release();
     await waitFor(() => expect(errorAlert()).toBeNull());
