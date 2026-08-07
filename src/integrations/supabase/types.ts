@@ -1348,6 +1348,57 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_deliveries: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          delivery_key: string
+          event_kind: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          response_body: string | null
+          response_content_type: string | null
+          response_status: number | null
+          source: string
+          state: string
+          user_id: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          delivery_key: string
+          event_kind: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          response_body?: string | null
+          response_content_type?: string | null
+          response_status?: number | null
+          source: string
+          state?: string
+          user_id?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          delivery_key?: string
+          event_kind?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          response_body?: string | null
+          response_content_type?: string | null
+          response_status?: number | null
+          source?: string
+          state?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       webhook_events: {
         Row: {
           created_at: string
@@ -1465,6 +1516,30 @@ export type Database = {
         }[]
       }
       tier_seat_limit: { Args: { _tier: string }; Returns: number }
+      webhook_deliveries_prune: { Args: never; Returns: undefined }
+      webhook_delivery_claim: {
+        Args: { _delivery_key: string; _event_kind: string; _source: string }
+        Returns: {
+          attempt_count: number
+          delivery_id: string
+          is_duplicate: boolean
+          response_body: string
+          response_content_type: string
+          response_status: number
+          state: string
+        }[]
+      }
+      webhook_delivery_complete: {
+        Args: {
+          _delivery_id: string
+          _response_body: string
+          _response_content_type: string
+          _response_status: number
+          _state: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       webhook_events_prune: { Args: never; Returns: undefined }
     }
     Enums: {
