@@ -4,6 +4,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PROJECT_PUBLIC_BASE } from "@/lib/twilio.server";
 import { insertLogReturningId, LogAction, logDedupeKey } from "@/lib/log-action-types";
+import { asDedupeConflict, dedupeConflictResponse } from "@/lib/log-dedupe-conflict-response";
+
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
@@ -52,7 +54,25 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         if (claim.duplicate) return duplicateResponse(claim, "twiml");
 
         let deliveryTenantId: string | null = null;
+        // Set when a keyed log write is refused because the redelivered payload
+        // disagrees with the stored row; keeps the 409 out of the replay cache.
+        let conflicted = false;
+        /**
+         * Conflict-aware keyed write. Returns `{ conflict }` holding the shared
+         * 409 TwiML conflict response (fields listed in the response headers and
+         * an XML comment) when the write was refused.
+         */
+        const writeLog = async (
+          row: Parameters<typeof insertLogReturningId>[1],
+        ): Promise<{ id: string | null; conflict: Response | null }> => {
+          const { id, error } = await insertLogReturningId(supabaseAdmin, row);
+          const conflict = asDedupeConflict(error);
+          if (!conflict) return { id, conflict: null };
+          conflicted = true;
+          return { id, conflict: dedupeConflictResponse(conflict, "twiml") };
+        };
         const run = async (): Promise<Response> => {
+
         const from = String(form.get("From") ?? "").trim();
         const to = String(form.get("To") ?? "").trim();
         const callSid = String(form.get("CallSid") ?? "");
@@ -100,7 +120,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           .maybeSingle();
 
         if (excluded) {
-          const { id: excludedLogId } = await insertLogReturningId(supabaseAdmin, {
+          const { id: excludedLogId, conflict } = await writeLog({
             user_id: tenant.id,
             action_type: LogAction.missed_call_excluded,
             status: "skipped",
@@ -110,6 +130,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_excluded),
             message_sent: `Caller ${from} on exclusion list${excluded.label ? ` (${excluded.label})` : ""} — auto-text skipped.`,
           });
+          if (conflict) return conflict;
           await markWebhookCorrelated(supabaseAdmin, {
             eventId: webhookEventId,
             logId: excludedLogId,
@@ -122,6 +143,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
 
         const biz = tenant.business_name || "our team";
         let logId: string | null = null;
+        let logConflict: Response | null = null;
 
         // Fire the auto-text before returning the TwiML. The caller hears the
         // greeting while their phone buzzes with the follow-up.
@@ -144,7 +166,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             }).select("id").maybeSingle();
             customerId = inserted?.id ?? null;
           }
-          const { id } = await insertLogReturningId(supabaseAdmin, {
+          const { id, conflict } = await writeLog({
             user_id: tenant.id,
             customer_id: customerId,
             action_type: LogAction.missed_call_autotext,
@@ -155,8 +177,9 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext),
           });
           logId = id;
+          logConflict = conflict;
         } catch (e) {
-          const { id } = await insertLogReturningId(supabaseAdmin, {
+          const { id, conflict } = await writeLog({
             user_id: tenant.id,
             action_type: LogAction.missed_call_autotext,
             status: "failed",
@@ -165,7 +188,16 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext),
           });
           logId = id;
+          logConflict = conflict;
         }
+
+        // A conflicting redelivery gets the 409 instead of TwiML: the caller is
+        // long gone, and the stored row must not be silently contradicted.
+        if (logConflict) {
+          await markWebhookCorrelated(supabaseAdmin, { eventId: webhookEventId, logId });
+          return logConflict;
+        }
+
 
 
         // Close the correlation loop inline: the auto-text attempt (sent or
@@ -224,8 +256,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         return completeWebhookDelivery(supabaseAdmin, {
           deliveryId: claim.deliveryId,
           userId: deliveryTenantId,
+          state: conflicted ? "failed" : "done",
           response,
         });
+
       },
     },
   },
