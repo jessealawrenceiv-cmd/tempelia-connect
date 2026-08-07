@@ -95,7 +95,14 @@ function serveLogs(url: URL): Fixture[] {
   return rows.slice(0, Number.isFinite(limit) ? limit : PAGE_SIZE);
 }
 
+/** Reads the "N loaded" footer counter. */
+async function loadedCount(page: import("@playwright/test").Page): Promise<number> {
+  const text = await page.getByText(/\d+ loaded/).first().innerText();
+  return Number(text.replace(/\D/g, ""));
+}
+
 test.describe("E2E · Activity log deep link + pagination", () => {
+
   test.beforeEach(async ({ context, page, baseURL }) => {
     const ok = await restoreSession(context, page, baseURL!);
     test.skip(!ok, "No Supabase session available in this environment");
