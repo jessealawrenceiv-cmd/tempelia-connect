@@ -121,7 +121,19 @@ describe.skipIf(!hasPyYaml)("Node.js 24.x pin guard", () => {
     },
   );
 
-  it.each(["20", "20.x", "latest", "lts/*", "*", ">=24", "24 - 25", "24,25", '""'])(
+  // Values are written as YAML literals (quoted where YAML would otherwise
+  // parse them as block scalars or globs).
+  it.each([
+    "20",
+    "20.x",
+    "latest",
+    '"lts/*"',
+    '"*"',
+    '">=24"',
+    '"24 - 25"',
+    '"24,25"',
+    '""',
+  ])(
     "rejects %s",
     (value) => {
       const res = runGuard(guard, {
