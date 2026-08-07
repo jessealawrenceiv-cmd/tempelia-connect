@@ -30,6 +30,7 @@ import {
   MAX_LOG_SEARCH_LENGTH,
   describeLogRequestError,
   friendlyLogRequestError,
+  hasBlockingFilterIssues,
   validateActivityLogFilters,
   type ActivityLogFilterIssue,
 } from "@/lib/activity-log-filters.schema";
@@ -310,6 +311,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const filterIssues = validation.issues;
   /**
+   * Client-side prevalidation: when a filter value can't be corrected (search
+   * too long, inverted date range) we never send the request. The same friendly
+   * messages render immediately from the Zod issues below.
+   */
+  const filtersBlocked = hasBlockingFilterIssues(filterIssues);
+  /**
    * Field-level helper text: the summary banner above says "some filters were
    * adjusted", but each control also needs to say what went wrong right where
    * the user can fix it. Keyed by the Zod issue's field.
@@ -545,7 +552,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   // fold them into the log query alongside the logged recipient_phone.
   const { data: phoneCustomerIds } = useQuery({
     queryKey: ["log-customer-phone", customerFilterDigits],
-    enabled: hasPhoneFilter,
+    enabled: hasPhoneFilter && !filtersBlocked,
     staleTime: 30_000,
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await supabase
@@ -575,7 +582,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   // and fold those ids into that term's Postgres OR clause.
   const { data: termCustomerIds } = useQuery({
     queryKey: ["log-search-customers", searchKey],
-    enabled: searchTerms.length > 0,
+    enabled: searchTerms.length > 0 && !filtersBlocked,
     staleTime: 30_000,
     queryFn: async (): Promise<Record<string, string[]>> => {
       const out: Record<string, string[]> = {};
@@ -726,6 +733,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     // Wait for the customer-name lookup so a name search doesn't briefly show
     // only message/phone matches before the ids land.
     enabled:
+      !filtersBlocked &&
       (searchTerms.length === 0 || termCustomerIds !== undefined) &&
       (!hasPhoneFilter || phoneCustomerIds !== undefined),
   });
@@ -1185,7 +1193,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <AlertTriangle size={14} className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-foreground">
-                {logError ? "We couldn’t load these records" : "Some filters were adjusted"}
+                {logError
+                  ? "We couldn’t load these records"
+                  : filtersBlocked
+                    ? "Fix these filters to load records"
+                    : "Some filters were adjusted"}
               </p>
               <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
                 {logError && <li>{friendlyLogRequestError(logError)}</li>}
