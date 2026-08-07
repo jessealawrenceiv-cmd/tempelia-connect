@@ -3,7 +3,7 @@
 // an auto-text from the same number. Routing: look up the tenant by the To number.
 import { createFileRoute } from "@tanstack/react-router";
 import { PROJECT_PUBLIC_BASE } from "@/lib/twilio.server";
-import { insertLog, insertLogReturningId, LogAction } from "@/lib/log-action-types";
+import { insertLogReturningId, LogAction } from "@/lib/log-action-types";
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
