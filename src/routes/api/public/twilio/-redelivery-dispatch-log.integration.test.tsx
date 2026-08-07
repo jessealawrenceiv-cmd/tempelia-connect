@@ -236,6 +236,7 @@ vi.mock("@/integrations/supabase/client.server", () => ({
 vi.mock("@/lib/twilio-verify.server", () => ({
   verifyTwilioRequest: async (request: Request) => {
     const text = await request.text();
+    console.log("VERIFY", text.slice(0, 40));
     return { ok: true, form: new URLSearchParams(text) };
   },
 }));
