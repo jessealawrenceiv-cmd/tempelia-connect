@@ -192,14 +192,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
 
 
+  // Use the validated (length-capped) query, not the raw input.
+  const safeSearchQuery = validation.value.searchQuery;
   const searchTerms = useMemo(
     () =>
-      searchQuery
+      safeSearchQuery
         .trim()
         .toLowerCase()
         .split(/\s+/)
         .filter((t) => t.length > 0),
-    [searchQuery],
+    [safeSearchQuery],
   );
 
   const fromISO = dateRange?.from ? startOfDay(dateRange.from).toISOString() : undefined;
@@ -271,6 +273,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const {
     data,
     isLoading,
+    error: logError,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
