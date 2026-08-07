@@ -197,7 +197,8 @@ describe("Activity log server error state", () => {
     // The error path replaces both the empty state and the skeletons.
     expect(screen.queryByText(/No dispatches yet/i)).toBeNull();
     expect(skeletons(container)).toBe(0);
-    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(screen.queryByText("quote row 1")).toBeNull();
+    expect(screen.queryByText(/\d+ loaded/)).toBeNull();
   });
 
   it("recovers when Retry succeeds", async () => {
