@@ -40,6 +40,29 @@ export interface BusinessSignals {
   missedCallWebhookCount: number;
   inboundSmsWebhookCount: number;
   webhookDeliveryCount: number;
+  /** Latest timestamps of related source events, used as gap evidence. */
+  evidence?: BusinessEvidence;
+}
+
+/**
+ * Latest observed timestamp per source of truth (ISO strings, or null when the
+ * source has no rows). Used to show *when* the evidence behind a gap happened.
+ */
+export interface BusinessEvidence {
+  numberProvisionedAt: string | null;
+  latestLogAt: string | null;
+  latestMissedCallWebhookAt: string | null;
+  latestInboundSmsWebhookAt: string | null;
+  latestWebhookDeliveryAt: string | null;
+  latestCustomerAt: string | null;
+  latestOptInUpdateAt: string | null;
+  latestExcludedNumberAt: string | null;
+  latestQuoteAt: string | null;
+  latestDeclinedQuoteAt: string | null;
+  latestDepositQuoteAt: string | null;
+  latestInvoiceAt: string | null;
+  latestContactImportAt: string | null;
+
 }
 
 export interface CoverageGap {
