@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { Download, Filter, Search, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Filter, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
@@ -142,6 +142,21 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       resetScroll: false,
     });
   };
+  // Sort direction also lives in the URL (?logSort=oldest) so a shared link or
+  // reload keeps the same browsing order.
+  const rawSearch = useSearch({ strict: false }) as { logSort?: unknown };
+  const sortDir: "newest" | "oldest" = rawSearch.logSort === "oldest" ? "oldest" : "newest";
+  const setSortDir = (value: "newest" | "oldest") => {
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        logSort: value === "oldest" ? "oldest" : undefined,
+      }),
+      replace: true,
+      resetScroll: false,
+    });
+  };
   const [scope, setScope] = useState<"live" | "archive">("live");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
@@ -172,7 +187,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     let out = q;
     if (fromISO) out = out.gte(timeCol, fromISO);
     if (toISO) out = out.lte(timeCol, toISO);
-    if (cursor) out = out.lt(timeCol, cursor);
+    // Keyset cursor: strictly past the last row seen, in the active sort direction.
+    if (cursor) out = sortDir === "oldest" ? out.gt(timeCol, cursor) : out.lt(timeCol, cursor);
 
     if (originFilter !== "all") {
       out = out.eq("action_type", LogAction.automation_status_change);
@@ -198,7 +214,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const base = supabase
       .from(archive ? "logs_archive" : "logs")
       .select(sel(`id, action_type, message_sent, ${timeCol}, status, customer_id`))
-      .order(timeCol, { ascending: false })
+      .order(timeCol, { ascending: sortDir === "oldest" })
       .limit(pageSize);
 
     const q = applyFilters(base as unknown as FilterableQuery, timeCol, cursor);
@@ -242,6 +258,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       statusRefreshOnly,
       failedOnly,
       originFilter,
+      sortDir,
     ],
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage: LogRow[]) =>
@@ -265,7 +282,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       downloadCsv(buildLogCsv(all), scope);
       toast.success(
         all.length === EXPORT_ROW_CAP
-          ? `Exported the newest ${EXPORT_ROW_CAP} matching records.`
+          ? `Exported the first ${EXPORT_ROW_CAP} matching records in the current sort order.`
           : `Exported ${all.length} record${all.length === 1 ? "" : "s"}.`,
       );
     } catch (err) {
@@ -443,6 +460,32 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
           <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
 
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sort order">
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Sort</span>
+            {(["newest", "oldest"] as const).map((key) => {
+              const active = sortDir === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setSortDir(key)}
+                  title={key === "newest" ? "Newest entries first" : "Oldest entries first"}
+                  className={`kb-focus inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    active
+                      ? "bg-primary text-paper"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {key === "newest" ? <ArrowDown size={11} aria-hidden="true" /> : <ArrowUp size={11} aria-hidden="true" />}
+                  {key === "newest" ? "Newest first" : "Oldest first"}
+                </button>
+              );
+            })}
+          </div>
+
+
+
           <button
             type="button"
             onClick={exportCsv}
@@ -600,7 +643,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               disabled={isFetchingNextPage}
               className="kb-focus rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
             >
-              {isFetchingNextPage ? "Loading…" : `Load ${limit} older`}
+              {isFetchingNextPage ? "Loading…" : `Load ${limit} ${sortDir === "oldest" ? "newer" : "older"}`}
             </button>
           ) : (
             <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">

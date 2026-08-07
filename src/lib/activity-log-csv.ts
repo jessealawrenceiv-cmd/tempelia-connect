@@ -8,6 +8,7 @@ export type FilterableQuery = {
   gte(column: string, value: string): FilterableQuery;
   lte(column: string, value: string): FilterableQuery;
   lt(column: string, value: string): FilterableQuery;
+  gt(column: string, value: string): FilterableQuery;
   eq(column: string, value: string): FilterableQuery;
   in(column: string, values: readonly string[]): FilterableQuery;
   or(filters: string): FilterableQuery;
