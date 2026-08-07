@@ -31,6 +31,9 @@ import {
 } from "@/lib/log-action-presentation";
 
 
+/** Above this many loaded rows the list renders windowed instead of in full. */
+const VIRTUALIZE_THRESHOLD = 60;
+
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
 type LogRow = {
