@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
 import { restoreSession } from "./support/session";
 
 /**
@@ -10,7 +10,9 @@ import { restoreSession } from "./support/session";
  * It signs in with the injected preview session, opens the Activity log with the
  * diagnostics panel visible, waits for the real `postgres_changes` subscription
  * to reach SUBSCRIBED, then writes real `logs` rows through the Data API as the
- * same user and drives repeated socket outages with `context.setOffline()`.
+ * same user and drives repeated outages by closing the live Realtime websocket
+ * out from under the client (Playwright websocket routing), which is what a real
+ * network blip looks like to the Supabase client.
  *
  * What it proves:
  *  - live inserts stream in over the real channel and render exactly once;
@@ -133,6 +135,29 @@ async function openLog(page: Page) {
 
 const refresh = (page: Page) => page.getByRole("button", { name: /Refresh activity now/i }).click();
 
+/**
+ * Proxies the real Realtime websocket so the test can sever it. Each reconnect
+ * opens a new socket, so the handler keeps the most recent one.
+ */
+async function proxyRealtimeSocket(page: Page) {
+  const sockets: WebSocketRoute[] = [];
+  await page.routeWebSocket(/realtime\/v1/i, (ws) => {
+    ws.connectToServer();
+    sockets.push(ws);
+  });
+  return {
+    /** Drop the live connection the way a network blip would. */
+    drop() {
+      const ws = sockets[sockets.length - 1];
+      expect(ws, "expected a live Realtime websocket to drop").toBeTruthy();
+      ws!.close({ code: 1006, reason: "e2e simulated outage" });
+    },
+    get count() {
+      return sockets.length;
+    },
+  };
+}
+
 test.describe("Activity log realtime smoke (real Supabase channel)", () => {
   test("dedupes live inserts across repeated socket outages", async ({ context, page }) => {
     const restored = await restoreSession(context, page, "http://localhost:8080");
@@ -142,7 +167,9 @@ test.describe("Activity log realtime smoke (real Supabase channel)", () => {
     test.skip(!conn, "No Supabase Data API credentials available for the signed-in user.");
     const { client, userId } = conn!;
 
+    const socket = await proxyRealtimeSocket(page);
     await openLog(page);
+    expect(socket.count, "the app should have opened a real Realtime socket").toBeGreaterThan(0);
 
     const seen: string[] = [];
 
@@ -163,7 +190,8 @@ test.describe("Activity log realtime smoke (real Supabase channel)", () => {
       seen.push(online);
       await expectRenderedOnce(page, online);
 
-      await context.setOffline(true);
+      const socketsBefore = socket.count;
+      socket.drop();
       await expect(page.getByTestId("debug-realtime-status")).not.toHaveText(/^subscribed$/i, {
         timeout: 45_000,
       });
@@ -172,10 +200,11 @@ test.describe("Activity log realtime smoke (real Supabase channel)", () => {
       const missedB = await insertLogRow(client, userId, `cycle ${cycle} during outage B`);
       seen.push(missedA, missedB);
 
-      await context.setOffline(false);
+      // The client reconnects on its own; a fresh socket proves it really did.
       await expect(page.getByTestId("debug-realtime-status")).toHaveText(/subscribed/i, {
         timeout: 60_000,
       });
+      expect(socket.count).toBeGreaterThan(socketsBefore);
 
       // Whatever the socket did or did not replay, the refresh reconciles the
       // outage window from the database.
