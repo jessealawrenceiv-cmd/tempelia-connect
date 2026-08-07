@@ -16,9 +16,9 @@ import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
-  // ?logTypes=a,b, ?logSort=oldest, ?q=, ?dateFrom=/?dateTo=, and ?logCustomer=
-  // keep the Activity log's filters, search, date range, and contact filter
-  // across reloads and shared links.
+  // ?logTypes=a,b, ?logSort=oldest, ?q=, ?dateFrom=/?dateTo=, ?logCustomer=,
+  // ?logScope=archive, ?logStatusOnly=1, ?logFailed=1, and ?logOrigin= keep every
+  // Activity log filter across reloads and shared links.
   validateSearch: (
     search: Record<string, unknown>,
   ): {
@@ -28,6 +28,10 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
     dateFrom?: string;
     dateTo?: string;
     logCustomer?: string;
+    logScope?: string;
+    logStatusOnly?: string;
+    logFailed?: string;
+    logOrigin?: string;
   } => ({
     ...(typeof search["logTypes"] === "string" ? { logTypes: search["logTypes"] as string } : {}),
     ...(search["logSort"] === "oldest" ? { logSort: "oldest" as const } : {}),
@@ -37,7 +41,14 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
     ...(typeof search["logCustomer"] === "string" && search["logCustomer"] !== ""
       ? { logCustomer: search["logCustomer"] as string }
       : {}),
+    ...(search["logScope"] === "archive" ? { logScope: "archive" as const } : {}),
+    ...(search["logStatusOnly"] === "1" ? { logStatusOnly: "1" as const } : {}),
+    ...(search["logFailed"] === "1" ? { logFailed: "1" as const } : {}),
+    ...(typeof search["logOrigin"] === "string" && search["logOrigin"] !== "" && search["logOrigin"] !== "all"
+      ? { logOrigin: search["logOrigin"] as string }
+      : {}),
   }),
+
 
 
 
