@@ -42,6 +42,9 @@ type LogRowInput = { action_type: string; [key: string]: unknown };
 /**
  * Validating insert for public.logs. Accepts a single row or an array and
  * rejects the write locally when any action_type is not whitelisted.
+ *
+ * This is the ONLY place in the app allowed to call `.from("logs").insert(...)`.
+ * `src/lib/log-insert-bypass.test.ts` fails the build if any other module does.
  */
 export async function insertLog(
   client: { from: (table: "logs") => { insert: (rows: never) => unknown } },
@@ -52,4 +55,25 @@ export async function insertLog(
   }
   return (await client.from("logs").insert(rows as never)) as { error: { message: string } | null };
 }
+
+type SelectIdBuilder = {
+  insert: (rows: never) => {
+    select: (cols: "id") => { maybeSingle: () => PromiseLike<{ data: unknown; error: unknown }> };
+  };
+};
+
+/**
+ * Validating insert that returns the new row id — for callers that need the
+ * generated log id (e.g. Twilio voicemail callbacks).
+ */
+export async function insertLogReturningId(
+  client: { from: (table: "logs") => SelectIdBuilder },
+  row: LogRowInput,
+) {
+  assertLogActionType(row?.action_type);
+  const { data, error } = await client.from("logs").insert(row as never).select("id").maybeSingle();
+  const id = (data as { id?: string } | null)?.id ?? null;
+  return { id, error };
+}
+
 

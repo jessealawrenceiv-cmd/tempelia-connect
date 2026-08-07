@@ -3,7 +3,7 @@
 // an auto-text from the same number. Routing: look up the tenant by the To number.
 import { createFileRoute } from "@tanstack/react-router";
 import { PROJECT_PUBLIC_BASE } from "@/lib/twilio.server";
-import { insertLog, assertLogActionType } from "@/lib/log-action-types";
+import { insertLog, insertLogReturningId } from "@/lib/log-action-types";
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
@@ -86,26 +86,27 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             }).select("id").maybeSingle();
             customerId = inserted?.id ?? null;
           }
-          const { data: inserted } = await supabaseAdmin.from("logs").insert({
+          const { id } = await insertLogReturningId(supabaseAdmin, {
             user_id: tenant.id,
             customer_id: customerId,
-            action_type: assertLogActionType("missed_call_autotext"),
+            action_type: "missed_call_autotext",
             status: "sent",
             message_sent: text,
             twilio_message_sid: res.sid,
             call_sid: callSid || null,
-          }).select("id").maybeSingle();
-          logId = inserted?.id ?? null;
+          });
+          logId = id;
         } catch (e) {
-          const { data: inserted } = await supabaseAdmin.from("logs").insert({
+          const { id } = await insertLogReturningId(supabaseAdmin, {
             user_id: tenant.id,
-            action_type: assertLogActionType("missed_call_autotext"),
+            action_type: "missed_call_autotext",
             status: "failed",
             message_sent: `Call ${callSid}: ${(e as Error).message}`,
             call_sid: callSid || null,
-          }).select("id").maybeSingle();
-          logId = inserted?.id ?? null;
+          });
+          logId = id;
         }
+
 
         // Voicemail branch: prompt the caller and record, then hang up.
         if (tenant.voicemail_enabled) {
