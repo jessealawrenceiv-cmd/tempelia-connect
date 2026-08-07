@@ -11,7 +11,7 @@
 import { toast } from "sonner";
 
 import {
-  LOG_ACTION_TYPE_CONSTRAINT,
+  LOGS_ACTION_TYPE_CONSTRAINT as LOG_ACTION_TYPE_CONSTRAINT,
   LOG_ACTION_TYPES,
 } from "@/lib/log-action-types.generated";
 
