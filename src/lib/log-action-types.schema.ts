@@ -115,3 +115,86 @@ export function parseLogRowsResponseStrict<T extends { action_type: unknown }>(
   }
   return result.rows;
 }
+
+/* ------------------------------------------------------------------ *
+ * Write-path guard errors
+ *
+ * When a log write would violate the database CHECK constraint
+ * logs_action_type_check, we stop it locally and hand back a
+ * Postgres-shaped error so callers (and the UI toast helpers in
+ * activity-log-filters.schema.ts) treat it exactly like the real 23514.
+ * ------------------------------------------------------------------ */
+
+export const LOG_ACTION_TYPE_CONSTRAINT = "logs_action_type_check";
+
+export type LogActionTypeViolation = {
+  code: "23514";
+  constraint: typeof LOG_ACTION_TYPE_CONSTRAINT;
+  message: string;
+  details: string;
+  hint: string;
+  /** The value that was rejected, as a string, for logging/toasts. */
+  rejectedActionType: string;
+};
+
+function asText(value: unknown): string {
+  return typeof value === "string" ? value : String(value);
+}
+
+/** Builds the Postgres-shaped error returned when a write is blocked locally. */
+export function logActionTypeViolation(value: unknown): LogActionTypeViolation {
+  const rejected = asText(value);
+  return {
+    code: "23514",
+    constraint: LOG_ACTION_TYPE_CONSTRAINT,
+    message:
+      `new row for relation "logs" violates check constraint "${LOG_ACTION_TYPE_CONSTRAINT}": ` +
+      `action_type ${JSON.stringify(rejected)} is not an allowed value`,
+    details: `Rejected action_type: ${JSON.stringify(rejected)}`,
+    hint:
+      `Use one of the generated LogAction values: ${LOG_ACTION_TYPES.join(", ")}. ` +
+      `To add a new value, ship a migration that updates ${LOG_ACTION_TYPE_CONSTRAINT}, then regenerate log-action-types.generated.ts.`,
+    rejectedActionType: rejected,
+  };
+}
+
+/** Thrown by assert-style helpers; carries the same payload for handlers. */
+export class LogActionTypeViolationError extends Error {
+  readonly code = "23514" as const;
+  readonly constraint = LOG_ACTION_TYPE_CONSTRAINT;
+  readonly hint: string;
+  readonly details: string;
+  readonly rejectedActionType: string;
+
+  constructor(value: unknown) {
+    const payload = logActionTypeViolation(value);
+    super(payload.message);
+    this.name = "LogActionTypeViolationError";
+    this.hint = payload.hint;
+    this.details = payload.details;
+    this.rejectedActionType = payload.rejectedActionType;
+  }
+}
+
+/** Validates one action_type, returning the violation payload instead of throwing. */
+export function checkLogActionType(
+  value: unknown,
+): { ok: true; value: LogActionType } | { ok: false; error: LogActionTypeViolation } {
+  const result = logActionTypeSchema.safeParse(value);
+  return result.success
+    ? { ok: true, value: result.data }
+    : { ok: false, error: logActionTypeViolation(value) };
+}
+
+/** Validates a single row or a batch; the first bad value wins (writes are atomic). */
+export function checkLogRowsActionTypes(
+  rows: unknown,
+): { ok: true } | { ok: false; error: LogActionTypeViolation } {
+  const list = Array.isArray(rows) ? rows : [rows];
+  for (const row of list) {
+    const value = (row as { action_type?: unknown } | null | undefined)?.action_type;
+    const checked = checkLogActionType(value);
+    if (!checked.ok) return { ok: false, error: checked.error };
+  }
+  return { ok: true };
+}

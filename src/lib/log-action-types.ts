@@ -18,6 +18,12 @@ import {
 } from "./log-action-types.generated";
 import {
   logActionTypeSchema,
+  LOG_ACTION_TYPE_CONSTRAINT,
+  LogActionTypeViolationError,
+  logActionTypeViolation,
+  checkLogActionType,
+  checkLogRowsActionTypes,
+  type LogActionTypeViolation,
   logActionTypeFilterSchema,
   logActionTypeListSchema,
   logRowSchema,
@@ -29,6 +35,11 @@ import {
 export { LOG_ACTION_TYPES, LogAction };
 export {
   logActionTypeSchema,
+  LOG_ACTION_TYPE_CONSTRAINT,
+  LogActionTypeViolationError,
+  logActionTypeViolation,
+  checkLogActionType,
+  checkLogRowsActionTypes,
   logActionTypeFilterSchema,
   logActionTypeListSchema,
   logRowSchema,
@@ -36,7 +47,7 @@ export {
   parseLogActionType,
   safeParseLogActionType,
 };
-export type { LogActionType };
+export type { LogActionType, LogActionTypeViolation };
 
 const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
 
@@ -47,8 +58,9 @@ export function isLogActionType(value: unknown): value is LogActionType {
 
 /** Throws on anything outside the whitelist. Case- and whitespace-sensitive, like the DB. */
 export function assertLogActionType(value: unknown): LogActionType {
-  // Single implementation: the Zod enum built from the generated whitelist.
-  return parseLogActionType(value);
+  const checked = checkLogActionType(value);
+  if (!checked.ok) throw new LogActionTypeViolationError(value);
+  return checked.value;
 }
 
 /**
@@ -69,8 +81,11 @@ export async function insertLog(
   client: { from: (table: "logs") => { insert: (rows: never) => unknown } },
   rows: LogRowInput | LogRowInput[],
 ) {
-  for (const row of Array.isArray(rows) ? rows : [rows]) {
-    assertLogActionType(row?.action_type);
+  const checked = checkLogRowsActionTypes(rows);
+  if (!checked.ok) {
+    // Never reaches Postgres: same 23514 shape the DB would return, plus a hint.
+    console.error("[logs] blocked insert:", checked.error.message, checked.error.hint);
+    return { error: checked.error };
   }
   return (await client.from("logs").insert(rows as never)) as { error: { message: string } | null };
 }
@@ -89,7 +104,11 @@ export async function insertLogReturningId(
   client: { from: (table: "logs") => SelectIdBuilder },
   row: LogRowInput,
 ) {
-  assertLogActionType(row?.action_type);
+  const checked = checkLogRowsActionTypes(row);
+  if (!checked.ok) {
+    console.error("[logs] blocked insert:", checked.error.message, checked.error.hint);
+    return { id: null, error: checked.error };
+  }
   const { data, error } = await client.from("logs").insert(row as never).select("id").maybeSingle();
   const id = (data as { id?: string } | null)?.id ?? null;
   return { id, error };
