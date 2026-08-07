@@ -329,7 +329,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       blocked: filtersBlocked,
       issues: filterIssues,
       rawFilters: {
-        logTypes: rawLogTypes ?? null,
+        logTypes: typeof rawLogTypes === "string" ? rawLogTypes : null,
         logSort: (rawSearch.logSort as string | undefined) ?? null,
         q: searchQuery,
         dateFrom: dateRange?.from ? dateRange.from.toISOString() : null,
