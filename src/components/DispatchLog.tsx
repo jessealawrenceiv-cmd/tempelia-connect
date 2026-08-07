@@ -170,20 +170,20 @@ export function parseLogTypesParam(raw: unknown): LogActionType[] {
 
 const LOG_TYPES_STORAGE_KEY = "temaro-activity-log-types";
 
-function readStoredTypes(): LogActionType[] | null {
-  if (typeof window === "undefined") return null;
+function readStoredTypes(): { valid: LogActionType[]; invalid: string[] } {
+  if (typeof window === "undefined") return { valid: [], invalid: [] };
   try {
     const raw = window.localStorage.getItem(LOG_TYPES_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return { valid: [], invalid: [] };
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed)) return { valid: [], invalid: [] };
     // Stored values are untrusted too (older build, hand-edited storage).
-    const valid = pickLogActionTypes(parsed).valid;
-    return valid.length > 0 ? valid : null;
+    return pickLogActionTypes(parsed);
   } catch {
-    return null;
+    return { valid: [], invalid: [] };
   }
 }
+
 
 function writeStoredTypes(types: LogActionType[]) {
   if (typeof window === "undefined") return;
