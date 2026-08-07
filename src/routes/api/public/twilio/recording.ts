@@ -63,17 +63,26 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         }
 
         // Find the matching log row (prefer logId query param, fall back to call_sid).
-        let logRow: { id: string; user_id: string; customer_id: string | null } | null = null;
+        type MatchedLog = {
+          id: string;
+          user_id: string;
+          customer_id: string | null;
+          voicemail_url: string | null;
+          recording_sid: string | null;
+          dedupe_key: string | null;
+        };
+        const MATCH_COLS = "id, user_id, customer_id, voicemail_url, recording_sid, dedupe_key";
+        let logRow: MatchedLog | null = null;
         if (logId) {
           const { data } = await supabaseAdmin
-            .from("logs").select("id, user_id, customer_id").eq("id", logId).maybeSingle();
-          logRow = data ?? null;
+            .from("logs").select(MATCH_COLS).eq("id", logId).maybeSingle();
+          logRow = (data as MatchedLog | null) ?? null;
         }
         if (!logRow && callSid) {
           const { data } = await supabaseAdmin
-            .from("logs").select("id, user_id, customer_id")
+            .from("logs").select(MATCH_COLS)
             .eq("call_sid", callSid).order("created_at", { ascending: false }).limit(1).maybeSingle();
-          logRow = data ?? null;
+          logRow = (data as MatchedLog | null) ?? null;
         }
 
         // Play-back URL: append .mp3 so the Twilio-hosted recording streams as audio.
@@ -82,11 +91,31 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         let tenantId: string | null = logRow?.user_id ?? null;
         deliveryTenantId = tenantId;
         if (logRow) {
+          // Attaching the recording to an existing missed-call row is an UPDATE,
+          // so the dedupe guard on inserts cannot see it. Apply the same integrity
+          // rule here: filling in an empty field is enrichment, but replacing a
+          // recording we already stored with a different one is a conflict — refuse
+          // it with the shared 409 rather than overwriting audit evidence.
+          const conflicts = diffDedupeRow(logRow as unknown as Record<string, unknown>, {
+            voicemail_url: playbackUrl,
+            recording_sid: recordingSid || null,
+          });
+          if (conflicts.length > 0) {
+            const error = dedupeConflictError(
+              logRow.dedupe_key ?? `recording:${recordingSid || callSid}`,
+              logRow.id,
+              conflicts,
+            );
+            console.error("[logs] recording conflict:", error.message, error.details);
+            conflicted = true;
+            return dedupeConflictResponse(error, "text");
+          }
           await supabaseAdmin.from("logs").update({
             voicemail_url: playbackUrl,
             recording_sid: recordingSid || null,
           }).eq("id", logRow.id);
         } else {
+
           // No prior log — synthesize a bare voicemail row so it still shows up.
           const { data: tenant } = await supabaseAdmin
             .from("profiles").select("id").eq("twilio_phone_number", called).maybeSingle();
