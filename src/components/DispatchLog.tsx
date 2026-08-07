@@ -114,7 +114,6 @@ const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> =
 
 const typeLabel = logActionLabel;
 
-const ALLOWED_TYPES = new Set<string>(LOG_ACTION_FILTER_ORDER);
 
 /** Reads ?logTypes=a,b — unknown or duplicate values are dropped. */
 export function parseLogTypesParam(raw: unknown): LogActionType[] {
