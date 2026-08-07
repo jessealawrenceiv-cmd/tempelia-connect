@@ -1116,6 +1116,95 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </button>
           )}
 
+          {/* Saved views: one tap reapplies a whole filter combination. */}
+          <div className="flex flex-wrap items-center gap-1.5" data-testid="log-saved-views">
+            <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <Bookmark size={11} aria-hidden="true" />
+              Saved
+            </span>
+            {presets.length === 0 && !showSavePreset && (
+              <span className="text-[10px] text-muted-foreground">none yet</span>
+            )}
+            {presets.map((preset) => (
+              <span
+                key={preset.id}
+                className="inline-flex items-center overflow-hidden rounded-full border border-border bg-background"
+              >
+                <button
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  title={summarizePreset(preset)}
+                  aria-label={`Apply saved view ${preset.name}: ${summarizePreset(preset)}`}
+                  className="kb-focus px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:text-primary"
+                >
+                  {preset.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deletePreset(preset)}
+                  aria-label={`Delete saved view ${preset.name}`}
+                  title={`Delete saved view ${preset.name}`}
+                  className="kb-focus border-l border-border px-1.5 py-0.5 text-muted-foreground transition-colors hover:text-destructive"
+                >
+                  <X size={9} aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+            {showSavePreset ? (
+              <span className="inline-flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={presetName}
+                  onChange={(e) => setPresetName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") savePreset();
+                    if (e.key === "Escape") {
+                      setShowSavePreset(false);
+                      setPresetName("");
+                    }
+                  }}
+                  maxLength={40}
+                  placeholder="Name this view"
+                  aria-label="Name for this saved filter view"
+                  className="kb-focus w-32 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-foreground placeholder:text-muted-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={savePreset}
+                  disabled={presetName.trim().length === 0}
+                  className="kb-focus rounded-full bg-primary px-2 py-0.5 text-[10px] uppercase tracking-wider text-paper disabled:opacity-50"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSavePreset(false);
+                    setPresetName("");
+                  }}
+                  className="kb-focus rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              presets.length < MAX_LOG_PRESETS && (
+                <button
+                  type="button"
+                  onClick={() => setShowSavePreset(true)}
+                  aria-label="Save the current filters as a view"
+                  title="Save the current filters as a view"
+                  className="kb-focus inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  <BookmarkPlus size={10} aria-hidden="true" />
+                  Save view
+                </button>
+              )
+            )}
+          </div>
+
+
+
           <div className="relative flex items-center">
             <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
             <input
