@@ -499,8 +499,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
-  const SkeletonRow = ({ key }: { key?: string }) => (
-    <li key={key} className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3" aria-hidden="true">
+  const SkeletonRow = () => (
+    <li className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3" aria-hidden="true">
       <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
       <div className="space-y-1.5">
