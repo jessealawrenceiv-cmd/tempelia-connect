@@ -18,6 +18,7 @@ import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
 import {
   MAX_LOG_SEARCH_LENGTH,
+  describeLogRequestError,
   friendlyLogRequestError,
   validateActivityLogFilters,
 } from "@/lib/activity-log-filters.schema";
@@ -607,26 +608,55 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     </div>
   );
 
-  const ErrorRetry = () => (
-    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
-      <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">Couldn’t load activity</p>
-          <p className="text-xs text-muted-foreground">
-            {logError ? friendlyLogRequestError(logError) : "Something went wrong. Pull to retry or tap the button."}
-          </p>
+  const ErrorRetry = () => {
+    const info = logError ? describeLogRequestError(logError) : null;
+    return (
+      <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">{info?.title ?? "Couldn’t load activity"}</p>
+            <p className="text-xs text-muted-foreground">
+              {info?.message ?? "Something went wrong. Pull to retry or tap the button."}
+            </p>
+            {info?.allowedTypes && (
+              <p className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                Allowed: {info.allowedTypes.join(", ")}
+              </p>
+            )}
+            {info?.technicalDetail && (
+              <details className="pt-1">
+                <summary className="kb-focus cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Technical details{info.status ? ` (HTTP ${info.status})` : ""}
+                </summary>
+                <p className="mono mt-1 break-words text-[10px] leading-relaxed text-muted-foreground">
+                  {info.technicalDetail}
+                </p>
+              </details>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {info?.suggestClearFilters && hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                Clear filters
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isFetchingNextPage || isLoading}
+              className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+            >
+              {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          disabled={isFetchingNextPage || isLoading}
-          className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
-        >
-          {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
-        </button>
       </div>
-    </div>
-  );
+    );
+  };
 
   /** One dispatch line; shared by the plain and virtualized render paths. */
   const RowBody = ({ row }: { row: LogRow }) => {
