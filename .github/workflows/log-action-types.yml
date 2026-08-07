@@ -101,7 +101,7 @@ jobs:
           # catches syntax errors, deprecated syntax, and common mistakes.
           docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:latest -color
 
-      - name: Enforce Node.js 24 on all setup-node steps
+      - name: Enforce explicit Node.js 24.x pin on all setup-node steps
         run: |
           # Parses each workflow's YAML structure (PyYAML, preinstalled on
           # ubuntu-latest) via yaml.compose, which preserves start_mark.line for
@@ -109,9 +109,18 @@ jobs:
           # comments, examples, and inline references to this check can never
           # cause a false positive, and every offender is reported with its
           # exact file path and line number.
+          #
+          # An "explicit 24.x pin" is a `with.node-version` value whose major
+          # version is 24 and that names a concrete pin rather than an
+          # indirect/range form. Accepted: 24, "24", 24.x, 24.0.0, 24.4.1,
+          # ^24, ~24.0.0. Rejected: 20/20.x (wrong major), latest, lts/*, *,
+          # ranges (>=24, 24 - 25, 24,25), an empty value, and node-version-file
+          # (indirect — pin an explicit node-version instead).
           set -euo pipefail
           python3 - <<'PY'
-          import glob, sys, yaml
+          import glob, re, sys, yaml
+
+          OK_MAJOR = 24
 
           def get_mapping_value(node, key):
               if node is None or not isinstance(node, yaml.MappingNode):
@@ -123,6 +132,28 @@ jobs:
 
           def scalar(node):
               return node.value if isinstance(node, yaml.ScalarNode) else None
+
+          def classify(nv):
+              """('ok',) for an explicit 24.x pin, else ('bad', reason)."""
+              s = str(nv).strip()
+              if not s:
+                  return ("bad", "node-version is empty — pin explicitly to 24.x")
+              low = s.lower()
+              if low == "latest" or low.startswith("lts/") or s == "*":
+                  return ("bad", f"'{s}' is not an explicit version pin "
+                                  f"(use {OK_MAJOR}.x)")
+              if any(tok in s for tok in ("||", " - ", ">", "<", ",")):
+                  return ("bad", f"'{s}' is a version range, not an explicit "
+                                  f"{OK_MAJOR}.x pin")
+              body = re.sub(r"^[~^= ]+", "", s).lstrip("vV")
+              m = re.match(r"^(\d+)(?:\.(?:x|\d+)(?:\.(?:x|\d+))?)?$", body)
+              if not m:
+                  return ("bad", f"'{s}' is not an explicit version pin")
+              major = int(m.group(1))
+              if major != OK_MAJOR:
+                  return ("bad", f"node-version is '{s}' (major {major}), "
+                                  f"expected {OK_MAJOR}.x")
+              return ("ok",)
 
           try:
               import yaml  # noqa: F811
@@ -152,26 +183,37 @@ jobs:
                           continue
                       with_node = get_mapping_value(step, "with")
                       nv_node = (get_mapping_value(with_node, "node-version")
-                                 if isinstance(with_node, yaml.MappingNode) else None)
+                                 if isinstance(with_node, yaml.MappingNode)
+                                 else None)
                       if nv_node is None:
-                          ref_line = ((with_node.start_mark.line + 1) if with_node
-                                      else (step.start_mark.line + 1))
-                          offenders.append(
-                              f"{path}:{ref_line} (job '{jname}', step {idx}): "
-                              f"node-version key is missing")
+                          nvf = (get_mapping_value(with_node, "node-version-file")
+                                 if isinstance(with_node, yaml.MappingNode)
+                                 else None)
+                          if nvf is not None:
+                              offenders.append(
+                                  f"{path}:{nvf.start_mark.line + 1} "
+                                  f"(job '{jname}', step {idx}): uses "
+                                  f"node-version-file ('{scalar(nvf)}') — pin "
+                                  f"an explicit 24.x node-version instead")
+                          else:
+                              ref = ((with_node.start_mark.line + 1) if with_node
+                                     else (step.start_mark.line + 1))
+                              offenders.append(
+                                  f"{path}:{ref} (job '{jname}', step {idx}): "
+                                  f"node-version key is missing — pin "
+                                  f"explicitly to 24.x")
                       else:
-                          nv = scalar(nv_node)
-                          if str(nv).strip() != "24":
+                          res = classify(scalar(nv_node))
+                          if res[0] == "bad":
                               offenders.append(
                                   f"{path}:{nv_node.start_mark.line + 1} "
-                                  f"(job '{jname}', step {idx}): node-version is "
-                                  f"'{nv}', expected 24")
+                                  f"(job '{jname}', step {idx}): {res[1]}")
           if offenders:
-              print("::error::One or more setup-node steps are not pinned to "
-                  "Node.js 24. Offending files and line numbers:")
+              print("::error::One or more setup-node steps are not explicitly "
+                  "pinned to Node.js 24.x. Offending files and line numbers:")
               for o in offenders:
                   print(f"::error::{o}")
               sys.exit(1)
-          print("All setup-node steps are pinned to Node.js 24.")
+          print("All setup-node steps are explicitly pinned to Node.js 24.x.")
           PY
 
