@@ -215,7 +215,7 @@ suite("DispatchLog row timestamp and message formatting", () => {
     renderLog();
     await waitFor(() => expect(screen.getByText(/Another device/i)).toBeTruthy());
     // eslint-disable-next-line no-console
-    console.log("ACTIVEROW:", document.body.textContent?.slice(0, 4000));
+    console.log("ACTIVEROW:", document.body.textContent?.slice(-1500));
     expect(screen.getByText(/Another device/i)).toBeTruthy();
   });
 
