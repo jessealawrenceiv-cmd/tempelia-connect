@@ -22,6 +22,7 @@ import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
 import { insertLog } from "@/lib/log-action-types";
+import { reportLogInsertError } from "@/lib/log-error";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
   "this-device": "from this device",
@@ -318,7 +319,7 @@ function SettingsPage() {
 
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) return;
-        await insertLog(supabase, {
+        const { error } = await insertLog(supabase, {
           user_id: u.user.id,
           action_type: "automation_status_change",
           status: entry.origin,
@@ -332,10 +333,20 @@ function SettingsPage() {
             new_values: entry.next,
           }),
         });
+        if (error) {
+          reportLogInsertError(error, {
+            attempted: "automation_status_change",
+            context: "ACTIVE status change",
+          });
+          return;
+        }
         void qc.invalidateQueries({ queryKey: ["logs"] });
-      } catch {
-        // logging must never break the live status handling
+      } catch (err) {
+        // Logging must never break live status handling — but a rejected
+        // action_type is worth surfacing so it isn't silently swallowed.
+        reportLogInsertError(err, { attempted: "automation_status_change" });
       }
+
     };
 
 

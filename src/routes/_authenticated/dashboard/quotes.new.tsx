@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
 import { insertLog } from "@/lib/log-action-types";
+import { reportLogInsertError } from "@/lib/log-error";
 import {
   DEPOSIT_SELECTIONS,
   describeCompanyDefault,
@@ -448,13 +449,15 @@ function NewQuotePage() {
 
       // Audit trail: log when a quote overwrites an existing (different) email.
       if (emailTrim && priorEmail && priorEmail.trim().toLowerCase() !== emailTrim.toLowerCase()) {
-        await insertLog(supabase, {
+        const { error: logErr } = await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: "customer_email_updated",
           status: "overwritten_via_quote",
           message_sent: JSON.stringify({ old: priorEmail, new: emailTrim, source: "quote" }),
         });
+        if (logErr) reportLogInsertError(logErr, { attempted: "customer_email_updated", context: "email change audit" });
+
       }
 
       // Audit trail: log when a quote would have downgraded an existing
@@ -463,13 +466,19 @@ function NewQuotePage() {
       if (priorSms && !smsOptIn) preserved.push("opt_in_consent");
       if (priorConsent && !consentSigned) preserved.push("consent_form_signed");
       if (preserved.length) {
-        await insertLog(supabase, {
+        const { error: consentLogErr } = await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: "customer_consent_preserved",
           status: "prevented_downgrade_via_quote",
           message_sent: JSON.stringify({ preserved, source: "quote" }),
         });
+        if (consentLogErr)
+          reportLogInsertError(consentLogErr, {
+            attempted: "customer_consent_preserved",
+            context: "consent audit",
+          });
+
       }
 
       const payload = {
