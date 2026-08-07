@@ -1021,6 +1021,7 @@ export type Database = {
           call_sid: string | null
           created_at: string
           customer_id: string | null
+          dedupe_key: string | null
           id: string
           message_sent: string | null
           prompt_cooldown_minutes: number | null
@@ -1038,6 +1039,7 @@ export type Database = {
           call_sid?: string | null
           created_at?: string
           customer_id?: string | null
+          dedupe_key?: string | null
           id?: string
           message_sent?: string | null
           prompt_cooldown_minutes?: number | null
@@ -1055,6 +1057,7 @@ export type Database = {
           call_sid?: string | null
           created_at?: string
           customer_id?: string | null
+          dedupe_key?: string | null
           id?: string
           message_sent?: string | null
           prompt_cooldown_minutes?: number | null
