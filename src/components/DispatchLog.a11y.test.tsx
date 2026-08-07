@@ -200,8 +200,8 @@ describe("action_type chips — roles and ARIA state", () => {
     await waitFor(() => expect(chipByLabel("QUOTE_SMS").getAttribute("aria-pressed")).toBe("false"));
   });
 
-  it("hydrates aria-pressed from a deep-linked ?types= param", async () => {
-    searchState = { types: "invoice_sms" };
+  it("hydrates aria-pressed from a deep-linked ?logTypes= param", async () => {
+    searchState = { logTypes: "invoice_sms" };
     renderLog();
 
     await waitFor(() => expect(chipByLabel("INVOICE_SMS").getAttribute("aria-pressed")).toBe("true"));
