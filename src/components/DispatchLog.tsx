@@ -428,7 +428,22 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             })}
           </div>
 
+          <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={isExporting}
+            aria-busy={isExporting}
+            title="Download the records matching the current filters as CSV"
+            className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Download size={11} aria-hidden="true" />
+            {isExporting ? "Exporting…" : "Export CSV"}
+          </button>
+
         </div>
+
 
         <fieldset className="mt-3 border-t border-border pt-3">
           <legend className="mono flex items-center gap-2 px-0 text-[10px] uppercase tracking-widest text-muted-foreground">
