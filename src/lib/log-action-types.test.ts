@@ -4,6 +4,7 @@ import {
   isLogActionType,
   assertLogActionType,
   insertLog,
+  LogAction,
 } from "./log-action-types";
 
 describe("log action_type whitelist", () => {
@@ -42,10 +43,11 @@ describe("insertLog", () => {
   it("validates every row in a batch and never calls the database on failure", async () => {
     const { client, insert } = makeClient();
     await expect(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       insertLog(client as never, [
         { action_type: "quote_sms" },
         { action_type: "not_allowed" },
-      ]),
+      ] as never),
     ).rejects.toThrow(/Invalid logs\.action_type "not_allowed"/);
     expect(insert).not.toHaveBeenCalled();
   });
@@ -59,8 +61,8 @@ describe("insertLog", () => {
   it("targets the logs table and passes the rows through unchanged", async () => {
     const { client, insert } = makeClient();
     const rows = [
-      { user_id: "u", action_type: "status_refresh" },
-      { user_id: "u", action_type: "automation_status_change" },
+      { user_id: "u", action_type: LogAction.status_refresh },
+      { user_id: "u", action_type: LogAction.automation_status_change },
     ];
     await insertLog(client as never, rows);
     expect(client.from).toHaveBeenCalledWith("logs");

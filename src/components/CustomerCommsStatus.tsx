@@ -4,20 +4,21 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { resendLastMessage } from "@/lib/resend-sms.functions";
 import { RESENDABLE_STATUSES } from "@/lib/resend-sms";
+import { LogAction } from "@/lib/log-action-types";
 
 
 /** Log action types that represent messages WE sent to the customer. */
 const OUTBOUND_TYPES = [
-  "quote_sms",
-  "review_request",
-  "missed_call_text",
-  "missed_call_autotext",
-  "reactivation_text",
-  "quote_decline_followup",
+  LogAction.quote_sms,
+  LogAction.review_request,
+  LogAction.missed_call_text,
+  LogAction.missed_call_autotext,
+  LogAction.reactivation_text,
+  LogAction.quote_decline_followup,
 ] as const;
 
 /** Log action types that represent messages the customer sent to US. */
-const INBOUND_TYPES = ["sms_inbound", "quote_decline_reason_captured"] as const;
+const INBOUND_TYPES = [LogAction.sms_inbound, LogAction.quote_decline_reason_captured] as const;
 
 type Props = {
   customerId: string | null | undefined;

@@ -2,7 +2,7 @@
 // finishes uploading. We attach the recording URL to the matching missed-call
 // log row and text the business owner if they've set an owner_phone.
 import { createFileRoute } from "@tanstack/react-router";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 
 export const Route = createFileRoute("/api/public/twilio/recording")({
   server: {
@@ -75,7 +75,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
             deliveryTenantId = tenantId;
             await insertLog(supabaseAdmin, {
               user_id: tenant.id,
-              action_type: "missed_call_autotext",
+              action_type: LogAction.missed_call_autotext,
               status: "sent",
               message_sent: `Voicemail received from ${from}.`,
               voicemail_url: playbackUrl,
@@ -100,7 +100,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
               const res = await sendTwilioSms(profile.twilio_phone_number, profile.owner_phone, body);
               await insertLog(supabaseAdmin, {
                 user_id: tenantId,
-                action_type: "voicemail_notify",
+                action_type: LogAction.voicemail_notify,
                 status: "sent",
                 message_sent: body,
                 twilio_message_sid: res.sid,
@@ -110,7 +110,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
             } catch (e) {
               await insertLog(supabaseAdmin, {
                 user_id: tenantId,
-                action_type: "voicemail_notify",
+                action_type: LogAction.voicemail_notify,
                 status: "failed",
                 message_sent: `Owner notify failed: ${(e as Error).message}`,
                 call_sid: callSid || null,

@@ -13,7 +13,7 @@ const inputSchema = z.object({
 // Stable public URL for the quote link in the SMS body. Uses the same
 // immutable project host as the Twilio webhook base.
 import { PROJECT_PUBLIC_BASE } from "./twilio.server";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 
 export const sendQuoteSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -86,7 +86,7 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: q.customer_id,
-        action_type: "quote_sms",
+        action_type: LogAction.quote_sms,
         message_sent: message,
         status: "sent",
         twilio_message_sid: res.sid,
@@ -96,7 +96,7 @@ export const sendQuoteSms = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: q.customer_id,
-        action_type: "quote_sms",
+        action_type: LogAction.quote_sms,
         message_sent: message,
         status: "failed",
       });

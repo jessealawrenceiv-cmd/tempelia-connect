@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { RESENDABLE_STATUSES, OUTBOUND_LOG_TYPES } from "./resend-sms";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, assertLogActionType } from "@/lib/log-action-types";
 
 function validate(data: unknown): { customerId: string } {
   const { customerId } = (data ?? {}) as { customerId?: unknown };
@@ -72,7 +72,7 @@ export const resendLastMessage = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: cust.id,
-        action_type: last.action_type,
+        action_type: assertLogActionType(last.action_type),
         message_sent: last.message_sent,
         status: "sent",
         twilio_message_sid: res.sid,
@@ -83,7 +83,7 @@ export const resendLastMessage = createServerFn({ method: "POST" })
       await insertLog(supabase, {
         user_id: userId,
         customer_id: cust.id,
-        action_type: last.action_type,
+        action_type: assertLogActionType(last.action_type),
         message_sent: last.message_sent,
         status: "failed",
       });
