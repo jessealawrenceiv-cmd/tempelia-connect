@@ -11,7 +11,13 @@ import {
   runLogActionDriftCheck,
   type LogActionDiagnostics,
 } from "@/lib/log-action-diagnostics.functions";
-import { Check, Copy, Database, RefreshCw, ScrollText, ShieldAlert } from "lucide-react";
+import { Check, Copy, Database, Download, RefreshCw, ScrollText, ShieldAlert } from "lucide-react";
+import {
+  actionTypesFilename,
+  buildActionTypesJson,
+  buildActionTypesSql,
+  downloadTextFile,
+} from "@/lib/action-type-export";
 import { DriftHistoryPanel } from "@/components/DriftHistoryPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/log-actions")({
@@ -103,6 +109,41 @@ function AdminLogActionsPage() {
         eyebrow="Operator · Diagnostics"
         title="Action type diagnostics"
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          {data && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadTextFile(
+                    actionTypesFilename("json"),
+                    "application/json",
+                    buildActionTypesJson(data),
+                  );
+                  toast.success("Exported action types (JSON)");
+                }}
+                className="kb-focus flex items-center gap-1.5 rounded-sm border border-border bg-card px-3 py-2 text-xs uppercase tracking-wider hover:bg-accent"
+              >
+                <Download size={12} />
+                Export JSON
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadTextFile(
+                    actionTypesFilename("sql"),
+                    "application/sql",
+                    buildActionTypesSql(data),
+                  );
+                  toast.success("Exported action types (SQL)");
+                }}
+                className="kb-focus flex items-center gap-1.5 rounded-sm border border-border bg-card px-3 py-2 text-xs uppercase tracking-wider hover:bg-accent"
+              >
+                <Download size={12} />
+                Export SQL
+              </button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => check.mutate()}
@@ -112,6 +153,7 @@ function AdminLogActionsPage() {
             <RefreshCw size={12} className={check.isPending ? "motion-safe:animate-spin" : ""} />
             {check.isPending ? "Checking…" : "Run drift check"}
           </button>
+          </div>
         }
       />
 
