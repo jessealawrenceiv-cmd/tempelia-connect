@@ -39,6 +39,7 @@ for (const key of Object.getOwnPropertyNames(dom.window)) {
 }
 g["IS_REACT_ACT_ENVIRONMENT"] = true;
 
+import { createHmac } from "crypto";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -50,6 +51,18 @@ type Row = Record<string, unknown>;
 const logs: Row[] = [];
 let logSeq = 0;
 const rejections: Row[] = [];
+
+// Signature verification runs for real (no module mock): every request below is
+// signed the way Twilio signs it. Mocking `verifyTwilioRequest` is not an option
+// here — concurrent dynamic imports of a mocked module can race and resolve the
+// unmocked original, which would fail the parallel-redelivery suites.
+process.env["TWILIO_AUTH_TOKEN"] = "test-auth-token";
+
+function twilioSignature(url: string, fields: Record<string, string>) {
+  let data = new URL(url).toString();
+  for (const key of Object.keys(fields).sort()) data += key + fields[key];
+  return createHmac("sha1", process.env["TWILIO_AUTH_TOKEN"]!).update(data).digest("base64");
+}
 
 const TENANT_NUMBER = "+14155559999";
 const CALLER = "+14155550123";
@@ -233,13 +246,6 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: { from: (table: string) => adminBuilder(table), rpc },
 }));
 
-vi.mock("@/lib/twilio-verify.server", () => ({
-  verifyTwilioRequest: async (request: Request) => {
-    const text = await request.text();
-    return { ok: true, form: new URLSearchParams(text) };
-  },
-}));
-
 vi.mock("@/lib/webhook-log.server", () => ({
   recordWebhookEvent: async () => "evt-1",
   formToPayload: () => ({}),
@@ -396,7 +402,10 @@ async function postHandler(mod: { Route: unknown }, url: string, fields: Record<
   return handler({
     request: new Request(url, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-twilio-signature": twilioSignature(url, fields),
+      },
       body: new URLSearchParams(fields).toString(),
     }),
   });
@@ -638,3 +647,390 @@ describe("Twilio webhook redelivery → DispatchLog stays deduped and ordered", 
     expect(loadedCount()).toBe(total);
   }, 45000);
 });
+
+// ---------------------------------------------------------------------------
+// 1) Concurrency: simultaneous redeliveries, not just sequential ones.
+//
+// The sequential suites above prove the guard works when attempt N finishes
+// before attempt N+1 starts. Twilio does not guarantee that: a slow response
+// can leave several attempts for the SAME event in flight at once, so the
+// duplicate check and the insert can interleave. These tests fire the bursts
+// in parallel and assert the same invariants hold.
+// ---------------------------------------------------------------------------
+describe("concurrent redeliveries stay idempotent", () => {
+  /**
+   * Test-harness warm-up, not app behaviour: Vitest resolves a mocked module on
+   * first import, and six handler invocations racing that very first resolution
+   * can observe the unmocked signature verifier. One throwaway delivery per
+   * handler warms the module graph; the shared tables are then reset so each
+   * test still starts from an empty log.
+   */
+  beforeEach(async () => {
+    await missedCall({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      CallSid: "CA-warmup",
+      CallStatus: "no-answer",
+    });
+    await inboundSms({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      Body: "warmup",
+      MessageSid: "SM-warmup",
+    });
+    await recordingStatus({
+      From: CALLER,
+      Called: TENANT_NUMBER,
+      CallSid: "CA-warmup-rec",
+      RecordingSid: "RE-warmup",
+      RecordingStatus: "completed",
+      RecordingUrl: "https://api.twilio.com/rec/RE-warmup",
+      RecordingDuration: "5",
+    });
+    logs.length = 0;
+    logSeq = 0;
+    rejections.length = 0;
+    deliveries.clear();
+  });
+
+  for (const type of WEBHOOK_TYPES) {
+    it(`writes one set of rows for ${type.name} when 6 attempts race`, async () => {
+      const responses = await Promise.all(Array.from({ length: 6 }, () => type.post()));
+      // Racing attempts are still answered, never dropped or 500'd.
+      for (const res of responses) expect(res.status).toBe(200);
+
+
+      const total = logs.length;
+      expect(total).toBeGreaterThan(0);
+      expectWhitelistedTypes();
+      expect(rejections).toHaveLength(0);
+
+      // Exactly one attempt won the claim; the rest were recognised as repeats.
+      const claims = [...deliveries.values()];
+      expect(claims).toHaveLength(1);
+      expect(claims[0]!.attempt_count).toBe(6);
+
+      // A sequential replay after the race adds nothing either.
+      await type.post();
+      expect(logs).toHaveLength(total);
+
+      renderLog();
+      await waitForLoaded(total);
+      expect(rowIds()).toHaveLength(total);
+      expectNoDuplicates();
+      expectNewestFirst();
+    }, 30000);
+  }
+
+  it("keeps distinct concurrent events separate while collapsing their repeats", async () => {
+    // Four real events, each delivered three times, all interleaved at once.
+    const bursts = [
+      ...["CA-race-1", "CA-race-2"].flatMap((CallSid) =>
+        Array.from({ length: 3 }, () => () =>
+          missedCall({ From: CALLER, To: TENANT_NUMBER, CallSid, CallStatus: "no-answer" }),
+        ),
+      ),
+      ...["SM-race-1", "SM-race-2"].flatMap((MessageSid) =>
+        Array.from({ length: 3 }, () => () =>
+          inboundSms({ From: CALLER, To: TENANT_NUMBER, Body: `race ${MessageSid}`, MessageSid }),
+        ),
+      ),
+    ];
+    await Promise.all(bursts.map((post) => post()));
+
+    // Four events → four rows out of twelve deliveries.
+    expect(logs).toHaveLength(4);
+    expect(deliveries.size).toBe(4);
+    expect([...deliveries.values()].every((d) => d.attempt_count === 3)).toBe(true);
+    expect(rejections).toHaveLength(0);
+
+    renderLog();
+    await waitForLoaded(4);
+    expectNoDuplicates();
+    expectNewestFirst();
+    expect(loadedCount()).toBe(4);
+  }, 45000);
+
+  it("collapses repeats that race while the log is already on screen", async () => {
+    await missedCall({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      CallSid: "CA-onscreen",
+      CallStatus: "no-answer",
+    });
+    const total = logs.length;
+
+    renderLog();
+    await waitForLoaded(total);
+    const baseline = rowIds();
+
+    // Parallel redelivery rounds with the socket replaying every write.
+    for (let round = 0; round < 3; round += 1) {
+      await Promise.all(
+        Array.from({ length: 4 }, () =>
+          missedCall({
+            From: CALLER,
+            To: TENANT_NUMBER,
+            CallSid: "CA-onscreen",
+            CallStatus: "no-answer",
+          }),
+        ),
+      );
+      for (const row of logs) socket.push(row);
+      await settle();
+
+      expect(logs).toHaveLength(total);
+      expect(rowIds()).toEqual(baseline);
+      expectNoDuplicates();
+      expect(loadedCount()).toBe(rowIds().length);
+    }
+  }, 45000);
+});
+
+// ---------------------------------------------------------------------------
+// 2) Conflict rejection audit.
+//
+// A repeat that carries a DIFFERENT payload under the same dedupe_key is an
+// integrity problem, not a duplicate. It must be refused (409), audited in
+// log_write_rejections with the differing field names, and must leave the
+// stored row and the rendered log untouched.
+// ---------------------------------------------------------------------------
+describe("conflicting redeliveries are refused and audited", () => {
+  /**
+   * The delivery-claim layer replays the cached response for a repeated
+   * delivery key, so it short-circuits before any log write. To exercise the
+   * *second* line of defense — the dedupe_key payload guard — the bookkeeping
+   * row is dropped first, exactly as pruning/expiry does in production.
+   */
+  const expireDeliveryCache = () => deliveries.clear();
+
+  it("audits an inbound SMS whose body changed under the same MessageSid", async () => {
+    const first = await inboundSms({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      Body: "on my way",
+      MessageSid: "SM-audit",
+    });
+    expect(first.status).toBe(200);
+    expect(logs).toHaveLength(1);
+    const storedId = String(logs[0]!["id"]);
+
+    expireDeliveryCache();
+    const conflicting = await inboundSms({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      Body: "actually cancel please",
+      MessageSid: "SM-audit",
+    });
+    expect(conflicting.status).toBe(409);
+
+
+    // Audited exactly once, with the field that disagreed.
+    expect(rejections).toHaveLength(1);
+    const audit = rejections[0]!;
+    expect(audit["error_code"]).toBe("dedupe_key_conflict");
+    expect(audit["blocked_at"]).toBeTruthy();
+    expect(String(audit["error_message"])).toContain("message_sent");
+    expect(String(audit["rejected_action_type"] ?? "")).toBe("sms_inbound");
+    // The attempted (refused) payload is captured for the operator.
+    expect(JSON.stringify(audit["attempted_row"])).toContain("actually cancel please");
+
+    // Stored row untouched: same id, original body, no extra row.
+    expect(logs).toHaveLength(1);
+    expect(String(logs[0]!["id"])).toBe(storedId);
+    expect(logs[0]!["message_sent"]).toBe("on my way");
+
+    renderLog();
+    await waitForLoaded(1);
+    expect(rowIds()).toEqual([storedId]);
+  }, 30000);
+
+  it("audits every conflicting attempt without ever growing the log", async () => {
+    await inboundSms({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      Body: "original",
+      MessageSid: "SM-audit-many",
+    });
+    const baselineLogs = logs.length;
+
+    renderLog();
+    await waitForLoaded(baselineLogs);
+    const baseline = rowIds();
+
+    for (let i = 0; i < 3; i += 1) {
+      expireDeliveryCache();
+      const res = await inboundSms({
+        From: CALLER,
+        To: TENANT_NUMBER,
+        Body: `mutated ${i}`,
+        MessageSid: "SM-audit-many",
+      });
+      expect(res.status).toBe(409);
+
+      for (const row of logs) socket.push(row);
+      await settle();
+
+      // One audit row per refused attempt; zero new log rows.
+      expect(rejections).toHaveLength(i + 1);
+      expect(logs).toHaveLength(baselineLogs);
+      expect(rowIds()).toEqual(baseline);
+      expectNoDuplicates();
+    }
+
+    // Every audit names the offending field, so the cause is never ambiguous.
+    for (const audit of rejections) {
+      expect(audit["error_code"]).toBe("dedupe_key_conflict");
+      expect(String(audit["error_message"])).toContain("message_sent");
+    }
+    expectWhitelistedTypes();
+  }, 45000);
+
+  it("a faithful repeat is deduped silently, with nothing written to the audit", async () => {
+    const fields = {
+      From: CALLER,
+      To: TENANT_NUMBER,
+      Body: "identical text",
+      MessageSid: "SM-no-audit",
+    };
+    for (let i = 0; i < 4; i += 1) expect((await inboundSms(fields)).status).toBe(200);
+
+    expect(logs).toHaveLength(1);
+    // Deduping is not an error: the audit table stays empty.
+    expect(rejections).toHaveLength(0);
+  }, 30000);
+});
+
+// ---------------------------------------------------------------------------
+// 3) Pagination ordering across keyset pages.
+//
+// Redeliveries and dedupe interact with the keyset cursor: a page boundary is
+// a `created_at` value, so a duplicate row or a mis-ordered page would either
+// repeat a dispatch or silently skip one. These tests build more rows than one
+// page holds, then walk every page and assert the concatenation is strictly
+// ordered, gap-free and duplicate-free.
+// ---------------------------------------------------------------------------
+describe("keyset pagination ordering survives redelivery", () => {
+  /** Distinct inbound messages, each delivered `repeats` times. */
+  async function seedMessages(count: number, repeats: number) {
+    for (let i = 0; i < count; i += 1) {
+      for (let r = 0; r < repeats; r += 1) {
+        await inboundSms({
+          From: CALLER,
+          To: TENANT_NUMBER,
+          Body: `paged message ${i}`,
+          MessageSid: `SM-page-${i}`,
+        });
+      }
+    }
+  }
+
+  const loadMore = async () => {
+    const button = screen.getByRole("button", { name: new RegExp(`Load ${PAGE} older`, "i") });
+    const { fireEvent } = await import("@testing-library/react");
+    fireEvent.click(button);
+  };
+
+  it("walks every page in strict newest-first order with no repeats or gaps", async () => {
+    // 3 pages worth of distinct events, each delivered twice.
+    const distinct = PAGE * 2 + 7;
+    await seedMessages(distinct, 2);
+    expect(logs).toHaveLength(distinct);
+
+    renderLog();
+    await waitForLoaded(PAGE);
+    // First page is exactly one page long and newest-first.
+    expect(rowIds()).toHaveLength(PAGE);
+    expectNewestFirst();
+
+    const seen = [...rowIds()];
+    while (screen.queryByRole("button", { name: new RegExp(`Load ${PAGE} older`, "i") })) {
+      const before = rowIds().length;
+      await loadMore();
+      await waitFor(() => expect(rowIds().length).toBeGreaterThan(before), { timeout: 8000 });
+      const ids = rowIds();
+      // Each page appends below what was already shown — earlier rows never move.
+      expect(ids.slice(0, before)).toEqual(seen);
+      seen.length = 0;
+      seen.push(...ids);
+      expectNoDuplicates();
+      expectNewestFirst();
+    }
+
+    // Every row surfaced exactly once across all pages, in the exact order the
+    // full table would give newest-first.
+    expect(seen).toHaveLength(distinct);
+    expect(new Set(seen).size).toBe(distinct);
+    const expected = [...logs]
+      .sort((a, b) => String(b["created_at"]).localeCompare(String(a["created_at"])))
+      .map((r) => String(r["id"]));
+    expect(seen).toEqual(expected);
+    expect(loadedCount()).toBe(distinct);
+  }, 60000);
+
+  it("keeps paged ordering stable when redeliveries arrive mid-pagination", async () => {
+    const distinct = PAGE + 9;
+    await seedMessages(distinct, 1);
+
+    renderLog();
+    await waitForLoaded(PAGE);
+    const firstPage = [...rowIds()];
+
+    // Re-deliver every event (and replay each write over the socket) *between*
+    // page loads — the cursor must not shift, duplicate, or skip a row.
+    for (let i = 0; i < distinct; i += 1) {
+      await inboundSms({
+        From: CALLER,
+        To: TENANT_NUMBER,
+        Body: `paged message ${i}`,
+        MessageSid: `SM-page-${i}`,
+      });
+    }
+    // Realtime only ever delivers rows inside the loaded window, so replay the
+    // rows currently on screen — a redelivery inserts nothing new anyway.
+    const onScreen = new Set(firstPage);
+    for (const row of logs) if (onScreen.has(String(row["id"]))) socket.push(row);
+    await settle();
+
+
+    expect(logs).toHaveLength(distinct);
+    expect(rowIds().slice(0, PAGE)).toEqual(firstPage);
+
+    await loadMore();
+    await waitFor(() => expect(rowIds().length).toBe(distinct), { timeout: 8000 });
+    expect(rowIds().slice(0, PAGE)).toEqual(firstPage);
+    expectNoDuplicates();
+    expectNewestFirst();
+    expect(loadedCount()).toBe(distinct);
+  }, 60000);
+
+  it("paginates the same way in oldest-first order", async () => {
+    const distinct = PAGE + 5;
+    await seedMessages(distinct, 2);
+
+    // Sort order lives in the URL search state the component reads.
+    searchState = { logSort: "oldest" };
+    renderLog();
+    await waitForLoaded(PAGE);
+
+    const ids = rowIds();
+    const byId = new Map(logs.map((r) => [String(r["id"]), r]));
+    const times = ids.map((id) => new Date(String(byId.get(id)?.["created_at"])).getTime());
+    // Oldest-first: ascending, and the first row is the oldest row in the table.
+    expect(times).toEqual([...times].sort((a, b) => a - b));
+
+    const button = screen.getByRole("button", { name: new RegExp(`Load ${PAGE} newer`, "i") });
+    const { fireEvent } = await import("@testing-library/react");
+    fireEvent.click(button);
+    await waitFor(() => expect(rowIds().length).toBe(distinct), { timeout: 8000 });
+
+    const all = rowIds();
+    expect(all.slice(0, PAGE)).toEqual(ids);
+    expect(new Set(all).size).toBe(distinct);
+    const ascending = [...logs]
+      .sort((a, b) => String(a["created_at"]).localeCompare(String(b["created_at"])))
+      .map((r) => String(r["id"]));
+    expect(all).toEqual(ascending);
+  }, 60000);
+});
+
