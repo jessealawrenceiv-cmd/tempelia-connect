@@ -67,11 +67,13 @@ export const sendOptInPrompt = createServerFn({ method: "POST" })
     );
 
     const since = new Date(Date.now() - cooldown * 60_000).toISOString();
+    const { assertLogActionFilter } = await import("./log-action-filter.server");
+    const promptFilter = assertLogActionFilter("opt_in_prompt.cooldown", OPT_IN_PROMPT_ACTION);
     const { data: recent } = await supabase
       .from("logs")
       .select("id, created_at")
       .eq("customer_id", cust.id)
-      .eq("action_type", OPT_IN_PROMPT_ACTION)
+      .eq("action_type", promptFilter)
       .gte("created_at", since)
       .limit(1)
       .maybeSingle();
@@ -202,11 +204,13 @@ export const sendTestOptInPrompt = createServerFn({ method: "POST" })
     const since = new Date(Date.now() - cooldown * 60_000).toISOString();
     // Failed / undelivered attempts never reached the handset, so they must not
     // block a retry to the same number.
+    const { assertLogActionFilter: assertTestFilter } = await import("./log-action-filter.server");
+    const testFilter = assertTestFilter("opt_in_prompt_test.cooldown", OPT_IN_PROMPT_TEST_ACTION);
     const { data: recent } = await supabase
       .from("logs")
       .select("created_at")
       .eq("user_id", userId)
-      .eq("action_type", OPT_IN_PROMPT_TEST_ACTION)
+      .eq("action_type", testFilter)
       .not("status", "in", "(failed,undelivered,canceled)")
       .gte("created_at", since)
       .order("created_at", { ascending: false })
