@@ -2,11 +2,15 @@
  * Expanded details for one Activity log row.
  *
  * Shows the raw dispatch payload (pretty-printed when it is JSON) plus the
- * related delivery/telephony fields that the one-line row can't fit.
+ * related delivery/telephony fields that the one-line row can't fit. Payloads
+ * from webhooks and status refreshes can run to dozens of keys, so a search box
+ * narrows the payload to matching lines and highlights the hits.
  */
 
-import { Copy } from "lucide-react";
+import { useId, useMemo, useState } from "react";
+import { Copy, Search, X } from "lucide-react";
 import { toast } from "sonner";
+
 
 export type DispatchLogDetailRow = {
   id: string;
