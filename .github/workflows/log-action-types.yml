@@ -17,6 +17,19 @@ jobs:
         with:
           node-version: 24
 
+      # Fail fast before any verification script runs: if the token is
+      # missing or blank the downstream steps would fail with confusing
+      # auth errors, so surface the real problem immediately.
+      - name: Preflight — CI_ENUM_CHECK_TOKEN present
+        env:
+          CI_ENUM_CHECK_TOKEN: ${{ secrets.CI_ENUM_CHECK_TOKEN }}
+        run: |
+          if [ -z "${CI_ENUM_CHECK_TOKEN}" ]; then
+            echo "::error::CI_ENUM_CHECK_TOKEN is missing or blank. Add it under Settings → Secrets and variables → Actions before re-running this workflow."
+            exit 1
+          fi
+          echo "CI_ENUM_CHECK_TOKEN is set."
+
       # Token verification: confirms CI and the deployed app hold the SAME
       # CI_ENUM_CHECK_TOKEN by comparing truncated sha256 fingerprints. Touches
       # no database and never prints the token.
