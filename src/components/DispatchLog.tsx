@@ -232,7 +232,102 @@ function toDayParam(date: Date): string {
   return `${date.getFullYear()}-${m}-${d}`;
 }
 
+/**
+ * Placeholder row shown while a page of activity loads. Defined at module
+ * scope so it keeps a stable component identity across renders.
+ */
+function SkeletonRow() {
+  return (
+    <div
+      className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 border-b border-border px-5 py-3"
+      aria-hidden="true"
+    >
+      <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
+      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
+      <div className="space-y-1.5">
+        <span className="block h-3.5 w-32 rounded bg-muted animate-pulse" />
+        <span className="block h-3 w-48 rounded bg-muted animate-pulse" />
+      </div>
+      <span className="h-3 w-6 rounded bg-muted animate-pulse" />
+    </div>
+  );
+}
+
+/**
+ * Inline alert for a failed logs request (including the HTTP 400 raised by the
+ * `logs_action_type_check` constraint). Lives at module scope on purpose: when
+ * it was declared inside DispatchLog, every render produced a brand-new
+ * component type, React remounted the whole alert, and the freshly-rendered
+ * "Clear filters" button could be detached from the tree before a click
+ * landed — so clearing filters silently did nothing.
+ */
+function LogErrorRetry({
+  logError,
+  hasActiveFilters,
+  filtersBlocked,
+  busy,
+  onClearFilters,
+  onRetry,
+}: {
+  logError: unknown;
+  hasActiveFilters: boolean;
+  filtersBlocked: boolean;
+  busy: boolean;
+  onClearFilters: () => void;
+  onRetry: () => void;
+}) {
+  const info = logError ? describeLogRequestError(logError) : null;
+  return (
+    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{info?.title ?? "Couldn’t load activity"}</p>
+          <p className="text-xs text-muted-foreground">
+            {info?.message ?? "Something went wrong. Pull to retry or tap the button."}
+          </p>
+          {info?.allowedTypes && (
+            <p className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Allowed: {info.allowedTypes.join(", ")}
+            </p>
+          )}
+          {info?.technicalDetail && (
+            <details className="pt-1">
+              <summary className="kb-focus cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground">
+                Technical details{info.status ? ` (HTTP ${info.status})` : ""}
+              </summary>
+              <p className="mono mt-1 break-words text-[10px] leading-relaxed text-muted-foreground">
+                {info.technicalDetail}
+              </p>
+            </details>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {info?.suggestClearFilters && hasActiveFilters && (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              data-testid="log-error-clear-filters"
+              className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Clear filters
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={busy || filtersBlocked}
+            className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+          >
+            {busy ? "Retrying…" : "Retry"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
+
   // Record-type filters, sort, free-text search, and the date range all live in
   // the URL (?logTypes=a,b&logSort=oldest&q=text&dateFrom=…&dateTo=…) so a
   // reload, back/forward, or a shared link keeps the same view. Because that
