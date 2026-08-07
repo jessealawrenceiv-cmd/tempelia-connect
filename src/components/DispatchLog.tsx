@@ -214,7 +214,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const base = supabase
       .from(archive ? "logs_archive" : "logs")
       .select(sel(`id, action_type, message_sent, ${timeCol}, status, customer_id`))
-      .order(timeCol, { ascending: false })
+      .order(timeCol, { ascending: sortDir === "oldest" })
       .limit(pageSize);
 
     const q = applyFilters(base as unknown as FilterableQuery, timeCol, cursor);
