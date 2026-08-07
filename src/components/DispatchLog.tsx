@@ -491,9 +491,21 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   // Rows the user has expanded to see the full dispatch payload.
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
-  const toggleExpanded = (id: string) =>
+  /**
+   * Deep-linked dispatch (?logId=<uuid>). A shared link opens that row's details
+   * drawer, scrolls it into view, and — when the row isn't part of the current
+   * filtered page set — pins it above the list so the link always resolves.
+   */
+  const deepLinkId = typeof rawSearch.logId === "string" ? rawSearch.logId.trim() : "";
+  const setDeepLinkId = (id: string | undefined) => setSearchParam("logId", id);
+  const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    // Collapsing the shared row also drops it from the URL, so the link the user
+    // copies next matches what they're actually looking at.
+    if (id === deepLinkId && expandedIds.includes(id)) setDeepLinkId(undefined);
+  };
   const lastAnnouncedIdRef = useRef<string | null>(null);
+
 
   const rawLogTypes = rawSearch.logTypes;
   const validation = useMemo(
