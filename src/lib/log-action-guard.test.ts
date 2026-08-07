@@ -35,7 +35,7 @@ describe("logs action_type write guard", () => {
   it("blocks an invalid value before any query runs", async () => {
     const { client, insert } = fakeClient();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = (await insertLog(client, { action_type: "totally_made_up" } as never)) as {
+    const res = (await insertLog(client, { action_type: "totally_made_up" } as never)) as unknown as {
       error: { code: string; constraint: string; message: string; hint: string; rejectedActionType: string };
     };
     expect(insert).not.toHaveBeenCalled();
@@ -53,7 +53,7 @@ describe("logs action_type write guard", () => {
     const res = (await insertLog(client, [
       { action_type: LogAction[LOG_ACTION_TYPES[0]!]! },
       { action_type: "nope" },
-    ] as never)) as { error: { rejectedActionType: string } };
+    ] as never)) as unknown as { error: { rejectedActionType: string } };
     expect(insert).not.toHaveBeenCalled();
     expect(res.error.rejectedActionType).toBe("nope");
   });
@@ -61,7 +61,7 @@ describe("logs action_type write guard", () => {
   it("blocks the returning-id variant too", async () => {
     const { client, insert } = fakeClient();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = (await insertLogReturningId(client, { action_type: "" } as never)) as {
+    const res = (await insertLogReturningId(client, { action_type: "" } as never)) as unknown as {
       id: string | null;
       error: { code: string };
     };
