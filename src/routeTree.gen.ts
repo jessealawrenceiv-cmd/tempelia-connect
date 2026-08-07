@@ -23,6 +23,7 @@ import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authentic
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
+import { Route as ApiPublicLogActionTypesRouteImport } from './routes/api/public/log-action-types'
 import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard/settings'
 import { Route as AuthenticatedDashboardScheduleRouteImport } from './routes/_authenticated/dashboard/schedule'
 import { Route as AuthenticatedDashboardReviewsRouteImport } from './routes/_authenticated/dashboard/reviews'
@@ -118,6 +119,11 @@ const AuthenticatedDashboardIndexRoute =
     path: '/dashboard/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicLogActionTypesRoute = ApiPublicLogActionTypesRouteImport.update({
+  id: '/api/public/log-action-types',
+  path: '/api/public/log-action-types',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardSettingsRoute =
   AuthenticatedDashboardSettingsRouteImport.update({
     id: '/dashboard/settings',
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/api/public/log-action-types': typeof ApiPublicLogActionTypesRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   '/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByTo {
   '/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/api/public/log-action-types': typeof ApiPublicLogActionTypesRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   '/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
@@ -345,6 +353,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/reviews': typeof AuthenticatedDashboardReviewsRoute
   '/_authenticated/dashboard/schedule': typeof AuthenticatedDashboardScheduleRoute
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/api/public/log-action-types': typeof ApiPublicLogActionTypesRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
   '/_authenticated/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/dashboard/reviews'
     | '/dashboard/schedule'
     | '/dashboard/settings'
+    | '/api/public/log-action-types'
     | '/dashboard/'
     | '/dashboard/admin/deposit-recovery'
     | '/dashboard/admin/log-actions'
@@ -421,6 +431,7 @@ export interface FileRouteTypes {
     | '/dashboard/reviews'
     | '/dashboard/schedule'
     | '/dashboard/settings'
+    | '/api/public/log-action-types'
     | '/dashboard'
     | '/dashboard/admin/deposit-recovery'
     | '/dashboard/admin/log-actions'
@@ -459,6 +470,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/reviews'
     | '/_authenticated/dashboard/schedule'
     | '/_authenticated/dashboard/settings'
+    | '/api/public/log-action-types'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/admin/deposit-recovery'
     | '/_authenticated/dashboard/admin/log-actions'
@@ -490,6 +502,7 @@ export interface RootRouteChildren {
   QuoteQuoteIdRoute: typeof QuoteQuoteIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicLogActionTypesRoute: typeof ApiPublicLogActionTypesRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
@@ -596,6 +609,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/log-action-types': {
+      id: '/api/public/log-action-types'
+      path: '/api/public/log-action-types'
+      fullPath: '/api/public/log-action-types'
+      preLoaderRoute: typeof ApiPublicLogActionTypesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard/settings': {
       id: '/_authenticated/dashboard/settings'
@@ -821,6 +841,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuoteQuoteIdRoute: QuoteQuoteIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicLogActionTypesRoute: ApiPublicLogActionTypesRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
