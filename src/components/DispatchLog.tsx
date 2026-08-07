@@ -743,7 +743,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   // Poll on the chosen interval. A tick is skipped while another fetch is in
   // flight (including "Load more") so slow connections never stack requests.
   useEffect(() => {
-    if (autoRefreshSeconds === 0 || scope !== "live") return;
+    if (autoRefreshSeconds === 0 || scope !== "live" || filtersBlocked) return;
     if (typeof window === "undefined") return;
     const tick = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
@@ -973,8 +973,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             )}
             <button
               type="button"
-              onClick={() => void refetch()}
-              disabled={isFetchingNextPage || isLoading}
+              onClick={() => {
+                if (filtersBlocked) return;
+                void refetch();
+              }}
+              disabled={isFetchingNextPage || isLoading || filtersBlocked}
               className="kb-focus inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
             >
               {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
@@ -1161,10 +1164,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               <button
                 type="button"
                 onClick={() => {
+                  if (filtersBlocked) {
+                    setAnnouncement("Fix the highlighted filters before refreshing");
+                    return;
+                  }
                   void refetch();
                   setAnnouncement("Refreshing activity");
                 }}
-                disabled={isFetching}
+                disabled={isFetching || filtersBlocked}
                 aria-label="Refresh activity now"
                 title={updatedLabel ? `Updated ${updatedLabel}` : "Refresh activity now"}
                 className="kb-focus inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
