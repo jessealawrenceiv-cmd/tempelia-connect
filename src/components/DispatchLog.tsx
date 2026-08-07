@@ -418,7 +418,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     logStatusOnly?: unknown;
     logFailed?: unknown;
     logOrigin?: unknown;
+    /** Deep-linked dispatch: ?logId=<uuid> opens that row's details drawer. */
+    logId?: unknown;
   };
+
 
   /**
    * The toggle-style filters (scope, status-refresh only, failures only, origin)
