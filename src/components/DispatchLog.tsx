@@ -282,7 +282,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       downloadCsv(buildLogCsv(all), scope);
       toast.success(
         all.length === EXPORT_ROW_CAP
-          ? `Exported the newest ${EXPORT_ROW_CAP} matching records.`
+          ? `Exported the first ${EXPORT_ROW_CAP} matching records in the current sort order.`
           : `Exported ${all.length} record${all.length === 1 ? "" : "s"}.`,
       );
     } catch (err) {
