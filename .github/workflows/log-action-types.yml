@@ -73,3 +73,31 @@ jobs:
       - name: Enforce single source of action types
         run: bunx vitest run src/lib/log-action-types.single-source.test.ts --reporter=verbose
 
+  # Lints every GitHub Actions workflow YAML and enforces the Node.js version
+  # stays pinned to 24 across all setup-node steps.
+  workflow-lint:
+    name: Workflow lint & Node version guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run actionlint
+        run: |
+          # actionlint is a linter for GitHub Actions workflow files. It
+          # catches syntax errors, deprecated syntax, and common mistakes.
+          docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:latest -color
+
+      - name: Enforce Node.js 24 on all setup-node steps
+        run: |
+          # Scans every workflow file for `node-version:` lines and fails
+          # if any are not pinned to 24. Keeps the runner from silently
+          # drifting onto a deprecated Node version.
+          set -euo pipefail
+          offenders="$(grep -RIn --exclude-dir=node_modules 'node-version:' .github/workflows | grep -v 'node-version: 24' || true)"
+          if [ -n "$offenders" ]; then
+            echo "::error::One or more setup-node steps are not pinned to Node.js 24:"
+            echo "$offenders"
+            exit 1
+          fi
+          echo "All setup-node steps are pinned to Node.js 24."
+
