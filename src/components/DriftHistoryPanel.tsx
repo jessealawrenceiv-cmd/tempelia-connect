@@ -157,6 +157,7 @@ export function DriftHistoryPanel({
       type="button"
       onClick={() => setStatusFilter(key)}
       aria-pressed={statusFilter === key}
+      aria-label={`Filter by ${label.toLowerCase()}`}
       className={`kb-focus rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
         statusFilter === key
           ? "bg-foreground text-background"
