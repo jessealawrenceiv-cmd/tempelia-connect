@@ -186,26 +186,26 @@ describe("action_type chips — roles and ARIA state", () => {
     renderLog();
     await waitFor(() => expect(screen.getByText("quote link sent")).toBeTruthy());
 
-    const quote = chipByLabel("QUOTE SMS");
+    const quote = chipByLabel("QUOTE_SMS");
     expect(quote.getAttribute("aria-pressed")).toBe("false");
 
     await user.click(quote);
-    await waitFor(() => expect(chipByLabel("QUOTE SMS").getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(chipByLabel("QUOTE_SMS").getAttribute("aria-pressed")).toBe("true"));
     // Every other chip stays unpressed — no ambiguous multi-state.
     expect(
       chips().filter((el) => el.getAttribute("aria-pressed") === "true"),
     ).toHaveLength(1);
 
-    await user.click(chipByLabel("QUOTE SMS"));
-    await waitFor(() => expect(chipByLabel("QUOTE SMS").getAttribute("aria-pressed")).toBe("false"));
+    await user.click(chipByLabel("QUOTE_SMS"));
+    await waitFor(() => expect(chipByLabel("QUOTE_SMS").getAttribute("aria-pressed")).toBe("false"));
   });
 
   it("hydrates aria-pressed from a deep-linked ?types= param", async () => {
     searchState = { types: "invoice_sms" };
     renderLog();
 
-    await waitFor(() => expect(chipByLabel("INVOICE SMS").getAttribute("aria-pressed")).toBe("true"));
-    expect(chipByLabel("QUOTE SMS").getAttribute("aria-pressed")).toBe("false");
+    await waitFor(() => expect(chipByLabel("INVOICE_SMS").getAttribute("aria-pressed")).toBe("true"));
+    expect(chipByLabel("QUOTE_SMS").getAttribute("aria-pressed")).toBe("false");
     await waitFor(() => expect(lastTypes).toEqual(["invoice_sms"]));
   });
 });
@@ -232,19 +232,19 @@ describe("action_type chips — keyboard navigation", () => {
     renderLog();
     await waitFor(() => expect(screen.getByText("quote link sent")).toBeTruthy());
 
-    const quote = chipByLabel("QUOTE SMS");
+    const quote = chipByLabel("QUOTE_SMS");
     quote.focus();
 
     await user.keyboard("{Enter}");
-    await waitFor(() => expect(chipByLabel("QUOTE SMS").getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(chipByLabel("QUOTE_SMS").getAttribute("aria-pressed")).toBe("true"));
     // Filter really applied, not just visually toggled.
     await waitFor(() => expect(lastTypes).toEqual(["quote_sms"]));
     // Focus stays put so keyboard users don't lose their position.
-    expect(document.activeElement).toBe(chipByLabel("QUOTE SMS"));
+    expect(document.activeElement).toBe(chipByLabel("QUOTE_SMS"));
 
     await user.keyboard(" ");
-    await waitFor(() => expect(chipByLabel("QUOTE SMS").getAttribute("aria-pressed")).toBe("false"));
-    expect(document.activeElement).toBe(chipByLabel("QUOTE SMS"));
+    await waitFor(() => expect(chipByLabel("QUOTE_SMS").getAttribute("aria-pressed")).toBe("false"));
+    expect(document.activeElement).toBe(chipByLabel("QUOTE_SMS"));
   });
 
   it("supports selecting multiple chips from the keyboard", async () => {
@@ -252,11 +252,11 @@ describe("action_type chips — keyboard navigation", () => {
     renderLog();
     await waitFor(() => expect(screen.getByText("quote link sent")).toBeTruthy());
 
-    chipByLabel("QUOTE SMS").focus();
+    chipByLabel("QUOTE_SMS").focus();
     await user.keyboard("{Enter}");
-    await waitFor(() => expect(chipByLabel("QUOTE SMS").getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(chipByLabel("QUOTE_SMS").getAttribute("aria-pressed")).toBe("true"));
 
-    chipByLabel("INVOICE SMS").focus();
+    chipByLabel("INVOICE_SMS").focus();
     await user.keyboard("{Enter}");
 
     await waitFor(() =>
