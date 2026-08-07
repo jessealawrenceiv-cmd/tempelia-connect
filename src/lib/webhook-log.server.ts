@@ -19,13 +19,18 @@ export function formToPayload(form: FormData): Record<string, string> {
   return out;
 }
 
+/**
+ * Records the hit and returns the `webhook_events` row id so the caller can
+ * correlate it with the Activity log entry the hit produces. Returns null when
+ * logging failed — correlation is best-effort and never blocks the webhook.
+ */
 export async function recordWebhookEvent(args: {
   request: Request;
   form: FormData;
   signatureValid: boolean;
   eventKind: "missed_call" | "sms_inbound" | "recording_status";
   source?: string;
-}): Promise<void> {
+}): Promise<string | null> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const form = args.form;
