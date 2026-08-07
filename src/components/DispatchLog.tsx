@@ -104,7 +104,26 @@ function describe(row: { action_type: string; status: string | null; message_sen
   return parts.length > 0 ? parts.join(" — ") : (row.message_sent ?? "—");
 }
 
-
+/** Formats a log row as a single dispatch line suitable for support notes. */
+function formatDispatchLine(row: LogRow): string {
+  const time = new Date(row.created_at).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const origin =
+    row.action_type === LogAction.automation_status_change && row.status && row.status in ORIGIN_LABEL
+      ? ` [${ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}]`
+      : "";
+  const affected = parseAffected(row)
+    .map((a) => (a.type === "customer" ? `contact:${a.label}` : `intake:${a.label}`))
+    .join(", ");
+  const suffix = affected ? ` | affected: ${affected}` : "";
+  return `${time} · ${logActionLabel(row.action_type)}${origin} · ${describe(row)}${suffix}`;
+}
 
 const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
   "this-device": "This device",
