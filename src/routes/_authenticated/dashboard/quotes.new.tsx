@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 import { reportLogInsertError } from "@/lib/log-error";
 import {
   DEPOSIT_SELECTIONS,
@@ -452,7 +452,7 @@ function NewQuotePage() {
         const { error: logErr } = await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
-          action_type: "customer_email_updated",
+          action_type: LogAction.customer_email_updated,
           status: "overwritten_via_quote",
           message_sent: JSON.stringify({ old: priorEmail, new: emailTrim, source: "quote" }),
         });
@@ -469,7 +469,7 @@ function NewQuotePage() {
         const { error: consentLogErr } = await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
-          action_type: "customer_consent_preserved",
+          action_type: LogAction.customer_consent_preserved,
           status: "prevented_downgrade_via_quote",
           message_sent: JSON.stringify({ preserved, source: "quote" }),
         });

@@ -1,3 +1,4 @@
+import { LogAction } from "./log-action-types";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -77,9 +78,9 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
 
     const { assertLogActionFilters } = await import("./log-action-filter.server");
     const usageFilter = assertLogActionFilters("admin.numbers_usage", [
-      "review_request",
-      "reactivation_text",
-      "missed_call_autotext",
+      LogAction.review_request,
+      LogAction.reactivation_text,
+      LogAction.missed_call_autotext,
     ]);
 
     const { data: logs, error: logErr } = await supabaseAdmin

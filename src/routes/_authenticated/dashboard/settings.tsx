@@ -22,7 +22,7 @@ import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { AutomationBadge, TooltipCloseButton } from "@/components/AutomationBadge";
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
-import { insertLog } from "@/lib/log-action-types";
+import { insertLog, LogAction } from "@/lib/log-action-types";
 import { reportLogInsertError } from "@/lib/log-error";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
@@ -309,7 +309,7 @@ function SettingsPage() {
         if (!u.user) return;
         const { error } = await insertLog(supabase, {
           user_id: u.user.id,
-          action_type: "automation_status_change",
+          action_type: LogAction.automation_status_change,
           status: entry.origin,
           message_sent: JSON.stringify({
             source: "settings_active_badge",
@@ -664,7 +664,7 @@ function SettingsPage() {
       const affected = status === "failed" ? [] : await collectAffected(windowStart);
       const { error } = await insertLog(supabase, {
         user_id: u.user.id,
-        action_type: "status_refresh",
+        action_type: LogAction.status_refresh,
         status,
         message_sent: JSON.stringify({
           source: "settings_active_badge",
