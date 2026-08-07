@@ -11,8 +11,11 @@
  * normally, retries get `duplicate: true` plus the stored response to replay.
  */
 
+// Loose shape: the generated Supabase client types `rpc` against the generated
+// function union, which lags behind newly added DB functions.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type AdminClient = {
-  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
+  rpc: (fn: any, args?: any) => PromiseLike<{ data: any; error: any }>;
 };
 
 export type DeliveryClaim = {
@@ -63,7 +66,7 @@ export async function claimWebhookDelivery(
     // No stable id from the provider — can't dedupe; process normally.
     return { deliveryId: null, duplicate: false, attemptCount: 1, storedResponse: null };
   }
-  const { data, error } = await client.rpc("webhook_delivery_claim", {
+  const { data, error } = await client.rpc("webhook_delivery_claim" as any, {
     _source: args.source,
     _event_kind: args.eventKind,
     _delivery_key: args.deliveryKey,
@@ -106,7 +109,7 @@ export async function completeWebhookDelivery(
   if (!deliveryId) return response;
   // Clone before reading — the original body must stay unconsumed for the caller.
   const body = await response.clone().text();
-  const { error } = await client.rpc("webhook_delivery_complete", {
+  const { error } = await client.rpc("webhook_delivery_complete" as any, {
     _delivery_id: deliveryId,
     _user_id: args.userId ?? null,
     _state: args.state ?? "done",
