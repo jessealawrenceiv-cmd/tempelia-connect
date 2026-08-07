@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -343,6 +343,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       toISO,
       typeKey,
       searchKey,
+      customerMatchKey,
       statusRefreshOnly,
       failedOnly,
       originFilter,
@@ -511,8 +512,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search messages…"
-              aria-label="Search activity messages"
+              placeholder="Search name, phone, message…"
+              aria-label="Search activity by phone number, customer name, or message text"
               aria-invalid={filterIssues.some((i) => i.field === "q") || undefined}
               maxLength={MAX_LOG_SEARCH_LENGTH + 20}
               className="kb-focus h-7 w-40 rounded-full border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56"
