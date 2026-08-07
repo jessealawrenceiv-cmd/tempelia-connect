@@ -964,6 +964,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               return (
                 <div
                   key={item.key}
+                  role="listitem"
                   data-index={item.index}
                   ref={virtualizer.measureElement}
                   className="absolute left-0 top-0 w-full border-b border-border"
