@@ -129,7 +129,7 @@ describe("DriftHistoryPanel filters", () => {
     expect(screen.queryByLabelText(/clear date range/i)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /date range/i }));
-    await user.click(screen.getByRole("button", { name: /today/i }));
+    await user.click(screen.getByRole("button", { name: /^Today$/i }));
 
     expect(screen.getByLabelText(/clear date range/i)).toBeTruthy();
   });
