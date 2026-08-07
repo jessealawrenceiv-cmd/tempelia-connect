@@ -344,7 +344,59 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           </div>
 
         </div>
+
+        <fieldset className="mt-3 border-t border-border pt-3">
+          <legend className="mono flex items-center gap-2 px-0 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Record type
+            {selectedTypes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedTypes([])}
+                className="kb-focus rounded-full border border-border px-2 py-0.5 text-[10px] normal-case tracking-normal text-foreground hover:border-primary hover:text-primary"
+              >
+                Clear {selectedTypes.length} selected
+              </button>
+            )}
+          </legend>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {LOG_ACTION_TYPES.map((t) => {
+              const selected = selectedTypes.includes(t);
+              const isNew = NEW_ACTION_TYPES.has(t);
+              const count = typeCounts[t] ?? 0;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => toggleType(t)}
+                  title={isNew ? `${typeLabel(t)} — newly added type` : typeLabel(t)}
+                  className={`kb-focus mono inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                    selected
+                      ? "border-primary bg-primary text-paper"
+                      : isNew
+                        ? "border-primary/60 bg-primary/10 text-primary hover:bg-primary/20"
+                        : "border-border bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {isNew && <Sparkles size={10} aria-hidden="true" />}
+                  {typeLabel(t)}
+                  {isNew && (
+                    <span
+                      className={`rounded-sm px-1 text-[9px] tracking-widest ${
+                        selected ? "bg-paper/20 text-paper" : "bg-primary/20 text-primary"
+                      }`}
+                    >
+                      New
+                    </span>
+                  )}
+                  {count > 0 && <span className={selected ? "text-paper/80" : "text-foreground/60"}>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       </div>
+
 
       <ul className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
         {isLoading && <li className="p-5 text-muted-foreground">Loading…</li>}
