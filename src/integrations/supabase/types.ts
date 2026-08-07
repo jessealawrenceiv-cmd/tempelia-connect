@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log_filter_rejections: {
+        Row: {
+          blocked: boolean
+          created_at: string
+          id: string
+          issue_fields: string[]
+          issues: Json
+          raw_filters: Json
+          source: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          blocked?: boolean
+          created_at?: string
+          id?: string
+          issue_fields?: string[]
+          issues?: Json
+          raw_filters?: Json
+          source: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          blocked?: boolean
+          created_at?: string
+          id?: string
+          issue_fields?: string[]
+          issues?: Json
+          raw_filters?: Json
+          source?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_access_log: {
         Row: {
           actor_user_id: string
