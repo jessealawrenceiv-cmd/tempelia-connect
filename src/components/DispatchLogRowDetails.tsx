@@ -87,6 +87,15 @@ const FieldRow = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
+/** Rows with a missing or malformed timestamp simply omit the field. */
+function formatRecordedAt(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleString();
+}
+
+
+
 export function DispatchLogRowDetails({ row }: { row: DispatchLogDetailRow }) {
   const payload = formatDispatchPayload(row.message_sent);
   const searchId = useId();
