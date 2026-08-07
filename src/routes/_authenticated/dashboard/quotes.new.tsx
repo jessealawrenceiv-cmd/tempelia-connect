@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
+import { insertLog } from "@/lib/log-action-types";
 import {
   DEPOSIT_SELECTIONS,
   describeCompanyDefault,
@@ -447,7 +448,7 @@ function NewQuotePage() {
 
       // Audit trail: log when a quote overwrites an existing (different) email.
       if (emailTrim && priorEmail && priorEmail.trim().toLowerCase() !== emailTrim.toLowerCase()) {
-        await supabase.from("logs").insert({
+        await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: "customer_email_updated",
@@ -462,7 +463,7 @@ function NewQuotePage() {
       if (priorSms && !smsOptIn) preserved.push("opt_in_consent");
       if (priorConsent && !consentSigned) preserved.push("consent_form_signed");
       if (preserved.length) {
-        await supabase.from("logs").insert({
+        await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: "customer_consent_preserved",
