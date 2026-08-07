@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Check, ChevronRight, History, ShieldAlert } from "lucide-react";
+import { Check, ChevronRight, History, RefreshCw, ShieldAlert } from "lucide-react";
 import type { DriftRun } from "@/lib/log-action-diagnostics.functions";
 
 const fmtWhen = (iso: string) =>
