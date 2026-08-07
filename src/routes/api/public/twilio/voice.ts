@@ -157,7 +157,38 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         );
         };
 
-        const response = await run();
+        let response: Response;
+        try {
+          response = await run();
+        } catch (e) {
+          const reason = (e as Error)?.message || "unknown error";
+          const final = claim.attemptCount >= WEBHOOK_MAX_ATTEMPTS;
+          if (deliveryTenantId) {
+            await logWebhookFailure(supabaseAdmin, {
+              userId: deliveryTenantId,
+              eventKind: "missed_call",
+              deliveryKey,
+              attemptCount: claim.attemptCount,
+              callSid: String(form.get("CallSid") ?? "") || null,
+              fromNumber: String(form.get("From") ?? "") || null,
+              reason,
+              final,
+            });
+          } else {
+            console.error("missed-call webhook failed before tenant lookup", reason);
+          }
+          // Retries left → 500 so the provider re-delivers. Exhausted → inert 200
+          // so it stops, with the final failure reason already in the log.
+          if (!final) {
+            return new Response("webhook processing failed", { status: 500 });
+          }
+          return completeWebhookDelivery(supabaseAdmin, {
+            deliveryId: claim.deliveryId,
+            userId: deliveryTenantId,
+            state: "failed",
+            response: twiml("<Hangup/>"),
+          });
+        }
         return completeWebhookDelivery(supabaseAdmin, {
           deliveryId: claim.deliveryId,
           userId: deliveryTenantId,
