@@ -516,7 +516,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   }, [filtered, scope]);
 
   const SkeletonRow = () => (
-    <li className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3" aria-hidden="true">
+    <div
+      className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 border-b border-border px-5 py-3"
+      aria-hidden="true"
+    >
       <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
       <div className="space-y-1.5">
@@ -524,11 +527,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         <span className="block h-3 w-48 rounded bg-muted animate-pulse" />
       </div>
       <span className="h-3 w-6 rounded bg-muted animate-pulse" />
-    </li>
+    </div>
   );
 
   const ErrorRetry = () => (
-    <li className="px-5 py-6" role="alert" aria-live="polite">
+    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
       <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Couldn’t load activity</p>
@@ -545,8 +548,94 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
         </button>
       </div>
-    </li>
+    </div>
   );
+
+  /** One dispatch line; shared by the plain and virtualized render paths. */
+  const RowBody = ({ row }: { row: LogRow }) => {
+    const affected = parseAffected(row);
+    const isCopied = copiedId === row.id;
+    return (
+      <div className="group grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
+        <span className="text-muted-foreground">
+          {new Date(row.created_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </span>
+        <span
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+            (row.action_type === LogAction.status_refresh
+              ? REFRESH_OUTCOME[row.status ?? ""]?.dot
+              : undefined) ?? logActionDot(row.action_type)
+          }`}
+        />
+        <span>
+          <span className="mr-2 font-semibold text-foreground" title={logActionDescription(row.action_type)}>
+            {logActionLabel(row.action_type)}
+          </span>
+          {row.action_type === LogAction.automation_status_change && row.status && row.status in ORIGIN_LABEL && (
+            <span className="mr-2 inline-flex items-center rounded bg-muted px-1 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+              {ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}
+            </span>
+          )}
+          <span className="text-foreground/80">{describe(row)}</span>
+          {affected.length > 0 && (
+            <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">affected</span>
+              {affected.map((a) =>
+                a.type === "customer" ? (
+                  <Link
+                    key={`c-${a.id}`}
+                    to="/dashboard/contacts"
+                    search={{ customerId: a.id }}
+                    className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-primary hover:border-primary hover:underline"
+                    title="Open this contact"
+                  >
+                    {a.label}
+                  </Link>
+                ) : (
+                  <Link
+                    key={`i-${a.id}`}
+                    to="/dashboard/intakes"
+                    search={{ intakeId: a.id }}
+                    className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-steel hover:border-steel hover:underline"
+                    title="Open this submission"
+                  >
+                    {a.label} · intake
+                  </Link>
+                ),
+              )}
+            </span>
+          )}
+        </span>
+        <button
+          type="button"
+          aria-label={isCopied ? "Copied" : "Copy dispatch line"}
+          title={isCopied ? "Copied" : "Copy dispatch line"}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(formatDispatchLine(row));
+              setCopiedId(row.id);
+              toast.success("Dispatch line copied");
+              window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
+            } catch {
+              toast.error("Copy failed", { description: "Clipboard access was denied." });
+            }
+          }}
+          className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+        >
+          {isCopied ? (
+            <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
+          ) : (
+            <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+    );
+  };
+
 
   return (
     <div className="panel">
