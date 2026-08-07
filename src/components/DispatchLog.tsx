@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { reportFilterRejection } from "@/lib/activity-log-validation.client";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -316,6 +317,28 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
    * messages render immediately from the Zod issues below.
    */
   const filtersBlocked = hasBlockingFilterIssues(filterIssues);
+
+  /**
+   * Ship every rejected/adjusted filter payload to the server so bad links can
+   * be traced. De-duplicated inside the reporter; fire-and-forget.
+   */
+  useEffect(() => {
+    if (filterIssues.length === 0) return;
+    reportFilterRejection({
+      source: "log_list",
+      blocked: filtersBlocked,
+      issues: filterIssues,
+      rawFilters: {
+        logTypes: rawLogTypes ?? null,
+        logSort: (rawSearch.logSort as string | undefined) ?? null,
+        q: searchQuery,
+        dateFrom: dateRange?.from ? dateRange.from.toISOString() : null,
+        dateTo: dateRange?.to ? dateRange.to.toISOString() : null,
+        scope,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterIssues, filtersBlocked]);
   /**
    * Field-level helper text: the summary banner above says "some filters were
    * adjusted", but each control also needs to say what went wrong right where
