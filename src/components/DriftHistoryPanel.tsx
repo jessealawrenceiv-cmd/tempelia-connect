@@ -31,6 +31,64 @@ export function driftRunDifferences(run: DriftRun) {
   return { missingInDb, missingInGenerated, orderDiffers };
 }
 
+/**
+ * Concise, human-readable summary of why a run failed, highlighting the top
+ * mismatching values so an operator does not have to read the whole diff.
+ */
+export function driftRunFailureSummary(run: DriftRun, max = 3) {
+  const { missingInDb, missingInGenerated, orderDiffers } = driftRunDifferences(run);
+  if (missingInDb.length === 0 && missingInGenerated.length === 0 && !orderDiffers) return null;
+
+  const parts: string[] = [];
+  if (missingInDb.length > 0) parts.push(`${missingInDb.length} only in code`);
+  if (missingInGenerated.length > 0) parts.push(`${missingInGenerated.length} only in database`);
+  if (orderDiffers) parts.push("order differs");
+
+  const highlights: { value: string; where: string; tone: string }[] = [
+    ...missingInDb.slice(0, max).map((value) => ({
+      value,
+      where: "missing in database",
+      tone: "border-orange/40 bg-orange/10 text-orange",
+    })),
+    ...missingInGenerated.slice(0, max).map((value) => ({
+      value,
+      where: "missing in code",
+      tone: "border-primary/40 bg-primary/10 text-primary",
+    })),
+  ];
+  const extra =
+    Math.max(0, missingInDb.length - max) + Math.max(0, missingInGenerated.length - max);
+
+  return { headline: parts.join(" · "), highlights, extra };
+}
+
+const FailureSummary = ({ run }: { run: DriftRun }) => {
+  const summary = driftRunFailureSummary(run);
+  if (!summary) return null;
+  return (
+    <div className="rounded-sm border border-orange/40 bg-orange/5 p-3">
+      <div className="mono text-[10px] uppercase tracking-widest text-orange">
+        Failure summary · {summary.headline}
+      </div>
+      {summary.highlights.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {summary.highlights.map((h) => (
+            <li key={`${h.where}-${h.value}`} className="flex items-center gap-2">
+              <span className={`mono rounded-sm border px-1.5 py-0.5 text-[10px] ${h.tone}`}>{h.value}</span>
+              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{h.where}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {summary.extra > 0 && (
+        <p className="mono mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+          + {summary.extra} more mismatch{summary.extra === 1 ? "" : "es"} below
+        </p>
+      )}
+    </div>
+  );
+};
+
 const ValueList = ({ label, values, tone }: { label: string; values: string[]; tone: string }) => (
   <div>
     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
@@ -43,6 +101,7 @@ const ValueList = ({ label, values, tone }: { label: string; values: string[]; t
     </div>
   </div>
 );
+
 
 export function DriftHistoryPanel({
   runs,
@@ -128,10 +187,12 @@ export function DriftHistoryPanel({
 
                 {isOpen && (
                   <div id={`drift-run-${run.id}`} className="space-y-3 pb-4 pl-8">
+                    <FailureSummary run={run} />
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       {run.dbValues.length} database value{run.dbValues.length === 1 ? "" : "s"} ·{" "}
                       {run.generatedValues.length} generated value{run.generatedValues.length === 1 ? "" : "s"}
                     </div>
+
                     {diff.missingInDb.length > 0 && (
                       <ValueList
                         label="In code, not in database"
