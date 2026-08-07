@@ -5,16 +5,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
 import { Filter, Search, Sparkles } from "lucide-react";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
-import { LOG_ACTION_TYPES, type LogActionType } from "@/lib/log-action-types";
-
-/** Types added most recently — surfaced with a NEW marker in the filter list. */
-const NEW_ACTION_TYPES = new Set<LogActionType>(["status_refresh", "automation_status_change"]);
+import { LogAction, type LogActionType } from "@/lib/log-action-types";
+import {
+  LOG_ACTION_FILTER_ORDER,
+  isNewLogAction,
+  logActionDescription,
+  logActionDot,
+  logActionLabel,
+} from "@/lib/log-action-presentation";
 
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
 function parseAffected(row: { action_type: string; message_sent: string | null }): AffectedRef[] {
-  if (row.action_type !== "status_refresh" || !row.message_sent) return [];
+  if (row.action_type !== LogAction.status_refresh || !row.message_sent) return [];
   try {
     const payload = JSON.parse(row.message_sent) as Record<string, unknown>;
     const list = payload["affected"];
@@ -33,21 +37,6 @@ function parseAffected(row: { action_type: string; message_sent: string | null }
 
 
 
-const DOT: Record<string, string> = {
-  missed_call_text: "bg-orange",
-  review_request: "bg-steel",
-  reactivation_text: "bg-moss",
-  status_refresh: "bg-orange",
-  automation_status_change: "bg-primary",
-};
-const LABEL: Record<string, string> = {
-  missed_call_text: "MISSED_CALL_TEXT",
-  review_request: "REVIEW_REQUEST",
-  reactivation_text: "REACTIVATION_TEXT",
-  status_refresh: "STATUS_REFRESH",
-  automation_status_change: "STATUS_CHANGE",
-};
-
 // Refresh-attempt audit rows store structured JSON; render them as readable
 // dispatch lines instead of dumping raw payloads.
 const REFRESH_OUTCOME: Record<string, { text: string; dot: string }> = {
@@ -57,7 +46,7 @@ const REFRESH_OUTCOME: Record<string, { text: string; dot: string }> = {
 };
 
 function describe(row: { action_type: string; status: string | null; message_sent: string | null }) {
-  if (row.action_type !== "status_refresh" && row.action_type !== "automation_status_change") {
+  if (row.action_type !== LogAction.status_refresh && row.action_type !== LogAction.automation_status_change) {
     return row.message_sent ?? "—";
   }
   let payload: Record<string, unknown> = {};
@@ -67,7 +56,7 @@ function describe(row: { action_type: string; status: string | null; message_sen
     return row.message_sent ?? "—";
   }
   const parts: string[] = [];
-  if (row.action_type === "status_refresh") {
+  if (row.action_type === LogAction.status_refresh) {
     parts.push(REFRESH_OUTCOME[row.status ?? ""]?.text ?? row.status ?? "refresh");
     if (typeof payload["error_code"] === "string") parts.push(String(payload["error_code"]));
     if (typeof payload["error"] === "string") parts.push(String(payload["error"]));
@@ -88,9 +77,7 @@ const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> =
   "backend": "Backend",
 };
 
-function typeLabel(actionType: string) {
-  return LABEL[actionType] ?? actionType.toUpperCase();
-}
+const typeLabel = logActionLabel;
 
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
@@ -169,13 +156,13 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const filtered = (data ?? []).filter((row) => {
     if (selectedTypes.length > 0 && !selectedTypes.includes(row.action_type as LogActionType)) return false;
     if (originFilter !== "all") {
-      if (row.action_type !== "automation_status_change") return false;
+      if (row.action_type !== LogAction.automation_status_change) return false;
       if (originFilter !== "active" && row.status !== originFilter) return false;
       return true;
     }
-    if (statusRefreshOnly && row.action_type !== "status_refresh") return false;
+    if (statusRefreshOnly && row.action_type !== LogAction.status_refresh) return false;
     if (failedOnly) {
-      if (row.action_type !== "status_refresh") return false;
+      if (row.action_type !== LogAction.status_refresh) return false;
       if (row.status !== "failed") return false;
     }
     if (searchTerms.length > 0) {
@@ -201,7 +188,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       hour: "2-digit",
       minute: "2-digit",
     });
-    setAnnouncement(`New activity: ${LABEL[latest.action_type] ?? latest.action_type} at ${time}`);
+    setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
   return (
@@ -359,9 +346,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             )}
           </legend>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {LOG_ACTION_TYPES.map((t) => {
+            {LOG_ACTION_FILTER_ORDER.map((t) => {
               const selected = selectedTypes.includes(t);
-              const isNew = NEW_ACTION_TYPES.has(t);
+              const isNew = isNewLogAction(t);
               const count = typeCounts[t] ?? 0;
               return (
                 <button
@@ -369,7 +356,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggleType(t)}
-                  title={isNew ? `${typeLabel(t)} — newly added type` : typeLabel(t)}
+                  title={isNew ? `${logActionDescription(t)} — newly added type` : logActionDescription(t)}
                   className={`kb-focus mono inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
                     selected
                       ? "border-primary bg-primary text-paper"
@@ -421,14 +408,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </span>
             <span
               className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                (row.action_type === "status_refresh" ? REFRESH_OUTCOME[row.status ?? ""]?.dot : undefined) ??
-                DOT[row.action_type] ??
-                "bg-muted"
+                (row.action_type === LogAction.status_refresh
+                  ? REFRESH_OUTCOME[row.status ?? ""]?.dot
+                  : undefined) ?? logActionDot(row.action_type)
               }`}
             />
             <span>
-              <span className="mr-2 font-semibold text-foreground">{LABEL[row.action_type] ?? row.action_type}</span>
-              {row.action_type === "automation_status_change" && row.status && row.status in ORIGIN_LABEL && (
+              <span className="mr-2 font-semibold text-foreground" title={logActionDescription(row.action_type)}>
+                {logActionLabel(row.action_type)}
+              </span>
+              {row.action_type === LogAction.automation_status_change && row.status && row.status in ORIGIN_LABEL && (
                 <span className="mr-2 inline-flex items-center rounded bg-muted px-1 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                   {ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}
                 </span>
