@@ -1527,12 +1527,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
           />
         </button>
-        <span className="text-muted-foreground">
-          {new Date(row.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          })}
+        <span className="text-muted-foreground" title={row.created_at ?? "timestamp unavailable"}>
+          {formatClock(row.created_at)}
         </span>
         <span
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
