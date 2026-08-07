@@ -2,7 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { checkAndRecord, rateLimitError } from "../rate-limit";
-import { LOG_ACTION_TYPES, logActionTypeFilterSchema, safeParseLogActionType } from "@/lib/log-action-types.schema";
+import { logActionTypeFilterSchema, safeParseLogActionType } from "@/lib/log-action-types.schema";
+import { LOG_ACTION_TYPES } from "@/lib/log-action-types.generated";
 
 function supabaseForUser(ctx: ToolContext) {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
