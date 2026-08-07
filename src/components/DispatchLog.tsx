@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, Link2 as LinkIcon, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { DispatchLogRowDetails } from "@/components/DispatchLogRowDetails";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
@@ -418,7 +418,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     logStatusOnly?: unknown;
     logFailed?: unknown;
     logOrigin?: unknown;
+    /** Deep-linked dispatch: ?logId=<uuid> opens that row's details drawer. */
+    logId?: unknown;
   };
+
 
   /**
    * The toggle-style filters (scope, status-refresh only, failures only, origin)
@@ -488,9 +491,21 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   // Rows the user has expanded to see the full dispatch payload.
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
-  const toggleExpanded = (id: string) =>
+  /**
+   * Deep-linked dispatch (?logId=<uuid>). A shared link opens that row's details
+   * drawer, scrolls it into view, and — when the row isn't part of the current
+   * filtered page set — pins it above the list so the link always resolves.
+   */
+  const deepLinkId = typeof rawSearch.logId === "string" ? rawSearch.logId.trim() : "";
+  const setDeepLinkId = (id: string | undefined) => setSearchParam("logId", id);
+  const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    // Collapsing the shared row also drops it from the URL, so the link the user
+    // copies next matches what they're actually looking at.
+    if (id === deepLinkId && expandedIds.includes(id)) setDeepLinkId(undefined);
+  };
   const lastAnnouncedIdRef = useRef<string | null>(null);
+
 
   const rawLogTypes = rawSearch.logTypes;
   const validation = useMemo(
@@ -1354,8 +1369,82 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     getItemKey: (index: number) => filtered[index]?.id ?? index,
   });
 
+  /**
+   * A shared link must resolve even when the recipient's filters, date range or
+   * scope exclude that dispatch — otherwise the drawer would never open. When the
+   * deep-linked id isn't in the loaded rows we look it up by id alone (live table
+   * first, then the archive) and pin it above the list.
+   */
+  const deepLinkInList = deepLinkId ? filtered.some((r) => r.id === deepLinkId) : false;
+  const { data: pinnedRow, isLoading: isPinnedLoading } = useQuery({
+    queryKey: ["log-deep-link", deepLinkId],
+    enabled: !!deepLinkId && !deepLinkInList,
+    staleTime: 60_000,
+    queryFn: async (): Promise<LogRow | null> => {
+      for (const table of ["logs", "logs_archive"] as const) {
+        const timeCol = table === "logs" ? "created_at" : "original_created_at";
+        const { data, error } = await supabase
+          .from(table)
+          .select(
+            sel(
+              `id, action_type, message_sent, ${timeCol}, status, customer_id, recipient_phone, twilio_message_sid, voicemail_url, recording_sid, call_sid, prompt_template, prompt_template_hash, prompt_cooldown_minutes`,
+            ),
+          )
+          .eq("id", deepLinkId)
+          .limit(1)
+          .returns<RawLogRow[]>();
+        if (error) throw error;
+        const parsed = parseLogRowsResponse(data ?? []);
+        const r = parsed.rows[0];
+        if (!r) continue;
+        return {
+          id: r.id,
+          action_type: r.action_type,
+          message_sent: r.message_sent,
+          created_at: (r.created_at ?? r.original_created_at) as string,
+          status: r.status,
+          customer_id: r.customer_id,
+          recipient_phone: r.recipient_phone ?? null,
+          twilio_message_sid: r.twilio_message_sid ?? null,
+          voicemail_url: r.voicemail_url ?? null,
+          recording_sid: r.recording_sid ?? null,
+          call_sid: r.call_sid ?? null,
+          prompt_template: r.prompt_template ?? null,
+          prompt_template_hash: r.prompt_template_hash ?? null,
+          prompt_cooldown_minutes: r.prompt_cooldown_minutes ?? null,
+        };
+      }
+      return null;
+    },
+  });
 
+  // Open the drawer for the deep-linked row and bring it into view.
+  useEffect(() => {
+    if (!deepLinkId) return;
+    setExpandedIds((prev) => (prev.includes(deepLinkId) ? prev : [...prev, deepLinkId]));
+    if (!deepLinkInList) return;
+    const node = document.getElementById(`log-row-${deepLinkId}`);
+    if (typeof node?.scrollIntoView === "function") node.scrollIntoView({ block: "center" });
+  }, [deepLinkId, deepLinkInList]);
 
+  /** Absolute, shareable URL for one dispatch, preserving the current view. */
+  const shareLinkFor = (id: string): string => {
+    if (typeof window === "undefined") return `?logId=${id}`;
+    const url = new URL(window.location.href);
+    url.searchParams.set("logId", id);
+    return url.toString();
+  };
+
+  const copyShareLink = async (id: string) => {
+    setDeepLinkId(id);
+    setExpandedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    try {
+      await navigator.clipboard.writeText(shareLinkFor(id));
+      toast.success("Link copied", { description: "Opens this dispatch with its details expanded." });
+    } catch {
+      toast.error("Copy failed", { description: "Clipboard access was denied." });
+    }
+  };
 
 
   useEffect(() => {
@@ -1392,9 +1481,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const affected = parseAffected(row);
     const isCopied = copiedId === row.id;
     const isExpanded = expandedIds.includes(row.id);
+    const isShared = row.id === deepLinkId;
     return (
-      <div>
+      <div
+        id={`log-row-${row.id}`}
+        {...(isShared ? { "data-shared": "true" } : {})}
+        className={isShared ? "bg-primary/5 ring-1 ring-inset ring-primary/40" : undefined}
+      >
       <div className="group grid grid-cols-[auto_auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
+
         <button
           type="button"
           aria-expanded={isExpanded}
@@ -1463,29 +1558,45 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </span>
           )}
         </span>
-        <button
-          type="button"
-          aria-label={isCopied ? "Copied" : "Copy dispatch line"}
-          title={isCopied ? "Copied" : "Copy dispatch line"}
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(formatDispatchLine(row));
-              setCopiedId(row.id);
-              toast.success("Dispatch line copied");
-              window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
-            } catch {
-              toast.error("Copy failed", { description: "Clipboard access was denied." });
-            }
-          }}
-          className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
-        >
-          {isCopied ? (
-            <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
-          ) : (
-            <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
-          )}
-        </button>
+        <span className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Copy link to this dispatch"
+            title="Copy link to this dispatch"
+            onClick={() => void copyShareLink(row.id)}
+            className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+          >
+            <LinkIcon
+              size={12}
+              className={isShared ? "text-primary" : "text-muted-foreground hover:text-foreground"}
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            type="button"
+            aria-label={isCopied ? "Copied" : "Copy dispatch line"}
+            title={isCopied ? "Copied" : "Copy dispatch line"}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(formatDispatchLine(row));
+                setCopiedId(row.id);
+                toast.success("Dispatch line copied");
+                window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
+              } catch {
+                toast.error("Copy failed", { description: "Clipboard access was denied." });
+              }
+            }}
+            className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+          >
+            {isCopied ? (
+              <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
+            ) : (
+              <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
+            )}
+          </button>
+        </span>
       </div>
+
       {isExpanded && (
         <div id={`log-details-${row.id}`}>
           <DispatchLogRowDetails row={row} />
@@ -2098,6 +2209,35 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                   : "No dispatches yet. Actions will appear here in real time."}
           </div>
         )}
+
+        {/* Deep link to a dispatch the current filters exclude: pin it on top so a
+            shared link always opens the record it points at. */}
+        {deepLinkId && !deepLinkInList && (
+          <div role="listitem" className="border-b border-border bg-primary/5">
+            <div className="flex items-center justify-between gap-3 px-5 pt-3">
+              <span className="mono text-[10px] uppercase tracking-widest text-primary">
+                Shared dispatch
+              </span>
+              <button
+                type="button"
+                onClick={() => setDeepLinkId(undefined)}
+                className="kb-focus mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              >
+                Clear
+              </button>
+            </div>
+            {isPinnedLoading ? (
+              <div className="px-5 py-3 text-xs text-muted-foreground">Loading shared dispatch…</div>
+            ) : pinnedRow ? (
+              <RowBody row={pinnedRow} />
+            ) : (
+              <div className="px-5 py-3 text-xs text-muted-foreground">
+                That dispatch is no longer available, or you don’t have access to it.
+              </div>
+            )}
+          </div>
+        )}
+
 
         {/* Small lists render in full; long ones (many appended pages) switch to
             windowed rendering so scrolling stays smooth no matter how many
