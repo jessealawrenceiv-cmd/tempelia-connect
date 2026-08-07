@@ -200,12 +200,17 @@ afterEach(() => {
 });
 
 suite("DispatchLog rows with missing or null payload fields", () => {
-  it("renders every malformed row without throwing or logging a React error", async () => {
+  /** Rows whose action_type isn't an allowed LogAction are dropped at parse. */
+  const renderableRows = rows.filter(
+    (r) => typeof r["action_type"] === "string" && (r["action_type"] as string).length > 0,
+  );
+
+  it("renders every renderable malformed row without throwing or logging a React error", async () => {
     await renderAndSettle();
 
-    // One expand toggle per row => all rows made it into the list.
+    // One expand toggle per surviving row => nothing crashed mid-list.
     const toggles = screen.getAllByRole("button", { name: /Show dispatch details/i });
-    expect(toggles.length).toBe(rows.length);
+    expect(toggles.length).toBe(renderableRows.length);
     expect(consoleErrors.join("\n")).not.toMatch(/Invalid|Cannot read|undefined is not/i);
   });
 
@@ -220,32 +225,31 @@ suite("DispatchLog rows with missing or null payload fields", () => {
 
   it("shows a dash instead of a clock when the timestamp is missing or unparseable", async () => {
     await renderAndSettle();
-    // no-timestamp, bad-timestamp and sparse-row all fall back to "—".
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTitle("timestamp unavailable")).toBeTruthy();
     expect(screen.getByTitle("not-a-real-date")).toBeTruthy();
   });
 
   it("shows a dash for null and empty-string messages", async () => {
     await renderAndSettle();
-    // Both the null and the "" message rows render the placeholder, so the
-    // dash count exceeds the missing-timestamp count alone.
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(5);
-    expect(screen.getByText("orphan record")).toBeTruthy();
+    // no-timestamp clock + bad-timestamp clock are dashes, and the empty-string
+    // and null message rows add two more placeholders.
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
   });
 
   it("omits the origin badge when an ACTIVE row has no status", async () => {
     await renderAndSettle();
-    // Origin badges only ever appear as quick-filter chips here (never on a row),
-    // so no row-level "This device"/"Backend" badge exists.
-    const list = screen.getAllByRole("button", { name: /Show dispatch details/i })[5]!;
-    const rowEl = list.closest("div")!;
+    const toggle = screen.getAllByRole("button", { name: /Show dispatch details/i })[5]!;
+    const rowEl = toggle.closest("div")!;
     expect(within(rowEl).queryByText(/This device|Another device|Backend/)).toBeNull();
   });
 
-  it("labels a blank or null action_type as UNKNOWN", async () => {
+  it("drops rows whose action_type is blank or null instead of rendering a broken label", async () => {
     await renderAndSettle();
-    expect(screen.getAllByText("UNKNOWN").length).toBeGreaterThanOrEqual(2);
+    // Unknown action types are rejected at the parse boundary, so their payload
+    // text never reaches the list — and no crash-y label is rendered.
+    expect(screen.queryByText("orphan record")).toBeNull();
+    expect(screen.queryByText("UNKNOWN")).toBeNull();
   });
 
   it("falls back to a readable outcome for a STATUS_REFRESH row with no payload", async () => {
@@ -253,17 +257,19 @@ suite("DispatchLog rows with missing or null payload fields", () => {
     expect(screen.getByText("refresh")).toBeTruthy();
   });
 
-  it("opens the details drawer for a fully-sparse row and omits the missing fields", async () => {
+  it("opens the details drawer for a row with no timestamp and omits the missing fields", async () => {
     await renderAndSettle();
     const toggles = screen.getAllByRole("button", { name: /Show dispatch details/i });
-    fireEvent.click(toggles[toggles.length - 1]!);
+    // Index 1 == the row whose created_at is null.
+    fireEvent.click(toggles[1]!);
 
     await waitFor(() => expect(screen.getByText("log id")).toBeTruthy());
-    // Only the id is present, so no "recorded at" / "recipient" rows render.
+    // The timestamp is unusable, so the "recorded at" field is omitted entirely.
     expect(screen.queryByText("recorded at")).toBeNull();
     expect(screen.queryByText("recipient")).toBeNull();
     expect(document.body.textContent ?? "").not.toMatch(/Invalid Date/);
   });
+
 
   it("copies a dispatch line for a row with no timestamp without leaking Invalid Date", async () => {
     await renderAndSettle();
