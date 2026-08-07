@@ -40,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
+  const insertLogValidated = useValidatedLogInsert(supabase);
   const runStatusRefreshFn = useServerFn(runStatusRefresh);
 
   const { isStaff } = useTeamRole();
@@ -308,7 +309,7 @@ function SettingsPage() {
 
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) return;
-        const { error } = await insertLog(supabase, {
+        const { error } = await insertLogValidated({
           user_id: u.user.id,
           action_type: LogAction.automation_status_change,
           status: entry.origin,
@@ -663,7 +664,7 @@ function SettingsPage() {
       if (!u.user) return;
       const windowStart = lastRefreshAtRef.current;
       const affected = status === "failed" ? [] : await collectAffected(windowStart);
-      const { error } = await insertLog(supabase, {
+      const { error } = await insertLogValidated({
         user_id: u.user.id,
         action_type: LogAction.status_refresh,
         status,

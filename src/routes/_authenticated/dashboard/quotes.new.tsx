@@ -118,6 +118,7 @@ function NewQuotePage() {
   const navigate = useNavigate();
   const { edit: editId } = Route.useSearch();
   const isEdit = !!editId;
+  const insertLogValidated = useValidatedLogInsert(supabase);
 
   // Load existing quote when editing
   const { data: existingQuote } = useQuery({
@@ -450,7 +451,7 @@ function NewQuotePage() {
 
       // Audit trail: log when a quote overwrites an existing (different) email.
       if (emailTrim && priorEmail && priorEmail.trim().toLowerCase() !== emailTrim.toLowerCase()) {
-        const { error: logErr } = await insertLog(supabase, {
+        const { error: logErr } = await insertLogValidated({
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: LogAction.customer_email_updated,
@@ -467,7 +468,7 @@ function NewQuotePage() {
       if (priorSms && !smsOptIn) preserved.push("opt_in_consent");
       if (priorConsent && !consentSigned) preserved.push("consent_form_signed");
       if (preserved.length) {
-        const { error: consentLogErr } = await insertLog(supabase, {
+        const { error: consentLogErr } = await insertLogValidated({
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: LogAction.customer_consent_preserved,
