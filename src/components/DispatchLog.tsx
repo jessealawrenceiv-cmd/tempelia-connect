@@ -889,8 +889,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               </button>
             </>
           ) : (
-            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              End of log
+            <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" aria-hidden="true" />
+              No more {sortDir === "oldest" ? "newer" : "older"} actions
             </span>
           )}
         </div>
