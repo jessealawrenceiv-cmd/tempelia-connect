@@ -201,6 +201,108 @@ export type Database = {
         }
         Relationships: []
       }
+      coverage_gap_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          acknowledged_note: string | null
+          action_type: string
+          cause: string
+          created_at: string
+          first_seen_at: string
+          flagged_at: string | null
+          id: string
+          last_seen_at: string
+          observation_count: number
+          resolved_at: string | null
+          severity: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
+          action_type: string
+          cause?: string
+          created_at?: string
+          first_seen_at?: string
+          flagged_at?: string | null
+          id?: string
+          last_seen_at?: string
+          observation_count?: number
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
+          action_type?: string
+          cause?: string
+          created_at?: string
+          first_seen_at?: string
+          flagged_at?: string | null
+          id?: string
+          last_seen_at?: string
+          observation_count?: number
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coverage_gap_scan_runs: {
+        Row: {
+          alerts_flagged: number
+          alerts_opened: number
+          alerts_resolved: number
+          businesses_scanned: number
+          created_at: string
+          detail: string | null
+          duration_ms: number
+          gaps_observed: number
+          id: string
+          ran_at: string
+          scope: string
+          triggered_by: string | null
+        }
+        Insert: {
+          alerts_flagged?: number
+          alerts_opened?: number
+          alerts_resolved?: number
+          businesses_scanned?: number
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number
+          gaps_observed?: number
+          id?: string
+          ran_at?: string
+          scope?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          alerts_flagged?: number
+          alerts_opened?: number
+          alerts_resolved?: number
+          businesses_scanned?: number
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number
+          gaps_observed?: number
+          id?: string
+          ran_at?: string
+          scope?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           consent_form_signed: boolean
