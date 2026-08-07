@@ -22,6 +22,7 @@ import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
 import { insertLog } from "@/lib/log-action-types";
+import { reportLogInsertError } from "@/lib/log-error";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
   "this-device": "from this device",
