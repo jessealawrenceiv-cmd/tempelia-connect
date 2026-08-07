@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -231,6 +231,34 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const typeKey = [...selectedTypes].sort().join(",");
   const searchKey = searchTerms.join(" ");
 
+  // A search term can also be a customer's name or phone number. Names live on
+  // `customers`, not `logs`, so resolve each term to matching customer ids first
+  // and fold those ids into that term's Postgres OR clause.
+  const { data: termCustomerIds } = useQuery({
+    queryKey: ["log-search-customers", searchKey],
+    enabled: searchTerms.length > 0,
+    staleTime: 30_000,
+    queryFn: async (): Promise<Record<string, string[]>> => {
+      const out: Record<string, string[]> = {};
+      for (const term of searchTerms) {
+        const safe = term.replace(/[%,()]/g, "");
+        if (!safe) continue;
+        const { data, error } = await supabase
+          .from("customers")
+          .select(sel("id"))
+          .or(
+            `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,phone_number.ilike.%${safe}%,email.ilike.%${safe}%`,
+          )
+          .limit(300)
+          .returns<{ id: string }[]>();
+        if (error) throw error;
+        out[safe] = (data ?? []).map((r) => r.id);
+      }
+      return out;
+    },
+  });
+  const customerMatchKey = JSON.stringify(termCustomerIds ?? {});
+
   // Every active filter is pushed down to Postgres. Shared by the paginated
   // list query and the CSV export so both always describe the same result set.
   const applyFilters = (q: FilterableQuery, timeCol: string, cursor: string | null): FilterableQuery => {
@@ -249,11 +277,20 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       if (selectedTypes.length > 0) out = out.in("action_type", selectedTypes);
     }
 
-    // Free-text search runs in Postgres so pages stay full-size.
+    // Free-text search runs in Postgres so pages stay full-size. Each term must
+    // match somewhere: message text, record type, the recipient phone number, or
+    // a customer whose name/phone/email matched the term.
     for (const term of searchTerms) {
       const safe = term.replace(/[%,()]/g, "");
       if (!safe) continue;
-      out = out.or(`message_sent.ilike.%${safe}%,action_type.ilike.%${safe}%`);
+      const clauses = [
+        `message_sent.ilike.%${safe}%`,
+        `action_type.ilike.%${safe}%`,
+        `recipient_phone.ilike.%${safe}%`,
+      ];
+      const ids = termCustomerIds?.[safe] ?? [];
+      if (ids.length > 0) clauses.push(`customer_id.in.(${ids.join(",")})`);
+      out = out.or(clauses.join(","));
     }
     return out;
   };
@@ -306,6 +343,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       toISO,
       typeKey,
       searchKey,
+      customerMatchKey,
       statusRefreshOnly,
       failedOnly,
       originFilter,
@@ -315,6 +353,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     getNextPageParam: (lastPage: LogRow[]) =>
       lastPage.length < limit ? undefined : (lastPage[lastPage.length - 1]?.created_at ?? undefined),
     queryFn: ({ pageParam }) => fetchLogPage(limit, pageParam),
+    // Wait for the customer-name lookup so a name search doesn't briefly show
+    // only message/phone matches before the ids land.
+    enabled: searchTerms.length === 0 || termCustomerIds !== undefined,
   });
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
@@ -474,8 +515,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search messages…"
-              aria-label="Search activity messages"
+              placeholder="Search name, phone, message…"
+              aria-label="Search activity by phone number, customer name, or message text"
               aria-invalid={filterIssues.some((i) => i.field === "q") || undefined}
               maxLength={MAX_LOG_SEARCH_LENGTH + 20}
               className="kb-focus h-7 w-40 rounded-full border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56"
