@@ -224,9 +224,39 @@ async function loadPages(user: ReturnType<typeof userEvent.setup>, pages: number
   }
 }
 
+/**
+ * jsdom reports every element as 0x0, which would make the windowed renderer
+ * mount nothing. Give elements a real viewport so the virtualizer produces rows.
+ */
+function stubLayout() {
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get: () => 600,
+  });
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+    configurable: true,
+    get: () => 600,
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get: () => 800,
+  });
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    return { width: 800, height: 600, top: 0, left: 0, bottom: 600, right: 800, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+  };
+  if (!("ResizeObserver" in window)) {
+    (window as unknown as Record<string, unknown>)["ResizeObserver"] = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+}
+
 beforeEach(() => {
   searchState = {};
   window.localStorage.clear();
+  stubLayout();
 });
 
 afterEach(() => cleanup());
