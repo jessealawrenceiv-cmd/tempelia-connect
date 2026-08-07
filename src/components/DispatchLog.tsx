@@ -1474,10 +1474,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     const latest = filtered[0];
     if (!latest || latest.id === lastAnnouncedIdRef.current) return;
     lastAnnouncedIdRef.current = latest.id;
-    const time = new Date(latest.created_at).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const parsed = safeDate(latest.created_at);
+    const time = parsed
+      ? parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "an unknown time";
     setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
