@@ -41,6 +41,7 @@ import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/publi
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_authenticated/dashboard/quotes.new'
 import { Route as AuthenticatedDashboardAdminNumbersRouteImport } from './routes/_authenticated/dashboard/admin/numbers'
+import { Route as AuthenticatedDashboardAdminLogActionsRouteImport } from './routes/_authenticated/dashboard/admin/log-actions'
 import { Route as AuthenticatedDashboardAdminDepositRecoveryRouteImport } from './routes/_authenticated/dashboard/admin/deposit-recovery'
 import { Route as AuthenticatedDashboardQuotesQuoteIdPrintRouteImport } from './routes/_authenticated/dashboard/quotes.$quoteId.print'
 import { Route as AuthenticatedDashboardInvoicesInvoiceIdEditRouteImport } from './routes/_authenticated/dashboard/invoices.$invoiceId.edit'
@@ -221,6 +222,12 @@ const AuthenticatedDashboardAdminNumbersRoute =
     path: '/dashboard/admin/numbers',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDashboardAdminLogActionsRoute =
+  AuthenticatedDashboardAdminLogActionsRouteImport.update({
+    id: '/dashboard/admin/log-actions',
+    path: '/dashboard/admin/log-actions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardAdminDepositRecoveryRoute =
   AuthenticatedDashboardAdminDepositRecoveryRouteImport.update({
     id: '/dashboard/admin/deposit-recovery',
@@ -264,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
+  '/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -300,6 +308,7 @@ export interface FileRoutesByTo {
   '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
+  '/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
   '/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -338,6 +347,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/admin/deposit-recovery': typeof AuthenticatedDashboardAdminDepositRecoveryRoute
+  '/_authenticated/dashboard/admin/log-actions': typeof AuthenticatedDashboardAdminLogActionsRoute
   '/_authenticated/dashboard/admin/numbers': typeof AuthenticatedDashboardAdminNumbersRoute
   '/_authenticated/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard/'
     | '/dashboard/admin/deposit-recovery'
+    | '/dashboard/admin/log-actions'
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
     | '/api/public/payments/webhook'
@@ -412,6 +423,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard'
     | '/dashboard/admin/deposit-recovery'
+    | '/dashboard/admin/log-actions'
     | '/dashboard/admin/numbers'
     | '/dashboard/quotes/new'
     | '/api/public/payments/webhook'
@@ -449,6 +461,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/settings'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/admin/deposit-recovery'
+    | '/_authenticated/dashboard/admin/log-actions'
     | '/_authenticated/dashboard/admin/numbers'
     | '/_authenticated/dashboard/quotes/new'
     | '/api/public/payments/webhook'
@@ -710,6 +723,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardAdminNumbersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/admin/log-actions': {
+      id: '/_authenticated/dashboard/admin/log-actions'
+      path: '/dashboard/admin/log-actions'
+      fullPath: '/dashboard/admin/log-actions'
+      preLoaderRoute: typeof AuthenticatedDashboardAdminLogActionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard/admin/deposit-recovery': {
       id: '/_authenticated/dashboard/admin/deposit-recovery'
       path: '/dashboard/admin/deposit-recovery'
@@ -745,6 +765,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardSettingsRoute: typeof AuthenticatedDashboardSettingsRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDashboardAdminDepositRecoveryRoute: typeof AuthenticatedDashboardAdminDepositRecoveryRoute
+  AuthenticatedDashboardAdminLogActionsRoute: typeof AuthenticatedDashboardAdminLogActionsRoute
   AuthenticatedDashboardAdminNumbersRoute: typeof AuthenticatedDashboardAdminNumbersRoute
   AuthenticatedDashboardQuotesNewRoute: typeof AuthenticatedDashboardQuotesNewRoute
   AuthenticatedDashboardInvoicesIndexRoute: typeof AuthenticatedDashboardInvoicesIndexRoute
@@ -766,6 +787,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedDashboardAdminDepositRecoveryRoute:
     AuthenticatedDashboardAdminDepositRecoveryRoute,
+  AuthenticatedDashboardAdminLogActionsRoute:
+    AuthenticatedDashboardAdminLogActionsRoute,
   AuthenticatedDashboardAdminNumbersRoute:
     AuthenticatedDashboardAdminNumbersRoute,
   AuthenticatedDashboardQuotesNewRoute: AuthenticatedDashboardQuotesNewRoute,
