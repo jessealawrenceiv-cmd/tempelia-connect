@@ -76,7 +76,7 @@ describe.skipIf(!hasDb)("logs API rejects invalid action_type over HTTP", () => 
     "missed_call_text ", // trailing space
     "quote_sms; drop table logs",
     "",
-  ])("returns 400 + %j constraint violation for %j", async (bad) => {
+  ])("returns 400 with the constraint violation for %j", async (bad) => {
     const { status, json } = await postLog({ user_id: userId, action_type: bad, status: "api_test" });
     expect(status).toBe(400);
     expect(json.code).toBe(CHECK_VIOLATION);
