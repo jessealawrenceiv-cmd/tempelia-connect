@@ -18,6 +18,13 @@ import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
 import { phoneDigits } from "@/lib/phone";
 import {
+  MAX_LOG_PRESETS,
+  readStoredPresets,
+  summarizePreset,
+  writeStoredPresets,
+  type LogFilterPreset,
+} from "@/lib/activity-log-presets";
+import {
   MAX_LOG_SEARCH_LENGTH,
   describeLogRequestError,
   friendlyLogRequestError,
