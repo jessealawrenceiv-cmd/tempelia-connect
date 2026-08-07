@@ -158,10 +158,83 @@ export function DispatchLogRowDetails({ row }: { row: DispatchLogDetailRow }) {
             </button>
           )}
         </div>
-        <pre className="max-h-72 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90">
-          {payload.text}
-        </pre>
+
+        {row.message_sent && (
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <Search
+                size={12}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                id={searchId}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && query) {
+                    e.stopPropagation();
+                    setQuery("");
+                  }
+                }}
+                placeholder="Search payload fields…"
+                aria-label="Search payload fields"
+                aria-describedby={`${searchId}-count`}
+                className="kb-focus w-full rounded border border-border bg-background py-1.5 pl-7 pr-8 font-mono text-[11px] text-foreground placeholder:text-muted-foreground"
+              />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Clear payload search"
+                  onClick={() => setQuery("")}
+                  className="kb-focus absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={12} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <span
+              id={`${searchId}-count`}
+              role="status"
+              aria-live="polite"
+              className="mono text-[10px] uppercase tracking-widest text-muted-foreground"
+            >
+              {query.trim()
+                ? matches.length === 0
+                  ? "No matching payload lines"
+                  : `${matches.length} matching line${matches.length === 1 ? "" : "s"}`
+                : ""}
+            </span>
+          </div>
+        )}
+
+        {query.trim() ? (
+          matches.length === 0 ? (
+            <p className="rounded border border-border bg-background px-3 py-2 font-mono text-[11px] text-muted-foreground">
+              Nothing in this payload matches “{query.trim()}”.
+            </p>
+          ) : (
+            <ul className="max-h-72 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90">
+              {matches.map((m) => (
+                <li key={m.line} className="flex gap-3">
+                  <span className="select-none text-right text-muted-foreground" style={{ minWidth: "2.5ch" }}>
+                    {m.line}
+                  </span>
+                  <span className="whitespace-pre-wrap break-all">
+                    <Highlight text={m.content.trimEnd()} query={query} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : (
+          <pre className="max-h-72 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90">
+            {payload.text}
+          </pre>
+        )}
       </div>
+
     </div>
   );
 }
