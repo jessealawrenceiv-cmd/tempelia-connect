@@ -15,6 +15,8 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const hasDb = Boolean(url && serviceKey);
 
 const CONSTRAINT_ERROR = "23514";
+const CONSTRAINT_NAME = "logs_action_type_check";
+
 
 describe.skipIf(!hasDb)("logs.action_type CHECK constraint", () => {
   let supabase: SupabaseClient;
