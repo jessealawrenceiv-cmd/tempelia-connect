@@ -84,9 +84,8 @@ describe("insertLog", () => {
     "blocks invalid value %j before the database",
     async (bad) => {
       const { client, insert } = makeClient();
-      await expect(
-        insertLog(client as never, { action_type: bad } as never),
-      ).rejects.toThrow(/Invalid logs\.action_type/);
+      const res = await insertLog(client as never, { action_type: bad } as never);
+      expect((res.error as { constraint?: string }).constraint).toBe("logs_action_type_check");
       expect(client.from).not.toHaveBeenCalled();
       expect(insert).not.toHaveBeenCalled();
     },
