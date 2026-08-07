@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, Link2 as LinkIcon, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { DispatchLogRowDetails } from "@/components/DispatchLogRowDetails";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
