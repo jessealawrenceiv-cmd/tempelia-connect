@@ -264,7 +264,9 @@ function NewQuotePage() {
     if (q.deposit_custom_type) setDepositCustomType(q.deposit_custom_type as DepositCustomType);
     setDepositCustomValue(q.deposit_custom_value != null ? String(q.deposit_custom_value) : "");
 
-    const items: QuoteLineItem[] = Array.isArray(q.line_items) ? (q.line_items as QuoteLineItem[]) : [];
+    const items: QuoteLineItem[] = Array.isArray(q.line_items)
+      ? (q.line_items as QuoteLineItem[])
+      : [];
     setCategories((prev) =>
       prev.map((c) => {
         const found = items.find((li) => li.key === c.key);
