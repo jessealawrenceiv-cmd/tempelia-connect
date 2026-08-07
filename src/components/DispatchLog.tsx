@@ -392,6 +392,37 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         </div>
       </div>
 
+      {(filterIssues.length > 0 || logError) && (
+        <div
+          data-testid="log-filter-errors"
+          role="status"
+          aria-live="polite"
+          className="border-b border-border bg-destructive/10 px-5 py-3"
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-foreground">
+                {logError ? "We couldn’t load these records" : "Some filters were adjusted"}
+              </p>
+              <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                {logError && <li>{friendlyLogRequestError(logError)}</li>}
+                {filterIssues.map((issue) => (
+                  <li key={`${issue.field}-${issue.message}`}>{issue.message}</li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="kb-focus shrink-0 rounded-full bg-muted px-2.5 py-1 text-[10px] uppercase tracking-wider text-foreground hover:bg-muted/80"
+            >
+              Reset filters
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-border px-5 py-3">
         <div className="flex flex-wrap items-center gap-4">
           <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -407,8 +438,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search messages…"
               aria-label="Search activity messages"
+              aria-invalid={filterIssues.some((i) => i.field === "q") || undefined}
+              maxLength={MAX_LOG_SEARCH_LENGTH + 20}
               className="kb-focus h-7 w-40 rounded-full border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56"
             />
+
             {searchQuery && (
               <button
                 type="button"
