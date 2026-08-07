@@ -20,6 +20,8 @@ import {
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
+import { isLogActionFilterRejection } from "@/lib/log-action-filter-rejection";
+
 import { phoneDigits } from "@/lib/phone";
 import {
   MAX_LOG_PRESETS,
@@ -1262,10 +1264,36 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     return map;
   };
 
+  /**
+   * Server pre-flight for the export's action_type filter.
+   *
+   * Mirrors the logs list endpoint: the server re-validates the filter through
+   * the shared guard and answers with the same `logs_action_type_check` 400
+   * payload for unknown or mixed lists. A rejection aborts the export by
+   * throwing that payload, so the toast renders exactly what the list alert
+   * shows. Transport failures (offline, dev bundle without the RPC) are logged
+   * and don't block — the export request itself will surface them.
+   */
+  const assertExportFiltersOnServer = async () => {
+    if (selectedTypes.length === 0) return;
+    try {
+      const { validateLogExportFilters } = await import("@/lib/activity-log-export.functions");
+      const result = await validateLogExportFilters({
+        data: { actionTypes: logActionFilterValues(selectedTypes) },
+      });
+      if (!result.ok) throw result.rejection;
+    } catch (err) {
+      if (isLogActionFilterRejection(err)) throw err;
+      console.warn("[activity-log] export filter pre-flight unavailable", err);
+    }
+  };
+
   const exportCsv = async () => {
     setIsExporting(true);
     try {
+      await assertExportFiltersOnServer();
       const all = await fetchLogPage(EXPORT_ROW_CAP, null);
+
       if (all.length === 0) {
         toast.info("Nothing to export for the current filters.");
         return;
