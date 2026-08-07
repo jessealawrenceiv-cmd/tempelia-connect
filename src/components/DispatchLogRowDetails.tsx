@@ -98,7 +98,7 @@ export function DispatchLogRowDetails({ row }: { row: DispatchLogDetailRow }) {
     { label: "log id", value: row.id },
     { label: "action type", value: row.action_type },
     { label: "status", value: row.status },
-    { label: "recorded at", value: new Date(row.created_at).toLocaleString() },
+    { label: "recorded at", value: formatRecordedAt(row.created_at) },
     { label: "contact id", value: row.customer_id },
     { label: "recipient", value: row.recipient_phone },
     { label: "message sid", value: row.twilio_message_sid },
