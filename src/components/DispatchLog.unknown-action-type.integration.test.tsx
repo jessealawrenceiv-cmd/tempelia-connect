@@ -172,8 +172,8 @@ describe("unknown action_type in storage never reaches clients", () => {
     expect(document.body.textContent ?? "").not.toContain(GHOST);
 
     await waitFor(() => expect(warn).toHaveBeenCalled());
-    const messages = warn.mock.calls.map((c) => String(c[0]));
-    const dropWarning = messages.find((m) => m.includes("unknown action_type"));
+    const messages = (warn.mock.calls as unknown[][]).map((c) => String(c[0]));
+    const dropWarning = messages.find((m: string) => m.includes("unknown action_type"));
     expect(dropWarning).toBeTruthy();
     expect(dropWarning).toContain("[activity-log]");
     expect(dropWarning).toContain(GHOST);
