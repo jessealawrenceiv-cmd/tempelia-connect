@@ -247,7 +247,7 @@ function NewQuotePage() {
   // Seed all state from existingQuote once loaded
   useEffect(() => {
     if (!existingQuote || seeded) return;
-    const q = existingQuote as any;
+    const q = existingQuote as Tables<"quotes">;
     setFirstName(q.customer_first_name ?? "");
     setLastName(q.customer_last_name ?? "");
     setBusinessName(q.customer_business_name ?? "");
