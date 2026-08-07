@@ -32,7 +32,7 @@ for (const key of Object.getOwnPropertyNames(dom.window)) {
 g["IS_REACT_ACT_ENVIRONMENT"] = true;
 
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LOG_ACTION_TYPES } from "@/lib/log-action-types.generated";
 
@@ -263,7 +263,7 @@ vi.mock("@tanstack/react-router", () => ({
   },
 }));
 
-const { render, screen, waitFor } = await import("@testing-library/react");
+const { cleanup, render, screen, waitFor } = await import("@testing-library/react");
 const { DispatchLog } = await import("@/components/DispatchLog");
 
 const CALL = { From: "+14155550123", To: "+14155559999", CallSid: "CA123" };
@@ -309,6 +309,8 @@ beforeEach(() => {
   state.customer = { id: "cust-1" };
   state.smsShouldFail = false;
 });
+
+afterEach(() => cleanup());
 
 describe("Twilio missed-call webhook → Activity log rendering", () => {
   it("renders the missed-call auto-reply entry written by the webhook", async () => {
