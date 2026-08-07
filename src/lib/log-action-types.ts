@@ -53,7 +53,9 @@ export {
   parseLogActionType,
   safeParseLogActionType,
 };
-export type { LogActionType, LogActionTypeViolation };
+export { isDedupeConflictError, dedupeConflictError, diffDedupeRow };
+export type { LogActionType, LogActionTypeViolation, DedupeConflictError };
+
 
 const ALLOWED = new Set<string>(LOG_ACTION_TYPES);
 
