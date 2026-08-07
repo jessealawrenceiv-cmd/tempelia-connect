@@ -649,10 +649,47 @@ describe("Twilio webhook redelivery → DispatchLog stays deduped and ordered", 
 // in parallel and assert the same invariants hold.
 // ---------------------------------------------------------------------------
 describe("concurrent redeliveries stay idempotent", () => {
+  /**
+   * Test-harness warm-up, not app behaviour: Vitest resolves a mocked module on
+   * first import, and six handler invocations racing that very first resolution
+   * can observe the unmocked signature verifier. One throwaway delivery per
+   * handler warms the module graph; the shared tables are then reset so each
+   * test still starts from an empty log.
+   */
+  beforeEach(async () => {
+    await missedCall({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      CallSid: "CA-warmup",
+      CallStatus: "no-answer",
+    });
+    await inboundSms({
+      From: CALLER,
+      To: TENANT_NUMBER,
+      Body: "warmup",
+      MessageSid: "SM-warmup",
+    });
+    await recordingStatus({
+      From: CALLER,
+      Called: TENANT_NUMBER,
+      CallSid: "CA-warmup-rec",
+      RecordingSid: "RE-warmup",
+      RecordingStatus: "completed",
+      RecordingUrl: "https://api.twilio.com/rec/RE-warmup",
+      RecordingDuration: "5",
+    });
+    logs.length = 0;
+    logSeq = 0;
+    rejections.length = 0;
+    deliveries.clear();
+  });
+
   for (const type of WEBHOOK_TYPES) {
     it(`writes one set of rows for ${type.name} when 6 attempts race`, async () => {
       const responses = await Promise.all(Array.from({ length: 6 }, () => type.post()));
+      // Racing attempts are still answered, never dropped or 500'd.
       for (const res of responses) expect(res.status).toBe(200);
+
 
       const total = logs.length;
       expect(total).toBeGreaterThan(0);
