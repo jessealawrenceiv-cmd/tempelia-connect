@@ -12,7 +12,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe as suite, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LogAction } from "@/lib/log-action-types.generated";
 import { logActionLabel } from "@/lib/log-action-presentation";
@@ -228,12 +228,12 @@ suite("DispatchLog row timestamp and message formatting", () => {
   });
 
   it("copies a full dispatch line with date, label and description", async () => {
-    const user = userEvent.setup();
     renderLog();
     await waitFor(() => expect(screen.getByText(rows[0]!.message_sent!)).toBeTruthy());
 
     const copyButtons = screen.getAllByRole("button", { name: /Copy dispatch line/i });
-    await user.click(copyButtons[0]!);
+    // fireEvent, not userEvent: userEvent.setup() swaps in its own clipboard stub.
+    fireEvent.click(copyButtons[0]!);
 
     await waitFor(() => expect(clipboardWrite).toHaveBeenCalled());
     const line = String(clipboardWrite.mock.calls[0]?.[0] ?? "");
