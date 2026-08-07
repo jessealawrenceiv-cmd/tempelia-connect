@@ -3,7 +3,9 @@ import {
   LOG_ACTION_TYPES,
   isLogActionType,
   assertLogActionType,
-  insertLog,, LogAction } from "./log-action-types";
+  insertLog,
+  LogAction,
+} from "./log-action-types";
 
 describe("log action_type whitelist", () => {
   it("includes the status/automation values", () => {
