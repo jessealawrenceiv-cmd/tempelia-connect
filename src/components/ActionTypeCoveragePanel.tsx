@@ -14,6 +14,7 @@ import {
 } from "@/lib/log-action-coverage-drilldown";
 import type { LogActionType } from "@/lib/log-action-types";
 import { LOG_ACTION_PRESENTATION } from "@/lib/log-action-presentation";
+import { ActionTypeBackfillButton } from "@/components/ActionTypeBackfillButton";
 
 const SEVERITY_LABEL: Record<GapSeverity, string> = {
   attention: "Needs review",
