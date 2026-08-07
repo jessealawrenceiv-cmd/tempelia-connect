@@ -17,6 +17,24 @@ import {
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
+type LogRow = {
+  id: string;
+  action_type: string;
+  message_sent: string | null;
+  created_at: string;
+  status: string | null;
+  customer_id: string | null;
+};
+
+type RawLogRow = Omit<LogRow, "created_at"> & {
+  created_at?: string | null;
+  original_created_at?: string | null;
+};
+
+/** Keeps supabase-js from type-parsing the select string (build-time perf). */
+const sel = (s: string): string => s;
+
+
 function parseAffected(row: { action_type: string; message_sent: string | null }): AffectedRef[] {
   if (row.action_type !== LogAction.status_refresh || !row.message_sent) return [];
   try {
