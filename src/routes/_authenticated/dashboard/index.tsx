@@ -16,17 +16,29 @@ import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
-  // ?logTypes=a,b, ?logSort=oldest, ?q=, and ?dateFrom=/?dateTo= keep the
-  // Activity log's filters, search, and date range across reloads and shared links.
+  // ?logTypes=a,b, ?logSort=oldest, ?q=, ?dateFrom=/?dateTo=, and ?logCustomer=
+  // keep the Activity log's filters, search, date range, and contact filter
+  // across reloads and shared links.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { logTypes?: string; logSort?: string; q?: string; dateFrom?: string; dateTo?: string } => ({
+  ): {
+    logTypes?: string;
+    logSort?: string;
+    q?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    logCustomer?: string;
+  } => ({
     ...(typeof search["logTypes"] === "string" ? { logTypes: search["logTypes"] as string } : {}),
     ...(search["logSort"] === "oldest" ? { logSort: "oldest" as const } : {}),
     ...(typeof search["q"] === "string" && search["q"] !== "" ? { q: search["q"] as string } : {}),
     ...(typeof search["dateFrom"] === "string" ? { dateFrom: search["dateFrom"] as string } : {}),
     ...(typeof search["dateTo"] === "string" ? { dateTo: search["dateTo"] as string } : {}),
+    ...(typeof search["logCustomer"] === "string" && search["logCustomer"] !== ""
+      ? { logCustomer: search["logCustomer"] as string }
+      : {}),
   }),
+
 
 
   component: HomePage,
