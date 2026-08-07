@@ -30,6 +30,7 @@ import {
 } from "./log-action-types.schema";
 
 export { LOG_ACTION_TYPES, LogAction };
+export { logDedupeKey };
 export {
   logActionTypeSchema,
   LOG_ACTION_TYPE_CONSTRAINT,
