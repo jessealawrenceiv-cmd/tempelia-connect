@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/AppShell";
+import { requireAdminAccess } from "@/lib/admin.functions";
 import { LOG_ACTION_PRESENTATION } from "@/lib/log-action-presentation";
 import {
   getLogActionDiagnostics,
@@ -14,6 +15,15 @@ import { Check, Copy, Database, RefreshCw, ScrollText, ShieldAlert } from "lucid
 import { DriftHistoryPanel } from "@/components/DriftHistoryPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/log-actions")({
+  // Server-side role gate: the operator check happens on the server from the
+  // caller's bearer token, so navigating straight to this URL cannot bypass it.
+  beforeLoad: async () => {
+    try {
+      await requireAdminAccess();
+    } catch {
+      throw redirect({ to: "/dashboard" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Action type diagnostics · Temaro operator" },
