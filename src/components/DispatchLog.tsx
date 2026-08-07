@@ -231,6 +231,15 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const typeKey = [...selectedTypes].sort().join(",");
   const searchKey = searchTerms.join(" ");
 
+  const hasActiveFilters =
+    selectedTypes.length > 0 ||
+    searchQuery.trim().length > 0 ||
+    statusRefreshOnly ||
+    failedOnly ||
+    originFilter !== "all" ||
+    dateRange?.from != null ||
+    sortDir === "oldest";
+
   // A search term can also be a customer's name or phone number. Names live on
   // `customers`, not `logs`, so resolve each term to matching customer ids first
   // and fold those ids into that term's Postgres OR clause.
