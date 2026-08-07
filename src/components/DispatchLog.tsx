@@ -571,7 +571,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetching,
+    dataUpdatedAt,
     refetch,
+
   } = useInfiniteQuery({
     queryKey: [
       "logs",
