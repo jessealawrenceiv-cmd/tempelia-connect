@@ -18,6 +18,7 @@ import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
 import {
   MAX_LOG_SEARCH_LENGTH,
+  describeLogRequestError,
   friendlyLogRequestError,
   validateActivityLogFilters,
 } from "@/lib/activity-log-filters.schema";
