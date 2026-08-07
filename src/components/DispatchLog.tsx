@@ -1122,6 +1122,20 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
    * the live region. Focus only moves when the message actually changes, so
    * typing in a filter field is never interrupted twice for the same error.
    */
+  /**
+   * When the logs API rejects the request with a 400 (the
+   * `logs_action_type_check` constraint), spell out the valid record types
+   * right next to the Record type filter. The technical details panel already
+   * carries the raw constraint text, but nobody should have to open it to learn
+   * which values are allowed.
+   */
+  const typeFilterAllowed = useMemo(() => {
+    if (!logError) return null;
+    const info = describeLogRequestError(logError);
+    if (!info.allowedTypes?.length) return null;
+    return info.allowedTypes;
+  }, [logError]);
+
   const errorBannerRef = useRef<HTMLDivElement | null>(null);
   const lastErrorSignatureRef = useRef<string | null>(null);
   const bannerVisible = filterIssues.length > 0 || Boolean(logError);
@@ -1880,7 +1894,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
         <fieldset
           className="mt-3 border-t border-border pt-3"
-          aria-describedby={issueFor("logTypes") ? helpId("logTypes") : undefined}
+          aria-describedby={
+            [issueFor("logTypes") ? helpId("logTypes") : null, typeFilterAllowed ? "log-filter-allowed-types" : null]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
         >
           <legend className="mono flex items-center gap-2 px-0 text-[10px] uppercase tracking-widest text-muted-foreground">
             Record type
@@ -1895,6 +1913,21 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             )}
           </legend>
           <FieldHelp field="logTypes" />
+          {typeFilterAllowed && (
+            <p
+              id="log-filter-allowed-types"
+              data-testid="log-filter-allowed-types"
+              role="status"
+              aria-live="polite"
+              className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-orange"
+            >
+              <AlertTriangle size={10} className="mt-[1px] shrink-0" aria-hidden="true" />
+              <span>
+                That record type isn’t one we track. Valid values:{" "}
+                <span className="mono">{typeFilterAllowed.join(", ")}</span>
+              </span>
+            </p>
+          )}
           {/* Compact picker for the same record types as the chips below: on a
               phone the full chip row is long, so this adds one type at a time.
               Options come from the generated enum, so the value can only ever
