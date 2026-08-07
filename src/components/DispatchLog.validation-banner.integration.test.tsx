@@ -152,7 +152,8 @@ describe("invalid filter payloads render the friendly validation banner", () => 
     await waitFor(() => expect(banner()).toBeTruthy());
     const text = banner()!.textContent ?? "";
     expect(text).toMatch(/date/i);
-    expect(text).toContain("Showing newest first");
+    expect(text).toContain("showing newest first");
+    expect(text).toContain("swap them");
     expect(screen.getByRole("alert")).toBe(banner());
   });
 
