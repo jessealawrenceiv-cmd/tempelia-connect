@@ -22,7 +22,8 @@ import { AutomationBadge, TooltipCloseButton } from "@/components/AutomationBadg
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
 import { LogAction } from "@/lib/log-action-types";
-import { useValidatedLogInsert } from "@/hooks/useValidatedLogInsert";
+import { useValidatedLogInsertWithError } from "@/hooks/useValidatedLogInsert";
+import { LogWriteErrorAlert } from "@/components/LogWriteErrorAlert";
 import { reportLogInsertError } from "@/lib/log-error";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
