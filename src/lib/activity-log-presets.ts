@@ -1,4 +1,5 @@
-import { pickLogActionTypes, type LogActionType } from "@/lib/log-action-query";
+import { pickLogActionTypes } from "@/lib/log-action-query";
+import type { LogActionType } from "@/lib/log-action-types";
 
 /**
  * A saved Activity-log filter combination. Stored in localStorage (per device):
