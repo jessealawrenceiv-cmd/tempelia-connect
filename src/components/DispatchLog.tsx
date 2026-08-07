@@ -1672,12 +1672,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                   type="button"
                   aria-pressed={active}
                   onClick={() => {
-                    setOriginFilter(key);
-                    if (key !== "all") {
-                      setStatusRefreshOnly(false);
-                      setFailedOnly(false);
-                    }
+                    void navigate({
+                      to: ".",
+                      search: (prev: Record<string, unknown>) => ({
+                        ...prev,
+                        logOrigin: key === "all" ? undefined : key,
+                        logStatusOnly:
+                          key === "all" ? (prev.logStatusOnly as string | undefined) : undefined,
+                        logFailed: key === "all" ? (prev.logFailed as string | undefined) : undefined,
+                      }),
+                      resetScroll: false,
+                    });
                   }}
+
                   className={`kb-focus rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
                     active
                       ? "bg-primary text-paper"
