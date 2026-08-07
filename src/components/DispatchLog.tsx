@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { reportFilterRejection } from "@/lib/activity-log-validation.reporter";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
 import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { DispatchLogRowDetails } from "@/components/DispatchLogRowDetails";
@@ -277,11 +277,26 @@ function LogErrorRetry({
   onRetry: () => void;
 }) {
   const info = logError ? describeLogRequestError(logError) : null;
+  // Controlled disclosure instead of a bare <details>: Safari/VoiceOver
+  // announces summary elements inconsistently, and we want Escape-to-collapse
+  // plus a predictable aria-expanded/aria-controls pair for screen readers.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsId = useId();
+  const titleId = `${detailsId}-title`;
+  const detailsToggleRef = useRef<HTMLButtonElement | null>(null);
   return (
-    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite" data-testid="log-error-alert">
+    <div
+      className="border-b border-border px-5 py-6"
+      role="alert"
+      aria-live="polite"
+      aria-labelledby={titleId}
+      data-testid="log-error-alert"
+    >
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">{info?.title ?? "Couldn’t load activity"}</p>
+          <p id={titleId} className="text-sm font-medium text-foreground">
+            {info?.title ?? "Couldn’t load activity"}
+          </p>
           <p className="text-xs text-muted-foreground">
             {info?.message ?? "Something went wrong. Pull to retry or tap the button."}
           </p>
@@ -291,16 +306,45 @@ function LogErrorRetry({
             </p>
           )}
           {info?.technicalDetail && (
-            <details className="pt-1">
-              <summary className="kb-focus cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground">
+            <div className="pt-1">
+              <button
+                type="button"
+                ref={detailsToggleRef}
+                onClick={() => setDetailsOpen((open) => !open)}
+                aria-expanded={detailsOpen}
+                aria-controls={detailsId}
+                data-testid="log-error-details-toggle"
+                className="kb-focus cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              >
                 Technical details{info.status ? ` (HTTP ${info.status})` : ""}
-              </summary>
-              <p className="mono mt-1 break-words text-[10px] leading-relaxed text-muted-foreground">
-                {info.technicalDetail}
-              </p>
-            </details>
+              </button>
+              <div
+                id={detailsId}
+                role="group"
+                aria-label="Technical details"
+                hidden={!detailsOpen}
+                onKeyDown={(event) => {
+                  // Escape collapses and hands focus back to the toggle so
+                  // keyboard users never end up on a hidden node.
+                  if (event.key === "Escape") {
+                    event.stopPropagation();
+                    setDetailsOpen(false);
+                    detailsToggleRef.current?.focus();
+                  }
+                }}
+              >
+                <p
+                  tabIndex={-1}
+                  data-testid="log-error-details-text"
+                  className="mono mt-1 break-words text-[10px] leading-relaxed text-muted-foreground"
+                >
+                  {info.technicalDetail}
+                </p>
+              </div>
+            </div>
           )}
         </div>
+
         <div className="flex shrink-0 items-center gap-2">
           {info?.suggestClearFilters && hasActiveFilters && (
             <button

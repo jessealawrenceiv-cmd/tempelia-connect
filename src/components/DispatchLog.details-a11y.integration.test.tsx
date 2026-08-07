@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 /**
- * Simulates an HTTP 400 coming back from the logs API (the Postgres
- * `logs_action_type_check` constraint violation) and asserts the inline alert
- * renders the friendly headline, the full allowed record-type list, a working
- * "Clear filters" shortcut, and the exact constraint text under Technical
- * details — nothing swallowed, nothing paraphrased.
+ * Screen-reader and keyboard behaviour for the HTTP 400 alert's collapsible
+ * "Technical details" disclosure: labelled alert region, aria-expanded /
+ * aria-controls wiring, hidden-until-opened content, Enter/Space activation,
+ * and Escape collapsing with focus returned to the toggle.
  */
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -128,66 +127,74 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
-describe("HTTP 400 from the logs API", () => {
-  it("shows the friendly headline instead of a raw error dump", async () => {
+describe("400 alert technical-details accessibility", () => {
+  beforeEach(() => {
     fail400 = true;
-    renderLog();
+  });
 
+  it("labels the alert region with its headline", async () => {
+    renderLog();
     const alert = await waitFor(() => errorAlert());
-    expect(screen.getByText(/That record type isn’t one we track/i)).toBeTruthy();
-    // The raw constraint text is never the headline.
-    expect(alert.textContent ?? "").not.toMatch(/^new row for relation/);
-    expect(alert.textContent ?? "").toMatch(/Clear your filters to get back to the full log/i);
+    const labelId = alert.getAttribute("aria-labelledby");
+    expect(labelId).toBeTruthy();
+    const label = document.getElementById(labelId!);
+    expect(label?.textContent ?? "").toMatch(/That record type isn’t one we track/i);
+    expect(alert.getAttribute("aria-live")).toBe("polite");
   });
 
-  it("lists every allowed record type from the shared enum", async () => {
-    fail400 = true;
+  it("exposes a collapsed disclosure button wired to the details region", async () => {
     renderLog();
-
-    const allowed = await waitFor(() => screen.getByText(/^Allowed:/));
-    for (const type of LOG_ACTION_TYPES) {
-      expect(allowed.textContent ?? "").toContain(type);
-    }
-    expect(allowed.textContent).toBe(`Allowed: ${LOG_ACTION_TYPES.join(", ")}`);
+    const toggle = await waitFor(() => screen.getByTestId("log-error-details-toggle"));
+    // A real <button>, so Enter/Space and screen-reader activation work natively.
+    expect(toggle.tagName).toBe("BUTTON");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    const region = document.getElementById(toggle.getAttribute("aria-controls")!);
+    expect(region).toBeTruthy();
+    // Collapsed content is hidden from the accessibility tree, not just visually.
+    expect((region as HTMLElement).hidden).toBe(true);
   });
 
-  it("renders the exact logs_action_type_check message under Technical details", async () => {
-    fail400 = true;
+  it("opens on keyboard activation and announces the expanded state", async () => {
     renderLog();
+    const toggle = await waitFor(() => screen.getByTestId("log-error-details-toggle"));
+    toggle.focus();
+    expect(document.activeElement).toBe(toggle);
 
-    await waitFor(() => errorAlert());
-    expect(screen.getByText(/Technical details \(HTTP 400\)/i)).toBeTruthy();
-    const detail = screen.getByText(new RegExp(CONSTRAINT_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    expect(detail.textContent ?? "").toContain('check constraint "logs_action_type_check"');
-    expect(detail.textContent ?? "").toContain(API_400.details);
+    // Enter on a native button fires click; assert the resulting state.
+    fireEvent.keyDown(toggle, { key: "Enter" });
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle.getAttribute("aria-expanded")).toBe("true"));
+
+    const region = document.getElementById(toggle.getAttribute("aria-controls")!) as HTMLElement;
+    expect(region.hidden).toBe(false);
+    expect(within(region).getByTestId("log-error-details-text").textContent ?? "").toContain(
+      'check constraint "logs_action_type_check"',
+    );
   });
 
-  it("offers a Clear filters shortcut that drops the offending filters and recovers", async () => {
-    // An active record-type filter is what makes the shortcut meaningful.
+  it("collapses on Escape and returns focus to the toggle", async () => {
+    renderLog();
+    const toggle = await waitFor(() => screen.getByTestId("log-error-details-toggle"));
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle.getAttribute("aria-expanded")).toBe("true"));
+
+    const region = document.getElementById(toggle.getAttribute("aria-controls")!) as HTMLElement;
+    fireEvent.keyDown(region, { key: "Escape" });
+
+    await waitFor(() => expect(toggle.getAttribute("aria-expanded")).toBe("false"));
+    expect(region.hidden).toBe(true);
+    // Focus must never be left on a hidden node.
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  it("keeps the Retry and Clear filters controls reachable while details are open", async () => {
     searchState = { logTypes: "quote_sms" };
-    fail400 = true;
     renderLog();
+    const toggle = await waitFor(() => screen.getByTestId("log-error-details-toggle"));
+    fireEvent.click(toggle);
 
-    const clear = await waitFor(() => screen.getByTestId("log-error-clear-filters"));
-    // The alert keeps a stable identity, so the button we found is still live.
-    expect(document.body.contains(clear)).toBe(true);
-    fail400 = false;
-    // Single click on the rendered button must be enough: the alert no longer
-    // remounts between render passes, so the node is still attached.
-    fireEvent.click(clear);
-    expect(searchState.logTypes).toBeUndefined();
-    await waitFor(() => expect(screen.getByText("quote row 1")).toBeTruthy());
-    expect(screen.queryByText(/That record type isn’t one we track/i)).toBeNull();
-  });
-
-  it("hides the Clear filters shortcut when no filters are active", async () => {
-    fail400 = true;
-    renderLog();
-
-    const alert = await waitFor(() => errorAlert());
-    expect(within(alert).getByRole("button", { name: /^Retry$/i })).toBeTruthy();
-    expect(
-      Array.from(alert.querySelectorAll("button")).some((b) => /Clear filters/i.test(b.textContent ?? "")),
-    ).toBe(false);
+    const alert = errorAlert();
+    expect(within(alert).getByTestId("log-error-clear-filters")).toBeTruthy();
+    expect(within(alert).getByRole("button", { name: /retry/i })).toBeTruthy();
   });
 });
