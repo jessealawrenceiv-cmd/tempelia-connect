@@ -643,7 +643,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               disabled={isFetchingNextPage}
               className="kb-focus rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
             >
-              {isFetchingNextPage ? "Loading…" : `Load ${limit} older`}
+              {isFetchingNextPage ? "Loading…" : `Load ${limit} ${sortDir === "oldest" ? "newer" : "older"}`}
             </button>
           ) : (
             <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
