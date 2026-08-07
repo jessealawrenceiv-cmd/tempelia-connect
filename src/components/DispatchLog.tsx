@@ -31,6 +31,7 @@ import {
   describeLogRequestError,
   friendlyLogRequestError,
   validateActivityLogFilters,
+  type ActivityLogFilterIssue,
 } from "@/lib/activity-log-filters.schema";
 
 
@@ -308,6 +309,28 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   );
 
   const filterIssues = validation.issues;
+  /**
+   * Field-level helper text: the summary banner above says "some filters were
+   * adjusted", but each control also needs to say what went wrong right where
+   * the user can fix it. Keyed by the Zod issue's field.
+   */
+  const issueFor = (field: ActivityLogFilterIssue["field"]): string | undefined =>
+    filterIssues.find((i) => i.field === field)?.message;
+  const helpId = (field: ActivityLogFilterIssue["field"]) => `log-filter-help-${field}`;
+  const FieldHelp = ({ field }: { field: ActivityLogFilterIssue["field"] }) => {
+    const message = issueFor(field);
+    if (!message) return null;
+    return (
+      <p
+        id={helpId(field)}
+        data-testid={`log-filter-help-${field}`}
+        className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-orange"
+      >
+        <AlertTriangle size={10} className="mt-[1px] shrink-0" aria-hidden="true" />
+        <span>{message}</span>
+      </p>
+    );
+  };
   const selectedTypes = validation.value.selectedTypes;
   const sortDir = validation.value.sortDir;
 
@@ -1291,30 +1314,37 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
 
 
-          <div className="relative flex items-center">
-            <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name, phone, message…"
-              aria-label="Search activity by phone number, customer name, or message text"
-              aria-invalid={filterIssues.some((i) => i.field === "q") || undefined}
-              maxLength={MAX_LOG_SEARCH_LENGTH + 20}
-              className="kb-focus h-7 w-40 rounded-full border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56"
-            />
+          <div>
+            <div className="relative flex items-center">
+              <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, phone, message…"
+                aria-label="Search activity by phone number, customer name, or message text"
+                aria-invalid={issueFor("q") ? true : undefined}
+                aria-describedby={issueFor("q") ? helpId("q") : undefined}
+                maxLength={MAX_LOG_SEARCH_LENGTH + 20}
+                className={`kb-focus h-7 w-40 rounded-full border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56 ${
+                  issueFor("q") ? "border-orange" : "border-border"
+                }`}
+              />
 
-            {searchQuery && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => setSearchQuery("")}
-                className="kb-focus absolute right-2 text-muted-foreground hover:text-foreground"
-              >
-                ×
-              </button>
-            )}
+              {searchQuery && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setSearchQuery("")}
+                  className="kb-focus absolute right-2 text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <FieldHelp field="q" />
           </div>
+
 
           <div className="relative flex items-center">
             <input
@@ -1349,13 +1379,17 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </span>
           )}
 
-          <DateRangePicker
-            value={dateRange}
-            onChange={(next) => {
-              setDateRange(next);
-            }}
-            placeholder="Date range"
-          />
+          <div>
+            <DateRangePicker
+              value={dateRange}
+              onChange={(next) => {
+                setDateRange(next);
+              }}
+              placeholder="Date range"
+            />
+            <FieldHelp field="dateRange" />
+          </div>
+
 
           <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
             <input
@@ -1419,29 +1453,38 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
           <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
 
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sort order">
-            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Sort</span>
-            {(["newest", "oldest"] as const).map((key) => {
-              const active = sortDir === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setSortDir(key)}
-                  title={key === "newest" ? "Newest entries first" : "Oldest entries first"}
-                  className={`kb-focus inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
-                    active
-                      ? "bg-primary text-paper"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                  }`}
-                >
-                  {key === "newest" ? <ArrowDown size={11} aria-hidden="true" /> : <ArrowUp size={11} aria-hidden="true" />}
-                  {key === "newest" ? "Newest first" : "Oldest first"}
-                </button>
-              );
-            })}
+          <div>
+            <div
+              className="flex flex-wrap items-center gap-2"
+              role="group"
+              aria-label="Sort order"
+              aria-describedby={issueFor("logSort") ? helpId("logSort") : undefined}
+            >
+              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Sort</span>
+              {(["newest", "oldest"] as const).map((key) => {
+                const active = sortDir === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setSortDir(key)}
+                    title={key === "newest" ? "Newest entries first" : "Oldest entries first"}
+                    className={`kb-focus inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider transition-colors ${
+                      active
+                        ? "bg-primary text-paper"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    }`}
+                  >
+                    {key === "newest" ? <ArrowDown size={11} aria-hidden="true" /> : <ArrowUp size={11} aria-hidden="true" />}
+                    {key === "newest" ? "Newest first" : "Oldest first"}
+                  </button>
+                );
+              })}
+            </div>
+            <FieldHelp field="logSort" />
           </div>
+
 
 
 
@@ -1460,7 +1503,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         </div>
 
 
-        <fieldset className="mt-3 border-t border-border pt-3">
+        <fieldset
+          className="mt-3 border-t border-border pt-3"
+          aria-describedby={issueFor("logTypes") ? helpId("logTypes") : undefined}
+        >
           <legend className="mono flex items-center gap-2 px-0 text-[10px] uppercase tracking-widest text-muted-foreground">
             Record type
             {selectedTypes.length > 0 && (
@@ -1473,6 +1519,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               </button>
             )}
           </legend>
+          <FieldHelp field="logTypes" />
           {/* Compact picker for the same record types as the chips below: on a
               phone the full chip row is long, so this adds one type at a time.
               Options come from the generated enum, so the value can only ever
