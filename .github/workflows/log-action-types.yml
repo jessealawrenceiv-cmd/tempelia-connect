@@ -367,5 +367,85 @@ jobs:
                 f"24.x.")
           PY
 
+      - name: Enforce npm cache config on setup-node when package-lock.json exists
+        run: |
+          # Only applies when an npm lockfile is actually committed: in that
+          # case every actions/setup-node step must set `cache: npm` and an
+          # explicit `cache-dependency-path`, so CI restores the npm cache
+          # deterministically instead of silently re-downloading dependencies.
+          # This repo uses bun (bun.lock), so the check no-ops until a
+          # package-lock.json appears. Offenders are reported with file path
+          # and line number from parsed YAML nodes, never raw text matching.
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, os, sys, yaml
+
+          locks = sorted(
+              p for p in glob.glob("**/package-lock.json", recursive=True)
+              if "node_modules" not in p.split(os.sep)
+          )
+          if not locks:
+              print("No package-lock.json found — npm cache guard skipped "
+                    "(this repo uses bun.lock).")
+              sys.exit(0)
+          print("Found npm lockfile(s): " + ", ".join(locks))
+
+          def get(node, key):
+              if not isinstance(node, yaml.MappingNode):
+                  return None
+              for k, v in node.value:
+                  if isinstance(k, yaml.ScalarNode) and k.value == key:
+                      return v
+              return None
+
+          offenders = []
+          for path in sorted(glob.glob(".github/workflows/*.y*ml")):
+              with open(path) as fh:
+                  root = yaml.compose(fh)
+              jobs = get(root, "jobs")
+              if not isinstance(jobs, yaml.MappingNode):
+                  continue
+              for jkey, job in jobs.value:
+                  jname = getattr(jkey, "value", "?")
+                  steps = get(job, "steps")
+                  if not isinstance(steps, yaml.SequenceNode):
+                      continue
+                  for idx, step in enumerate(steps.value, start=1):
+                      uses = get(step, "uses")
+                      if not isinstance(uses, yaml.ScalarNode):
+                          continue
+                      if "actions/setup-node" not in uses.value:
+                          continue
+                      line = uses.start_mark.line + 1
+                      where = f"{path}:{line} (job '{jname}', step {idx})"
+                      with_node = get(step, "with")
+                      cache = get(with_node, "cache")
+                      dep = get(with_node, "cache-dependency-path")
+                      cache_val = (cache.value.strip()
+                                   if isinstance(cache, yaml.ScalarNode) else "")
+                      dep_val = (dep.value.strip()
+                                 if isinstance(dep, yaml.ScalarNode) else "")
+                      if cache_val != "npm":
+                          offenders.append(
+                              f"{where}: cache is "
+                              f"{repr(cache_val) if cache_val else 'missing'}, "
+                              f"expected 'npm' (package-lock.json is present)")
+                      if not dep_val:
+                          offenders.append(
+                              f"{where}: cache-dependency-path is missing — set "
+                              f"it to the package-lock.json path(s) so the npm "
+                              f"cache key is deterministic")
+
+          if offenders:
+              print("::error::One or more actions/setup-node steps are missing "
+                    "npm cache configuration. Offending files and line numbers:")
+              for o in offenders:
+                  print(f"::error::{o}")
+              sys.exit(1)
+          print("All actions/setup-node steps set cache: npm and a "
+                "cache-dependency-path.")
+          PY
+
+
 
 
