@@ -487,6 +487,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const filtered = rows;
 
+  // Once many keyset pages are appended, rendering every row hurts scroll
+  // performance, so long lists switch to a windowed renderer that only mounts
+  // the visible slice (plus a small overscan buffer).
+  const isVirtualized = filtered.length > VIRTUALIZE_THRESHOLD;
+  const virtualizer = useVirtualizer({
+    count: isVirtualized ? filtered.length : 0,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => 60,
+    overscan: 10,
+    getItemKey: (index: number) => filtered[index]?.id ?? index,
+  });
+
+
 
 
 
