@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
     logStatusOnly?: string;
     logFailed?: string;
     logOrigin?: string;
+    logDebug?: string;
   } => ({
     ...(typeof search["logTypes"] === "string" ? { logTypes: search["logTypes"] as string } : {}),
     ...(search["logSort"] === "oldest" ? { logSort: "oldest" as const } : {}),
@@ -47,6 +48,9 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
     ...(typeof search["logOrigin"] === "string" && search["logOrigin"] !== "" && search["logOrigin"] !== "all"
       ? { logOrigin: search["logOrigin"] as string }
       : {}),
+    // ?logDebug=1 opens the Activity log diagnostics panel (subscription state,
+    // last streamed event, keyset cursor) so a reconnect report is shareable.
+    ...(search["logDebug"] === "1" ? { logDebug: "1" as const } : {}),
   }),
 
 

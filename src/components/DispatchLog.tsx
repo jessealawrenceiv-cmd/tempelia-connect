@@ -5,6 +5,13 @@ import { reportFilterRejection } from "@/lib/activity-log-validation.reporter";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  DispatchLogDebugPanel,
+  type CursorDebugState,
+  type LastEventDebugState,
+  type RealtimeDebugState,
+  type RealtimeDebugStatus,
+} from "./DispatchLogDebugPanel";
 import { endOfDay, startOfDay } from "date-fns";
 import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, Link2 as LinkIcon, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { DispatchLogRowDetails } from "@/components/DispatchLogRowDetails";
@@ -442,6 +449,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     logOrigin?: unknown;
     /** Deep-linked dispatch: ?logId=<uuid> opens that row's details drawer. */
     logId?: unknown;
+    logDebug?: unknown;
   };
 
 
@@ -511,6 +519,59 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const [announcement, setAnnouncement] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  /**
+   * Diagnostics (?logDebug=1): subscription lifecycle, the last streamed event,
+   * and the live keyset cursor. Tracked unconditionally — it is a few fields and
+   * having the history already recorded is what makes the panel useful the
+   * moment someone opens it mid-incident.
+   */
+  const debugPanelId = useId();
+  const debugOpen = rawSearch.logDebug === "1";
+  const setDebugOpen = (next: boolean) => setSearchParam("logDebug", next ? "1" : undefined);
+  const [realtimeDebug, setRealtimeDebug] = useState<RealtimeDebugState>({
+    status: "idle",
+    channel: null,
+    since: null,
+    rawStatus: null,
+    transitions: 0,
+  });
+  const markRealtime = (status: RealtimeDebugStatus, channel: string | null, rawStatus?: string) =>
+    setRealtimeDebug((prev) => ({
+      status,
+      channel,
+      since: Date.now(),
+      rawStatus: rawStatus ?? null,
+      transitions: prev.transitions + (prev.status === status ? 0 : 1),
+    }));
+  const [lastEventDebug, setLastEventDebug] = useState<LastEventDebugState>({
+    id: null,
+    receivedAt: null,
+    applied: null,
+    outcome: null,
+    received: 0,
+    appliedCount: 0,
+  });
+  const noteEventReceived = (id: string) =>
+    setLastEventDebug((prev) => ({
+      ...prev,
+      id,
+      receivedAt: Date.now(),
+      applied: null,
+      outcome: "received",
+      received: prev.received + 1,
+    }));
+  const noteEventOutcome = (id: string, applied: boolean, outcome: string) =>
+    setLastEventDebug((prev) =>
+      // Ignore a late resolution for an event that has already been superseded.
+      prev.id !== id
+        ? prev
+        : {
+            ...prev,
+            applied,
+            outcome,
+            appliedCount: prev.appliedCount + (applied ? 1 : 0),
+          },
+    );
   // Rows the user has expanded to see the full dispatch payload.
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   /**
@@ -1092,6 +1153,29 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
 
+  // Current keyset position, read straight off the query cache so the panel can
+  // never disagree with what the next "Load more" will actually request.
+  const cursorDebug: CursorDebugState = useMemo(() => {
+    const pages = data?.pages ?? [];
+    const lastPage = pages[pages.length - 1];
+    const nextCursor =
+      lastPage && lastPage.length >= limit
+        ? (lastPage[lastPage.length - 1]?.created_at ?? null)
+        : null;
+    return {
+      nextCursor,
+      pageParams: (data?.pageParams ?? []) as (string | null)[],
+      pages: pages.length,
+      rowsLoaded: rows.length,
+      pageSize: limit,
+      sortDir,
+      scope,
+      hasNextPage: Boolean(hasNextPage),
+      isFetchingNextPage,
+      queryKey: logsQueryKey,
+    };
+  }, [data, limit, rows.length, sortDir, scope, hasNextPage, isFetchingNextPage, logsQueryKey]);
+
   // Poll on the chosen interval. A tick is skipped while another fetch is in
   // flight (including "Load more") so slow connections never stack requests.
   useEffect(() => {
@@ -1124,41 +1208,76 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     if (scope !== "live" || sortDir !== "newest" || filtersBlocked) return;
     // Realtime is optional: environments (and tests) without a channel-capable
     // client simply fall back to polling.
-    if (typeof supabase.channel !== "function") return;
+    if (typeof supabase.channel !== "function") {
+      markRealtime("disabled", null);
+      return;
+    }
 
     let cancelled = false;
+    const topic = "dispatch-log-live";
+    markRealtime("subscribing", topic);
     const channel = supabase
-      .channel("dispatch-log-live")
+      .channel(topic)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "logs" },
         (payload) => {
           const id = (payload.new as { id?: string } | null)?.id;
           if (!id) return;
+          noteEventReceived(id);
           void (async () => {
             try {
               const row = await fetchLogRowById(id);
-              if (!row || cancelled) return;
+              if (cancelled) return;
+              if (!row) {
+                noteEventOutcome(id, false, "filtered out");
+                return;
+              }
+              let outcome = "prepended";
               queryClient.setQueryData<InfiniteData<LogRow[], string | null>>(
                 logsQueryKey,
                 (prev) => {
-                  if (!prev || prev.pages.length === 0) return prev;
-                  if (prev.pages.some((page) => page.some((r) => r.id === row.id))) return prev;
+                  if (!prev || prev.pages.length === 0) {
+                    outcome = "no page loaded";
+                    return prev;
+                  }
+                  if (prev.pages.some((page) => page.some((r) => r.id === row.id))) {
+                    // Redelivery after a reconnect: the row is already on screen.
+                    outcome = "duplicate ignored";
+                    return prev;
+                  }
                   const pages = prev.pages.slice();
                   pages[0] = [row, ...(pages[0] ?? [])];
                   return { ...prev, pages };
                 },
               );
+              noteEventOutcome(id, outcome === "prepended", outcome);
             } catch {
               // A transient failure just means this row shows up on the next poll.
+              noteEventOutcome(id, false, "fetch failed");
             }
           })();
         },
       )
-      .subscribe();
+      .subscribe((status: string) => {
+        // Verbatim client status -> the coarse state the panel renders. A
+        // CHANNEL_ERROR/TIMED_OUT loop shows up as a climbing transition count.
+        const mapped: RealtimeDebugStatus =
+          status === "SUBSCRIBED"
+            ? "subscribed"
+            : status === "CLOSED"
+              ? "closed"
+              : status === "TIMED_OUT"
+                ? "reconnecting"
+                : status === "CHANNEL_ERROR"
+                  ? "error"
+                  : "subscribing";
+        markRealtime(mapped, topic, status);
+      });
 
     return () => {
       cancelled = true;
+      markRealtime("closed", topic);
       void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1654,6 +1773,22 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            data-testid="log-debug-toggle"
+            aria-pressed={debugOpen}
+            aria-expanded={debugOpen}
+            aria-controls={debugOpen ? debugPanelId : undefined}
+            onClick={() => setDebugOpen(!debugOpen)}
+            title="Show subscription, last event, and pagination cursor"
+            className={`kb-focus mono rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-widest transition-colors ${
+              debugOpen
+                ? "border-primary text-primary"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Debug
+          </button>
           {scope === "live" ? (
             <>
               <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-moss">
@@ -2319,6 +2454,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               No more {sortDir === "oldest" ? "newer" : "older"} actions
             </span>
           )}
+        </div>
+      )}
+
+      {debugOpen && (
+        <div id={debugPanelId}>
+          <DispatchLogDebugPanel
+            realtime={realtimeDebug}
+            lastEvent={lastEventDebug}
+            cursor={cursorDebug}
+          />
         </div>
       )}
 
