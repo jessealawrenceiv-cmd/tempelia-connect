@@ -180,7 +180,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         ...prev,
         logTypes: value.length > 0 ? value.join(",") : undefined,
       }),
-      replace: true,
       resetScroll: false,
     });
   };
@@ -191,7 +190,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         ...prev,
         logSort: value === "oldest" ? "oldest" : undefined,
       }),
-      replace: true,
       resetScroll: false,
     });
   };
@@ -205,7 +203,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     void navigate({
       to: ".",
       search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: undefined, logSort: undefined }),
-      replace: true,
       resetScroll: false,
     });
   };
