@@ -174,13 +174,59 @@ function writeStoredTypes(types: LogActionType[]) {
   }
 }
 
+/** Parses a ?dateFrom=/?dateTo= day string (yyyy-MM-dd) into a local Date. */
+function parseDayParam(value: unknown): Date | undefined {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const [y, m, d] = value.split("-").map(Number) as [number, number, number];
+  const date = new Date(y, m - 1, d);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+/** Serialises a Date to the yyyy-MM-dd form used in the URL. */
+function toDayParam(date: Date): string {
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${m}-${d}`;
+}
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
+  // Record-type filters, sort, free-text search, and the date range all live in
+  // the URL (?logTypes=a,b&logSort=oldest&q=text&dateFrom=…&dateTo=…) so a
+  // reload, back/forward, or a shared link keeps the same view. Because that
+  // payload is untrusted, it is Zod-validated and any problem is surfaced to the
+  // user in plain language instead of silently dropped.
+  const navigate = useNavigate();
+  const rawSearch = useSearch({ strict: false }) as {
+    logTypes?: unknown;
+    logSort?: unknown;
+    q?: unknown;
+    dateFrom?: unknown;
+    dateTo?: unknown;
+  };
+
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
   const [scope, setScope] = useState<"live" | "archive">("live");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
+  // The input stays local for responsive typing and is mirrored into ?q= (see below).
+  const [searchQuery, setSearchQuery] = useState(typeof rawSearch.q === "string" ? rawSearch.q : "");
+  const urlFrom = parseDayParam(rawSearch.dateFrom);
+  const urlTo = parseDayParam(rawSearch.dateTo);
+  const dateRange: DateRangeValue | undefined = urlFrom
+    ? { from: urlFrom, ...(urlTo ? { to: urlTo } : {}) }
+    : undefined;
+  const setDateRange = (next: DateRangeValue | undefined) => {
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        dateFrom: next?.from ? toDayParam(next.from) : undefined,
+        dateTo: next?.to ? toDayParam(next.to) : undefined,
+      }),
+      resetScroll: false,
+    });
+  };
+
   const [announcement, setAnnouncement] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const lastAnnouncedIdRef = useRef<string | null>(null);
