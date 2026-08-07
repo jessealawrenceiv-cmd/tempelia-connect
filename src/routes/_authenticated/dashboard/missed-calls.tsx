@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/AppShell";
 import { getVoicemailProxyUrl } from "@/lib/voicemail.functions";
 import { sendOptInPrompt, sendOptInPromptBatch } from "@/lib/opt-in-prompt.functions";
 import { OPT_IN_PROMPT_ACTION } from "@/lib/opt-in-prompt";
+import { LogAction } from "@/lib/log-action-types";
+import { logActionFilterValue, logActionFilterValues } from "@/lib/log-action-query";
 import {
   OPT_IN_PROMPT_ENGAGEMENT_RULE,
   OPT_IN_PROMPT_HOLD_REASON,
@@ -95,7 +97,14 @@ function MissedCallsPage() {
         .select(
           "id, message_sent, created_at, twilio_message_sid, customer_id, voicemail_url, call_sid, recording_sid, action_type, status, customers(phone_number, first_name, opt_in_consent)",
         )
-        .in("action_type", ["missed_call_text", "missed_call_autotext", "missed_call_excluded"]);
+        .in(
+          "action_type",
+          logActionFilterValues([
+            LogAction.missed_call_text,
+            LogAction.missed_call_autotext,
+            LogAction.missed_call_excluded,
+          ]),
+        );
       if (from) query = query.gte("created_at", new Date(`${from}T00:00:00`).toISOString());
       if (to) query = query.lte("created_at", new Date(`${to}T23:59:59.999`).toISOString());
       const { data } = await query.order("created_at", { ascending: false }).limit(200);
@@ -111,7 +120,7 @@ function MissedCallsPage() {
       const { data } = await supabase
         .from("logs")
         .select("customer_id, created_at, status")
-        .eq("action_type", OPT_IN_PROMPT_ACTION)
+        .eq("action_type", logActionFilterValue(OPT_IN_PROMPT_ACTION))
         .order("created_at", { ascending: false })
         .limit(200);
       const map = new Map<string, { created_at: string; status: string }>();
@@ -241,7 +250,7 @@ function MissedCallsPage() {
           .select(
             "customer_id, created_at, status, twilio_message_sid, prompt_template, prompt_template_hash, prompt_cooldown_minutes",
           )
-          .eq("action_type", OPT_IN_PROMPT_ACTION)
+          .eq("action_type", logActionFilterValue(OPT_IN_PROMPT_ACTION))
           .in("customer_id", customerIds)
           .order("created_at", { ascending: true });
         for (const log of promptLogs ?? []) {
