@@ -40,6 +40,7 @@ import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/tw
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio/recording'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicLogActionTypesTokenCheckRouteImport } from './routes/api/public/log-action-types/token-check'
 import { Route as ApiPublicLogActionTypesConstraintRouteImport } from './routes/api/public/log-action-types/constraint'
 import { Route as ApiPublicHooksCoverageGapScanRouteImport } from './routes/api/public/hooks/coverage-gap-scan'
 import { Route as AuthenticatedDashboardQuotesNewRouteImport } from './routes/_authenticated/dashboard/quotes.new'
@@ -218,6 +219,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicLogActionTypesTokenCheckRoute =
+  ApiPublicLogActionTypesTokenCheckRouteImport.update({
+    id: '/token-check',
+    path: '/token-check',
+    getParentRoute: () => ApiPublicLogActionTypesRoute,
+  } as any)
 const ApiPublicLogActionTypesConstraintRoute =
   ApiPublicLogActionTypesConstraintRouteImport.update({
     id: '/constraint',
@@ -297,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/hooks/coverage-gap-scan': typeof ApiPublicHooksCoverageGapScanRoute
   '/api/public/log-action-types/constraint': typeof ApiPublicLogActionTypesConstraintRoute
+  '/api/public/log-action-types/token-check': typeof ApiPublicLogActionTypesTokenCheckRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
@@ -337,6 +345,7 @@ export interface FileRoutesByTo {
   '/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/hooks/coverage-gap-scan': typeof ApiPublicHooksCoverageGapScanRoute
   '/api/public/log-action-types/constraint': typeof ApiPublicLogActionTypesConstraintRoute
+  '/api/public/log-action-types/token-check': typeof ApiPublicLogActionTypesTokenCheckRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
@@ -379,6 +388,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/quotes/new': typeof AuthenticatedDashboardQuotesNewRoute
   '/api/public/hooks/coverage-gap-scan': typeof ApiPublicHooksCoverageGapScanRoute
   '/api/public/log-action-types/constraint': typeof ApiPublicLogActionTypesConstraintRoute
+  '/api/public/log-action-types/token-check': typeof ApiPublicLogActionTypesTokenCheckRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/twilio/recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
@@ -421,6 +431,7 @@ export interface FileRouteTypes {
     | '/dashboard/quotes/new'
     | '/api/public/hooks/coverage-gap-scan'
     | '/api/public/log-action-types/constraint'
+    | '/api/public/log-action-types/token-check'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
@@ -461,6 +472,7 @@ export interface FileRouteTypes {
     | '/dashboard/quotes/new'
     | '/api/public/hooks/coverage-gap-scan'
     | '/api/public/log-action-types/constraint'
+    | '/api/public/log-action-types/token-check'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
@@ -502,6 +514,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/quotes/new'
     | '/api/public/hooks/coverage-gap-scan'
     | '/api/public/log-action-types/constraint'
+    | '/api/public/log-action-types/token-check'
     | '/api/public/payments/webhook'
     | '/api/public/twilio/recording'
     | '/api/public/twilio/sms'
@@ -756,6 +769,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/log-action-types/token-check': {
+      id: '/api/public/log-action-types/token-check'
+      path: '/token-check'
+      fullPath: '/api/public/log-action-types/token-check'
+      preLoaderRoute: typeof ApiPublicLogActionTypesTokenCheckRouteImport
+      parentRoute: typeof ApiPublicLogActionTypesRoute
+    }
     '/api/public/log-action-types/constraint': {
       id: '/api/public/log-action-types/constraint'
       path: '/constraint'
@@ -868,12 +888,15 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface ApiPublicLogActionTypesRouteChildren {
   ApiPublicLogActionTypesConstraintRoute: typeof ApiPublicLogActionTypesConstraintRoute
+  ApiPublicLogActionTypesTokenCheckRoute: typeof ApiPublicLogActionTypesTokenCheckRoute
 }
 
 const ApiPublicLogActionTypesRouteChildren: ApiPublicLogActionTypesRouteChildren =
   {
     ApiPublicLogActionTypesConstraintRoute:
       ApiPublicLogActionTypesConstraintRoute,
+    ApiPublicLogActionTypesTokenCheckRoute:
+      ApiPublicLogActionTypesTokenCheckRoute,
   }
 
 const ApiPublicLogActionTypesRouteWithChildren =
