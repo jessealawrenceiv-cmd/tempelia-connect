@@ -702,14 +702,18 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             {filtered.length} loaded
           </span>
           {hasNextPage ? (
-            <button
-              type="button"
-              onClick={() => void fetchNextPage()}
-              disabled={isFetchingNextPage}
-              className="kb-focus rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
-            >
-              {isFetchingNextPage ? "Loading…" : `Load ${limit} ${sortDir === "oldest" ? "newer" : "older"}`}
-            </button>
+            <>
+              {/* Sentinel: scrolling it into view pulls the next keyset page. */}
+              <span ref={loadMoreRef} aria-hidden="true" className="sr-only" />
+              <button
+                type="button"
+                onClick={() => void fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="kb-focus rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+              >
+                {isFetchingNextPage ? "Loading…" : `Load ${limit} ${sortDir === "oldest" ? "newer" : "older"}`}
+              </button>
+            </>
           ) : (
             <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
               End of log
@@ -717,6 +721,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           )}
         </div>
       )}
+
     </div>
 
   );
