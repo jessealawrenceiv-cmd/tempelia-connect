@@ -236,7 +236,6 @@ vi.mock("@/integrations/supabase/client.server", () => ({
 vi.mock("@/lib/twilio-verify.server", () => ({
   verifyTwilioRequest: async (request: Request) => {
     const text = await request.text();
-    console.log("VERIFY", text.slice(0, 40));
     return { ok: true, form: new URLSearchParams(text) };
   },
 }));
@@ -653,7 +652,6 @@ describe("concurrent redeliveries stay idempotent", () => {
   for (const type of WEBHOOK_TYPES) {
     it(`writes one set of rows for ${type.name} when 6 attempts race`, async () => {
       const responses = await Promise.all(Array.from({ length: 6 }, () => type.post()));
-      for (const res of responses) { if (res.status !== 200) console.log("DBG", res.status, await res.clone().text()); }
       for (const res of responses) expect(res.status).toBe(200);
 
       const total = logs.length;
