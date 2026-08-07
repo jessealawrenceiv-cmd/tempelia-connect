@@ -224,7 +224,7 @@ describe("Load 25 older states across a mid-pagination server error", () => {
     expect(screen.getByText(/upstream request timed out/i)).toBeTruthy();
   });
 
-  it("shows Retrying… and keeps Load 25 older disabled during a retry", async () => {
+  it("marks a retry as in flight without stranding the pager in Loading…", async () => {
     const user = userEvent.setup();
     renderLog();
     await loadedCount(PAGE);
@@ -236,15 +236,18 @@ describe("Load 25 older states across a mid-pagination server error", () => {
     const release = openGate();
     await user.click(retryButton());
 
-    await waitFor(() => expect(screen.getByRole("button", { name: /Retrying…/i })).toBeTruthy());
-    expect(
-      (screen.getByRole("button", { name: /Retrying…/i }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    // While the retry runs the header refresh control reports the in-flight
+    // fetch, and the pager never shows a stale "Loading…" label.
+    const refresh = () =>
+      screen.getByRole("button", { name: /Refresh activity now/i }) as HTMLButtonElement;
+    await waitFor(() => expect(refresh().disabled).toBe(true));
+    expect(loadingButton()).toBeNull();
 
     release();
     await waitFor(() => expect(errorAlert()).toBeNull());
     await loadedCount(PAGE);
     expect(loadOlder()!.disabled).toBe(false);
+    await waitFor(() => expect(refresh().disabled).toBe(false));
   });
 
   it("recovers pagination after a retry and settles on No more older actions", async () => {
