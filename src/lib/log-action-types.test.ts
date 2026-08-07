@@ -42,19 +42,23 @@ describe("insertLog", () => {
 
   it("validates every row in a batch and never calls the database on failure", async () => {
     const { client, insert } = makeClient();
-    await expect(
+    const res = await insertLog(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      insertLog(client as never, [
+      client as never,
+      [
         { action_type: "quote_sms" },
         { action_type: "not_allowed" },
-      ] as never),
-    ).rejects.toThrow(/Invalid logs\.action_type "not_allowed"/);
+      ] as never,
+    );
+    expect(res.error?.constraint).toBe("logs_action_type_check");
+    expect(res.error?.rejectedActionType).toBe("not_allowed");
     expect(insert).not.toHaveBeenCalled();
   });
 
   it("rejects a missing action_type before insert", async () => {
     const { client, insert } = makeClient();
-    await expect(insertLog(client as never, { status: "x" } as never)).rejects.toThrow();
+    const res = await insertLog(client as never, { status: "x" } as never);
+    expect(res.error?.constraint).toBe("logs_action_type_check");
     expect(insert).not.toHaveBeenCalled();
   });
 
