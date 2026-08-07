@@ -12,6 +12,7 @@
  */
 
 import { LOG_ACTION_TYPES, LogAction, type LogActionType } from "./log-action-types.generated";
+import { LOG_DEDUPE_CONFLICT_TARGET, hasDedupeKey, logDedupeKey } from "./log-dedupe";
 import {
   logActionTypeSchema,
   LOG_ACTION_TYPE_CONSTRAINT,
