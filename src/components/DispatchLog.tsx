@@ -353,6 +353,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     getNextPageParam: (lastPage: LogRow[]) =>
       lastPage.length < limit ? undefined : (lastPage[lastPage.length - 1]?.created_at ?? undefined),
     queryFn: ({ pageParam }) => fetchLogPage(limit, pageParam),
+    // Wait for the customer-name lookup so a name search doesn't briefly show
+    // only message/phone matches before the ids land.
+    enabled: searchTerms.length === 0 || termCustomerIds !== undefined,
   });
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
