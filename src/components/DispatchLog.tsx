@@ -176,6 +176,22 @@ function writeStoredTypes(types: LogActionType[]) {
   }
 }
 
+/** Auto-refresh: 0 = off. Persisted so the choice survives reloads. */
+const LOG_AUTO_REFRESH_STORAGE_KEY = "temaro-activity-log-auto-refresh";
+const AUTO_REFRESH_OPTIONS = [0, 15, 30, 60] as const;
+type AutoRefreshSeconds = (typeof AUTO_REFRESH_OPTIONS)[number];
+
+function readStoredAutoRefresh(): AutoRefreshSeconds {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = Number(window.localStorage.getItem(LOG_AUTO_REFRESH_STORAGE_KEY));
+    return (AUTO_REFRESH_OPTIONS as readonly number[]).includes(raw) ? (raw as AutoRefreshSeconds) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+
 /** Parses a ?dateFrom=/?dateTo= day string (yyyy-MM-dd) into a local Date. */
 function parseDayParam(value: unknown): Date | undefined {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
