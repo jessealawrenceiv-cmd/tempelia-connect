@@ -527,7 +527,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   };
   /** Clears every filter, including any invalid values that came from the URL. */
   const resetFilters = () => {
-    console.log("RESET FILTERS CALLED");
     setSearchQuery("");
     setCustomerInput("");
     writeStoredTypes([]);
@@ -1255,7 +1254,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
     setAnnouncement(`New activity: ${logActionLabel(latest.action_type)} at ${time}`);
   }, [filtered, scope]);
 
-  const ErrorRetry = () => (
+  // Rendered inline (not via a locally-declared component) so the alert keeps a
+  // stable identity across renders and its buttons stay attached to the DOM.
+  const errorRetryPanel = (
     <LogErrorRetry
       logError={logError}
       hasActiveFilters={hasActiveFilters}
@@ -1941,7 +1942,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <SkeletonRow key="s5" />
           </>
         )}
-        {!isLoading && logError && filtered.length === 0 && <ErrorRetry />}
+        {!isLoading && logError && errorRetryPanel}
         {filtersBlocked && filtered.length === 0 && (
           <div role="listitem" data-testid="log-filters-blocked" className="p-5 text-muted-foreground">
             We didn’t search yet — fix the highlighted filters above and results will load.
@@ -1992,7 +1993,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             </div>
           ))
         )}
-        {!isLoading && logError && filtered.length > 0 && <ErrorRetry />}
         {isFetchingNextPage && (
           <>
             <SkeletonRow key="s-more-1" />
