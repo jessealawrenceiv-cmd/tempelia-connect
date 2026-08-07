@@ -48,6 +48,8 @@ describe("useValidatedLogInsert", () => {
       { user_id: "u", action_type: "bad_action", status: "ok" },
     ] as never);
     expect(insert).not.toHaveBeenCalled();
-    expect(res.error?.constraint).toBe("logs_action_type_check");
+    expect((res.error as { constraint?: string }).constraint).toBe(
+      "logs_action_type_check",
+    );
   });
 });
