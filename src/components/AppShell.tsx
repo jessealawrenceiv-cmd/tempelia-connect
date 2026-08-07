@@ -120,6 +120,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                   >
                     <Shield size={14} /> Admin · Recovery
                   </Link>
+                  <Link
+                    to="/dashboard/admin/log-actions"
+                    className="mb-2 flex items-center gap-3 rounded-sm px-3 py-2 text-xs uppercase tracking-wider text-orange hover:bg-paper/10"
+                  >
+                    <Shield size={14} /> Admin · Action types
+                  </Link>
                 </>
               )}
               {!isStaff && (
