@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { reportFilterRejection } from "@/lib/activity-log-validation.reporter";
@@ -720,20 +720,45 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   };
 
-  // Server-side keyset pagination: only one small page ships over mobile data.
-  const {
-    data,
-    isLoading,
-    error: logError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isFetching,
-    dataUpdatedAt,
-    refetch,
+  // Re-fetch a single record through the exact same filter chain. Used by the
+  // live subscription so a streamed insert is only prepended when it genuinely
+  // belongs in the current view (and is readable under RLS).
+  const fetchLogRowById = async (id: string): Promise<LogRow | null> => {
+    const base = supabase
+      .from("logs")
+      .select(
+        sel(
+          `id, action_type, message_sent, created_at, status, customer_id, recipient_phone, twilio_message_sid, voicemail_url, recording_sid, call_sid, prompt_template, prompt_template_hash, prompt_cooldown_minutes`,
+        ),
+      )
+      .eq("id", id)
+      .limit(1);
+    const q = applyFilters(base as unknown as FilterableQuery, "created_at", null);
+    const { data: rows, error } = await (q as unknown as typeof base).returns<RawLogRow[]>();
+    if (error) throw error;
+    const parsed = parseLogRowsResponse(rows ?? []);
+    const r = parsed.rows[0];
+    if (!r) return null;
+    return {
+      id: r.id,
+      action_type: r.action_type,
+      message_sent: r.message_sent,
+      created_at: (r.created_at ?? r.original_created_at) as string,
+      status: r.status,
+      customer_id: r.customer_id,
+      recipient_phone: r.recipient_phone ?? null,
+      twilio_message_sid: r.twilio_message_sid ?? null,
+      voicemail_url: r.voicemail_url ?? null,
+      recording_sid: r.recording_sid ?? null,
+      call_sid: r.call_sid ?? null,
+      prompt_template: r.prompt_template ?? null,
+      prompt_template_hash: r.prompt_template_hash ?? null,
+      prompt_cooldown_minutes: r.prompt_cooldown_minutes ?? null,
+    };
+  };
 
-  } = useInfiniteQuery({
-    queryKey: [
+  const logsQueryKey = useMemo(
+    () => [
       "logs",
       scope,
       limit,
@@ -749,6 +774,37 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       originFilter,
       sortDir,
     ],
+    [
+      scope,
+      limit,
+      fromISO,
+      toISO,
+      typeKey,
+      searchKey,
+      customerMatchKey,
+      customerFilter,
+      phoneCustomerKey,
+      statusRefreshOnly,
+      failedOnly,
+      originFilter,
+      sortDir,
+    ],
+  );
+
+  // Server-side keyset pagination: only one small page ships over mobile data.
+  const {
+    data,
+    isLoading,
+    error: logError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetching,
+    dataUpdatedAt,
+    refetch,
+
+  } = useInfiniteQuery({
+    queryKey: logsQueryKey,
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage: LogRow[]) =>
       lastPage.length < limit ? undefined : (lastPage[lastPage.length - 1]?.created_at ?? undefined),
@@ -760,6 +816,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       (searchTerms.length === 0 || termCustomerIds !== undefined) &&
       (!hasPhoneFilter || phoneCustomerIds !== undefined),
   });
+
 
   const rows = useMemo(() => (data?.pages ?? []).flat(), [data]);
 
@@ -783,6 +840,56 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [autoRefreshSeconds, scope, isFetching, isFetchingNextPage, refetch]);
+
+  // Live updates: new dispatch rows written by the server stream in over
+  // Realtime and are prepended to the top page instead of waiting for a poll.
+  // Each insert is re-read through the active filter chain so only records that
+  // belong in the current view (and are readable under RLS) are added, and
+  // newest-first is required so "prepend" is actually correct.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (scope !== "live" || sortDir !== "newest" || filtersBlocked) return;
+
+    let cancelled = false;
+    const channel = supabase
+      .channel("dispatch-log-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "logs" },
+        (payload) => {
+          const id = (payload.new as { id?: string } | null)?.id;
+          if (!id) return;
+          void (async () => {
+            try {
+              const row = await fetchLogRowById(id);
+              if (!row || cancelled) return;
+              queryClient.setQueryData<InfiniteData<LogRow[], string | null>>(
+                logsQueryKey,
+                (prev) => {
+                  if (!prev || prev.pages.length === 0) return prev;
+                  if (prev.pages.some((page) => page.some((r) => r.id === row.id))) return prev;
+                  const pages = prev.pages.slice();
+                  pages[0] = [row, ...(pages[0] ?? [])];
+                  return { ...prev, pages };
+                },
+              );
+            } catch {
+              // A transient failure just means this row shows up on the next poll.
+            }
+          })();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, sortDir, filtersBlocked, logsQueryKey, queryClient]);
+
+
 
   const updatedLabel = useMemo(
     () =>
