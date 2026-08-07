@@ -2,7 +2,7 @@
 // finishes uploading. We attach the recording URL to the matching missed-call
 // log row and text the business owner if they've set an owner_phone.
 import { createFileRoute } from "@tanstack/react-router";
-import { insertLog, LogAction } from "@/lib/log-action-types";
+import { insertLog, LogAction, logDedupeKey } from "@/lib/log-action-types";
 
 export const Route = createFileRoute("/api/public/twilio/recording")({
   server: {
@@ -19,10 +19,11 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { claimWebhookDelivery, completeWebhookDelivery, duplicateResponse, twilioDeliveryKey } =
           await import("@/lib/webhook-idempotency.server");
+        const deliveryKey = twilioDeliveryKey("recording_status", form);
         const claim = await claimWebhookDelivery(supabaseAdmin, {
           source: "twilio",
           eventKind: "recording_status",
-          deliveryKey: twilioDeliveryKey("recording_status", form),
+          deliveryKey,
         });
         if (claim.duplicate) return duplicateResponse(claim, "text");
 
@@ -81,6 +82,9 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
               voicemail_url: playbackUrl,
               recording_sid: recordingSid || null,
               call_sid: callSid || null,
+              // Keyed on RecordingSid so a retried status callback resolves to
+              // this synthesized row rather than adding another one.
+              dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext, "voicemail"),
             });
           }
         }
@@ -106,6 +110,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
                 twilio_message_sid: res.sid,
                 call_sid: callSid || null,
                 voicemail_url: playbackUrl,
+                dedupe_key: logDedupeKey(deliveryKey, LogAction.voicemail_notify),
               });
             } catch (e) {
               await insertLog(supabaseAdmin, {
@@ -115,6 +120,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
                 message_sent: `Owner notify failed: ${(e as Error).message}`,
                 call_sid: callSid || null,
                 voicemail_url: playbackUrl,
+                dedupe_key: logDedupeKey(deliveryKey, LogAction.voicemail_notify),
               });
             }
           }

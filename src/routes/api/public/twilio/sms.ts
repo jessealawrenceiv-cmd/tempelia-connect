@@ -1,7 +1,7 @@
 // Twilio inbound SMS webhook — routes by the To number to a specific tenant.
 // Twilio POSTs application/x-www-form-urlencoded.
 import { createFileRoute } from "@tanstack/react-router";
-import { insertLog, LogAction } from "@/lib/log-action-types";
+import { insertLog, LogAction, logDedupeKey } from "@/lib/log-action-types";
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
@@ -30,10 +30,11 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { claimWebhookDelivery, completeWebhookDelivery, duplicateResponse, twilioDeliveryKey } =
           await import("@/lib/webhook-idempotency.server");
+        const deliveryKey = twilioDeliveryKey("sms_inbound", form);
         const claim = await claimWebhookDelivery(supabaseAdmin, {
           source: "twilio",
           eventKind: "sms_inbound",
-          deliveryKey: twilioDeliveryKey("sms_inbound", form),
+          deliveryKey,
         });
         if (claim.duplicate) return duplicateResponse(claim, "twiml");
 
@@ -68,6 +69,8 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           twilio_message_sid: messageSid || null,
         });
 
+        // Dedupe key: keyed on the provider MessageSid, so a redelivery of this
+        // SMS can never add a second row even if the delivery claim failed open.
         const logRow = (status: string) => ({
           user_id: tenant.id,
           customer_id: cust?.id ?? null,
@@ -75,6 +78,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           status,
           message_sent: body,
           twilio_message_sid: messageSid || null,
+          dedupe_key: logDedupeKey(deliveryKey, LogAction.sms_inbound, status),
         });
 
         if (STOP_KEYWORDS.has(keyword)) {
@@ -125,6 +129,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             status: "captured",
             message_sent: body,
             twilio_message_sid: messageSid || null,
+            dedupe_key: logDedupeKey(deliveryKey, LogAction.quote_decline_reason_captured),
           });
           return twiml("<Message>Thanks — we've passed that along.</Message>");
         }

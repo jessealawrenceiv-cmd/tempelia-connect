@@ -3,7 +3,7 @@
 // an auto-text from the same number. Routing: look up the tenant by the To number.
 import { createFileRoute } from "@tanstack/react-router";
 import { PROJECT_PUBLIC_BASE } from "@/lib/twilio.server";
-import { insertLogReturningId, LogAction } from "@/lib/log-action-types";
+import { insertLogReturningId, LogAction, logDedupeKey } from "@/lib/log-action-types";
 
 function twiml(body: string) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`;
@@ -105,6 +105,9 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             action_type: LogAction.missed_call_excluded,
             status: "skipped",
             call_sid: callSid || null,
+            // Keyed on CallSid: a redelivered voice webhook resolves to this
+            // same row instead of writing another exclusion entry.
+            dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_excluded),
             message_sent: `Caller ${from} on exclusion list${excluded.label ? ` (${excluded.label})` : ""} — auto-text skipped.`,
           });
           await markWebhookCorrelated(supabaseAdmin, {
@@ -149,6 +152,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             message_sent: text,
             twilio_message_sid: res.sid,
             call_sid: callSid || null,
+            dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext),
           });
           logId = id;
         } catch (e) {
@@ -158,6 +162,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
             status: "failed",
             message_sent: `Call ${callSid}: ${(e as Error).message}`,
             call_sid: callSid || null,
+            dedupe_key: logDedupeKey(deliveryKey, LogAction.missed_call_autotext),
           });
           logId = id;
         }
