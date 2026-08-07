@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { reportFilterRejection } from "@/lib/activity-log-validation.client";
+import { reportFilterRejection } from "@/lib/activity-log-validation.reporter";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
 import { useEffect, useMemo, useRef, useState } from "react";
