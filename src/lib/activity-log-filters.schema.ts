@@ -176,3 +176,91 @@ export function friendlyLogRequestError(err: unknown): string {
   }
   return "We couldn’t load the activity log with these filters. Try clearing them and searching again.";
 }
+
+/**
+ * Structured, user-facing description of a failed logs request.
+ *
+ * Postgres rejects an out-of-whitelist action_type with HTTP 400 and the
+ * check-constraint message `violates check constraint "logs_action_type_check"`.
+ * That raw string is meaningless to a business owner, so the UI shows the
+ * friendly headline plus the exact constraint text in a collapsible details
+ * block (useful when they paste it to support).
+ */
+export type LogRequestErrorInfo = {
+  /** Short headline for the alert. */
+  title: string;
+  /** Friendly sentence explaining what to do. */
+  message: string;
+  /** Raw server text (constraint message / details / hint), if any. */
+  technicalDetail?: string;
+  /** HTTP status, when the client surfaced one (400 for a bad action_type). */
+  status?: number;
+  /** True when this is specifically the logs_action_type_check violation. */
+  isActionTypeCheck: boolean;
+  /** Whitelist to show the user when the action_type was rejected. */
+  allowedTypes?: readonly string[];
+  /** Whether clearing filters is the likely fix. */
+  suggestClearFilters: boolean;
+};
+
+const ACTION_TYPE_CHECK = "logs_action_type_check";
+
+function errorParts(err: unknown): {
+  message: string;
+  details?: string;
+  hint?: string;
+  code?: string;
+  status?: number;
+} {
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const message =
+      typeof e['message'] === "string" ? e['message'] : err instanceof Error ? err.message : "";
+    return {
+      message,
+      details: typeof e['details'] === "string" ? e['details'] : undefined,
+      hint: typeof e['hint'] === "string" ? e['hint'] : undefined,
+      code: typeof e['code'] === "string" ? e['code'] : undefined,
+      status:
+        typeof e['status'] === "number"
+          ? e['status']
+          : typeof e['statusCode'] === "number"
+            ? (e['statusCode'] as number)
+            : undefined,
+    };
+  }
+  return { message: String(err ?? "") };
+}
+
+export function describeLogRequestError(err: unknown): LogRequestErrorInfo {
+  const { message, details, hint, code, status } = errorParts(err);
+  const blob = [message, details, hint].filter(Boolean).join(" ");
+  const technicalDetail =
+    [message, details, hint].filter((s): s is string => Boolean(s && s.trim())).join(" — ") || undefined;
+
+  const isActionTypeCheck =
+    blob.includes(ACTION_TYPE_CHECK) || (code === "23514" && /action_type/i.test(blob));
+
+  if (isActionTypeCheck || (status === 400 && /action_type/i.test(blob))) {
+    return {
+      title: "That record type isn’t one we track",
+      message:
+        "The activity log only accepts a fixed list of record types, and one of the values in your filters (or in the entry being saved) isn’t on it. Clear your filters to get back to the full log.",
+      technicalDetail,
+      status: status ?? 400,
+      isActionTypeCheck: true,
+      allowedTypes: LOG_ACTION_TYPES,
+      suggestClearFilters: true,
+    };
+  }
+
+  const friendly = friendlyLogRequestError(err);
+  return {
+    title: "Couldn’t load activity",
+    message: friendly,
+    technicalDetail,
+    status,
+    isActionTypeCheck: false,
+    suggestClearFilters: /filter/i.test(friendly),
+  };
+}
