@@ -13,6 +13,8 @@ import {
   type FilterableQuery,
 } from "@/lib/activity-log-csv";
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
+import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
+
 import {
   LOG_ACTION_FILTER_ORDER,
   isNewLogAction,
