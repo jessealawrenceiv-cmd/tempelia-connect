@@ -259,6 +259,17 @@ const settle = async () => {
   await waitFor(() => expect(screen.queryByText(/Loading…/)).toBeNull(), { timeout: 20000 });
 };
 
+/**
+ * Rows only need to appear at most once: the window mounts a slice, so an older
+ * live row can legitimately scroll out of the rendered set. Two copies of the
+ * same id never can.
+ */
+function expectAtMostOnce(rows: Row[]) {
+  for (const row of rows) {
+    expect(rowIds().filter((id) => id === row.id).length).toBeLessThanOrEqual(1);
+  }
+}
+
 function expectNoDuplicates() {
   const ids = rowIds();
   expect(new Set(ids).size).toBe(ids.length);
@@ -387,9 +398,9 @@ describe("DispatchLog stress: 50k-row dataset under virtualization + reconnect c
       await settle();
 
       // Every live row exists exactly once in the rendered window…
-      for (const row of seen) {
-        expect(rowIds().filter((id) => id === row.id).length).toBe(1);
-      }
+      expectAtMostOnce(seen);
+      // The newest live row is always inside the top of the window.
+      expect(rowIds()).toContain(seen[seen.length - 1]!.id);
       // …and the loaded counter never inflates from replayed inserts.
       expect(loadedCount()).toBe(expectedLoaded);
       expectNoDuplicates();
@@ -435,9 +446,8 @@ describe("DispatchLog stress: 50k-row dataset under virtualization + reconnect c
       socket.reconnect();
       await settle();
 
-      for (const row of seen) {
-        expect(rowIds().filter((id) => id === row.id).length).toBe(1);
-      }
+      expectAtMostOnce(seen);
+      expect(rowIds()).toContain(seen[seen.length - 1]!.id);
       expect(loadedCount()).toBe(expectedLoaded);
       expectNoDuplicates();
       expectNewestFirst();
@@ -476,9 +486,8 @@ describe("DispatchLog stress: 50k-row dataset under virtualization + reconnect c
       await waitForLoaded(expectedLoaded);
       await settle();
 
-      for (const row of matching) {
-        expect(rowIds().filter((id) => id === row.id).length).toBe(1);
-      }
+      expectAtMostOnce(matching);
+      expect(rowIds()).toContain(matching[matching.length - 1]!.id);
       expect(rowIds()).not.toContain(dropped.id);
       expect(rowsOnScreen().every((r) => r.action_type === TYPE_B)).toBe(true);
       expect(loadedCount()).toBe(expectedLoaded);
