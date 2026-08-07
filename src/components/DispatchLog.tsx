@@ -414,9 +414,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   };
   /** Clears every filter, including any invalid values that came from the URL. */
   const resetFilters = () => {
-    setStatusRefreshOnly(false);
-    setFailedOnly(false);
-    setOriginFilter("all");
     setSearchQuery("");
     setCustomerInput("");
     writeStoredTypes([]);
@@ -430,10 +427,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         dateFrom: undefined,
         dateTo: undefined,
         logCustomer: undefined,
+        logStatusOnly: undefined,
+        logFailed: undefined,
+        logOrigin: undefined,
       }),
       resetScroll: false,
     });
   };
+
 
   /** Captures the current filter bar as a named preset. */
   const savePreset = () => {
