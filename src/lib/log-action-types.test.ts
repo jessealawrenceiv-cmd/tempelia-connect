@@ -23,7 +23,7 @@ describe("log action_type whitelist", () => {
     "rejects %j",
     (v) => {
       expect(isLogActionType(v)).toBe(false);
-      expect(() => assertLogActionType(v)).toThrow(/Invalid logs\.action_type/);
+      expect(() => assertLogActionType(v)).toThrow(/logs_action_type_check/);
     },
   );
 });
