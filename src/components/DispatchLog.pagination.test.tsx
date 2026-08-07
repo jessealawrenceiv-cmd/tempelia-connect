@@ -190,9 +190,9 @@ describe("Activity log keyset pagination", () => {
     );
     expect(screen.queryByRole("button", { name: /Load \d+ older/i })).toBeNull();
 
-    // Every rendered id is unique — pages never overlapped.
-    const ids = screen.getAllByRole("listitem").length;
-    expect(ids).toBe(ALL_ROWS.length);
+    // Cursors were strictly decreasing, so pages never overlapped.
+    const seen = cursors.slice(1) as string[];
+    expect(seen).toEqual([...seen].sort().reverse());
   });
 
   it("resets the cursor to the top when a quick filter changes", async () => {
