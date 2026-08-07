@@ -117,6 +117,7 @@ describe("logs API — invalid action_type returns 400", () => {
 
   it("logs a greppable structured warning for each rejection", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear();
     await endpoint(post({ action_type: ["bogus_type"] }));
     expect(warn).toHaveBeenCalledTimes(1);
     const line = String(warn.mock.calls[0]?.[0]);
