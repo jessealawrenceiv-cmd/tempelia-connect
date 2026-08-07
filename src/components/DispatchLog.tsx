@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -29,6 +30,9 @@ import {
   logActionLabel,
 } from "@/lib/log-action-presentation";
 
+
+/** Above this many loaded rows the list renders windowed instead of in full. */
+const VIRTUALIZE_THRESHOLD = 60;
 
 type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
@@ -424,7 +428,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   // keyset page, so older records stream in as the user scrolls instead of
   // requiring a tap. The "Load more" button stays as an explicit fallback.
   const loadMoreRef = useRef<HTMLSpanElement | null>(null);
-  const listRef = useRef<HTMLUListElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+
 
   // Reset scroll position whenever filters change so the user always starts
   // at the top of the newly-filtered result set and never sees pages from a
@@ -484,6 +490,19 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
 
   const filtered = rows;
 
+  // Once many keyset pages are appended, rendering every row hurts scroll
+  // performance, so long lists switch to a windowed renderer that only mounts
+  // the visible slice (plus a small overscan buffer).
+  const isVirtualized = filtered.length > VIRTUALIZE_THRESHOLD;
+  const virtualizer = useVirtualizer({
+    count: isVirtualized ? filtered.length : 0,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => 60,
+    overscan: 10,
+    getItemKey: (index: number) => filtered[index]?.id ?? index,
+  });
+
+
 
 
 
@@ -500,7 +519,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   }, [filtered, scope]);
 
   const SkeletonRow = () => (
-    <li className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3" aria-hidden="true">
+    <div
+      className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 border-b border-border px-5 py-3"
+      aria-hidden="true"
+    >
       <span className="h-3.5 w-12 rounded bg-muted animate-pulse" />
       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted animate-pulse" />
       <div className="space-y-1.5">
@@ -508,11 +530,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         <span className="block h-3 w-48 rounded bg-muted animate-pulse" />
       </div>
       <span className="h-3 w-6 rounded bg-muted animate-pulse" />
-    </li>
+    </div>
   );
 
   const ErrorRetry = () => (
-    <li className="px-5 py-6" role="alert" aria-live="polite">
+    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
       <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Couldn’t load activity</p>
@@ -529,8 +551,94 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           {isFetchingNextPage || isLoading ? "Retrying…" : "Retry"}
         </button>
       </div>
-    </li>
+    </div>
   );
+
+  /** One dispatch line; shared by the plain and virtualized render paths. */
+  const RowBody = ({ row }: { row: LogRow }) => {
+    const affected = parseAffected(row);
+    const isCopied = copiedId === row.id;
+    return (
+      <div className="group grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
+        <span className="text-muted-foreground">
+          {new Date(row.created_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </span>
+        <span
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+            (row.action_type === LogAction.status_refresh
+              ? REFRESH_OUTCOME[row.status ?? ""]?.dot
+              : undefined) ?? logActionDot(row.action_type)
+          }`}
+        />
+        <span>
+          <span className="mr-2 font-semibold text-foreground" title={logActionDescription(row.action_type)}>
+            {logActionLabel(row.action_type)}
+          </span>
+          {row.action_type === LogAction.automation_status_change && row.status && row.status in ORIGIN_LABEL && (
+            <span className="mr-2 inline-flex items-center rounded bg-muted px-1 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+              {ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}
+            </span>
+          )}
+          <span className="text-foreground/80">{describe(row)}</span>
+          {affected.length > 0 && (
+            <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">affected</span>
+              {affected.map((a) =>
+                a.type === "customer" ? (
+                  <Link
+                    key={`c-${a.id}`}
+                    to="/dashboard/contacts"
+                    search={{ customerId: a.id }}
+                    className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-primary hover:border-primary hover:underline"
+                    title="Open this contact"
+                  >
+                    {a.label}
+                  </Link>
+                ) : (
+                  <Link
+                    key={`i-${a.id}`}
+                    to="/dashboard/intakes"
+                    search={{ intakeId: a.id }}
+                    className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-steel hover:border-steel hover:underline"
+                    title="Open this submission"
+                  >
+                    {a.label} · intake
+                  </Link>
+                ),
+              )}
+            </span>
+          )}
+        </span>
+        <button
+          type="button"
+          aria-label={isCopied ? "Copied" : "Copy dispatch line"}
+          title={isCopied ? "Copied" : "Copy dispatch line"}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(formatDispatchLine(row));
+              setCopiedId(row.id);
+              toast.success("Dispatch line copied");
+              window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
+            } catch {
+              toast.error("Copy failed", { description: "Clipboard access was denied." });
+            }
+          }}
+          className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
+        >
+          {isCopied ? (
+            <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
+          ) : (
+            <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+    );
+  };
+
 
   return (
     <div className="panel">
@@ -814,7 +922,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       </div>
 
 
-      <ul ref={listRef} className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs">
+      <div
+        ref={listRef}
+        role="list"
+        className="mono max-h-[520px] divide-y divide-border overflow-y-auto text-xs"
+      >
         {isLoading && (
           <>
             <SkeletonRow key="s1" />
@@ -826,7 +938,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         )}
         {!isLoading && logError && filtered.length === 0 && <ErrorRetry />}
         {!isLoading && !logError && filtered.length === 0 && (
-          <li className="p-5 text-muted-foreground">
+          <div role="listitem" className="p-5 text-muted-foreground">
             {hasRange
               ? "No entries in the selected date range. Try widening the range or clearing filters."
               : selectedTypes.length > 0 ||
@@ -838,89 +950,38 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
                 : scope === "archive"
                   ? "Nothing archived yet. Entries older than 90 days move here automatically."
                   : "No dispatches yet. Actions will appear here in real time."}
-          </li>
+          </div>
         )}
 
-
-        {filtered.map((row) => {
-          const affected = parseAffected(row);
-          const isCopied = copiedId === row.id;
-          return (
-          <li key={row.id} className="group grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-5 py-3">
-            <span className="text-muted-foreground">
-              {new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </span>
-            <span
-              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                (row.action_type === LogAction.status_refresh
-                  ? REFRESH_OUTCOME[row.status ?? ""]?.dot
-                  : undefined) ?? logActionDot(row.action_type)
-              }`}
-            />
-            <span>
-              <span className="mr-2 font-semibold text-foreground" title={logActionDescription(row.action_type)}>
-                {logActionLabel(row.action_type)}
-              </span>
-              {row.action_type === LogAction.automation_status_change && row.status && row.status in ORIGIN_LABEL && (
-                <span className="mr-2 inline-flex items-center rounded bg-muted px-1 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {ORIGIN_LABEL[row.status as keyof typeof ORIGIN_LABEL]}
-                </span>
-              )}
-              <span className="text-foreground/80">{describe(row)}</span>
-              {affected.length > 0 && (
-                <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">affected</span>
-                  {affected.map((a) =>
-                    a.type === "customer" ? (
-                      <Link
-                        key={`c-${a.id}`}
-                        to="/dashboard/contacts"
-                        search={{ customerId: a.id }}
-                        className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-primary hover:border-primary hover:underline"
-                        title="Open this contact"
-                      >
-                        {a.label}
-                      </Link>
-                    ) : (
-                      <Link
-                        key={`i-${a.id}`}
-                        to="/dashboard/intakes"
-                        search={{ intakeId: a.id }}
-                        className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-steel hover:border-steel hover:underline"
-                        title="Open this submission"
-                      >
-                        {a.label} · intake
-                      </Link>
-                    ),
-                  )}
-                </span>
-              )}
-            </span>
-            <button
-              type="button"
-              aria-label={isCopied ? "Copied" : "Copy dispatch line"}
-              title={isCopied ? "Copied" : "Copy dispatch line"}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(formatDispatchLine(row));
-                  setCopiedId(row.id);
-                  toast.success("Dispatch line copied");
-                  window.setTimeout(() => setCopiedId((id) => (id === row.id ? null : id)), 1500);
-                } catch {
-                  toast.error("Copy failed", { description: "Clipboard access was denied." });
-                }
-              }}
-              className="kb-focus opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
-            >
-              {isCopied ? (
-                <span className="text-[10px] uppercase tracking-widest text-moss">Copied</span>
-              ) : (
-                <Copy size={12} className="text-muted-foreground hover:text-foreground" aria-hidden="true" />
-              )}
-            </button>
-          </li>
-          );
-        })}
+        {/* Small lists render in full; long ones (many appended pages) switch to
+            windowed rendering so scrolling stays smooth no matter how many
+            keyset pages have been loaded. */}
+        {isVirtualized ? (
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((item) => {
+              const row = filtered[item.index];
+              if (!row) return null;
+              return (
+                <div
+                  key={item.key}
+                  role="listitem"
+                  data-index={item.index}
+                  ref={virtualizer.measureElement}
+                  className="absolute left-0 top-0 w-full border-b border-border"
+                  style={{ transform: `translateY(${item.start}px)` }}
+                >
+                  <RowBody row={row} />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          filtered.map((row) => (
+            <div key={row.id} role="listitem" className="w-full">
+              <RowBody row={row} />
+            </div>
+          ))
+        )}
         {!isLoading && logError && filtered.length > 0 && <ErrorRetry />}
         {isFetchingNextPage && (
           <>
@@ -928,7 +989,8 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
             <SkeletonRow key="s-more-2" />
           </>
         )}
-      </ul>
+      </div>
+
 
       {filtered.length > 0 && (
         <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
