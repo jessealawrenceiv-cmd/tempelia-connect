@@ -520,6 +520,29 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           );
         })}
       </ul>
+
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
+          <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            {filtered.length} loaded
+          </span>
+          {hasNextPage ? (
+            <button
+              type="button"
+              onClick={() => void fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="kb-focus rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+            >
+              {isFetchingNextPage ? "Loading…" : `Load ${limit} older`}
+            </button>
+          ) : (
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              End of log
+            </span>
+          )}
+        </div>
+      )}
     </div>
+
   );
 }
