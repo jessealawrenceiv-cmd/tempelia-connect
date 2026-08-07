@@ -200,6 +200,8 @@ export type LogRequestErrorInfo = {
   isActionTypeCheck: boolean;
   /** Whitelist to show the user when the action_type was rejected. */
   allowedTypes?: readonly string[];
+  /** The offending action_type value parsed out of the server error, when detectable. */
+  rejectedValue?: string;
   /** Whether clearing filters is the likely fix. */
   suggestClearFilters: boolean;
 };
@@ -233,6 +235,26 @@ function errorParts(err: unknown): {
   return { message: String(err ?? "") };
 }
 
+/**
+ * Pull the offending action_type out of a Postgres check-constraint error.
+ * Postgres reports it inside `Failing row contains (…)` (or a quoted value),
+ * so we scan those tokens for something that isn't an allowed record type.
+ */
+export function rejectedActionTypeFromError(err: unknown): string | undefined {
+  const { message, details, hint } = errorParts(err);
+  const blob = [message, details, hint].filter(Boolean).join(" ");
+  const allowed = new Set<string>(LOG_ACTION_TYPES as readonly string[]);
+  const candidates: string[] = [];
+  for (const m of blob.matchAll(/[“"']([a-z][a-z0-9_]{2,63})[”"']/g)) candidates.push(m[1]!);
+  for (const tuple of blob.matchAll(/Failing row contains \(([^)]*)\)/gi)) {
+    for (const raw of tuple[1]!.split(",")) {
+      const token = raw.trim().replace(/^[“"']|[”"']$/g, "");
+      if (/^[a-z][a-z0-9_]{2,63}$/.test(token)) candidates.push(token);
+    }
+  }
+  return candidates.find((c) => !allowed.has(c) && c.includes("_")) ?? candidates.find((c) => !allowed.has(c));
+}
+
 export function describeLogRequestError(err: unknown): LogRequestErrorInfo {
   const { message, details, hint, code, status } = errorParts(err);
   const blob = [message, details, hint].filter(Boolean).join(" ");
@@ -243,10 +265,13 @@ export function describeLogRequestError(err: unknown): LogRequestErrorInfo {
     blob.includes(ACTION_TYPE_CHECK) || (code === "23514" && /action_type/i.test(blob));
 
   if (isActionTypeCheck || (status === 400 && /action_type/i.test(blob))) {
+    const rejectedValue = rejectedActionTypeFromError(err);
     return {
       title: "That record type isn’t one we track",
       message:
+        (rejectedValue ? `The record type “${rejectedValue}” isn’t one we track. ` : "") +
         "The activity log only accepts a fixed list of record types, and one of the values in your filters (or in the entry being saved) isn’t on it. Clear your filters to get back to the full log.",
+      rejectedValue,
       technicalDetail,
       status: status ?? 400,
       isActionTypeCheck: true,
