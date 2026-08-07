@@ -16,6 +16,7 @@ import {
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
+import { phoneDigits } from "@/lib/phone";
 import {
   MAX_LOG_SEARCH_LENGTH,
   describeLogRequestError,
@@ -182,6 +183,9 @@ function parseDayParam(value: unknown): Date | undefined {
   const date = new Date(y, m - 1, d);
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
+
+/** Matches a customer id pasted into the contact filter. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Serialises a Date to the yyyy-MM-dd form used in the URL. */
 function toDayParam(date: Date): string {
@@ -959,6 +963,39 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               </button>
             )}
           </div>
+
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              value={customerInput}
+              onChange={(e) => setCustomerInput(e.target.value)}
+              placeholder="Contact phone or ID…"
+              aria-label="Filter activity by customer phone number or customer ID"
+              aria-invalid={customerFilterInvalid || undefined}
+              aria-describedby="log-customer-filter-hint"
+              maxLength={64}
+              className="kb-focus h-7 w-40 rounded-full border border-border bg-background px-3 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-48"
+            />
+            {customerInput && (
+              <button
+                type="button"
+                aria-label="Clear contact filter"
+                onClick={() => setCustomerInput("")}
+                className="kb-focus absolute right-2 text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            )}
+            <span id="log-customer-filter-hint" className="sr-only">
+              Enter a full customer ID or at least four digits of a phone number.
+            </span>
+          </div>
+
+          {customerFilterInvalid && (
+            <span className="mono text-[10px] uppercase tracking-wider text-orange">
+              Enter a customer ID or 4+ phone digits
+            </span>
+          )}
 
           <DateRangePicker
             value={dateRange}
