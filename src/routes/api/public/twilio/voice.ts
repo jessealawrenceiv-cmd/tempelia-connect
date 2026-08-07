@@ -21,7 +21,14 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         const { verifyTwilioRequest } = await import("@/lib/twilio-verify.server");
         const { ok, form } = await verifyTwilioRequest(request);
         const { recordWebhookEvent } = await import("@/lib/webhook-log.server");
-        await recordWebhookEvent({ request, form, signatureValid: ok, eventKind: "missed_call" });
+        // Keep the event id: every verified missed call must end up linked to
+        // the Activity log entry it produces, or be flagged as a failure.
+        const webhookEventId = await recordWebhookEvent({
+          request,
+          form,
+          signatureValid: ok,
+          eventKind: "missed_call",
+        });
         if (!ok) return new Response("Forbidden", { status: 403 });
 
         // Idempotency: Twilio retries the same CallSid when we're slow or error
@@ -32,6 +39,9 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           await import("@/lib/webhook-idempotency.server");
         const { logWebhookRetryAttempt, logWebhookFailure, WEBHOOK_MAX_ATTEMPTS } = await import(
           "@/lib/webhook-delivery-audit.server"
+        );
+        const { markWebhookCorrelated, markWebhookNotApplicable } = await import(
+          "@/lib/webhook-correlation.server"
         );
         const deliveryKey = twilioDeliveryKey("missed_call", form);
         const claim = await claimWebhookDelivery(supabaseAdmin, {
@@ -47,6 +57,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         const to = String(form.get("To") ?? "").trim();
         const callSid = String(form.get("CallSid") ?? "");
         if (!from || !to) {
+          await markWebhookNotApplicable(supabaseAdmin, {
+            eventId: webhookEventId,
+            reason: "Call payload had no From/To number — nothing to process",
+          });
           return twiml("<Say>Sorry, this line is not configured.</Say><Hangup/>");
         }
 
@@ -57,6 +71,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           .maybeSingle();
 
         if (!tenant) {
+          await markWebhookNotApplicable(supabaseAdmin, {
+            eventId: webhookEventId,
+            reason: `No business is configured on ${to} — no activity entry expected`,
+          });
           return twiml("<Say>Sorry, this line is not configured.</Say><Hangup/>");
         }
         deliveryTenantId = tenant.id;
@@ -82,12 +100,17 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           .maybeSingle();
 
         if (excluded) {
-          await insertLog(supabaseAdmin, {
+          const { id: excludedLogId } = await insertLogReturningId(supabaseAdmin, {
             user_id: tenant.id,
             action_type: LogAction.missed_call_excluded,
             status: "skipped",
             call_sid: callSid || null,
             message_sent: `Caller ${from} on exclusion list${excluded.label ? ` (${excluded.label})` : ""} — auto-text skipped.`,
+          });
+          await markWebhookCorrelated(supabaseAdmin, {
+            eventId: webhookEventId,
+            logId: excludedLogId,
+            detail: "Linked to the exclusion-list entry for this call",
           });
           return twiml(
             `<Say voice="alice">Thanks for calling ${xmlEscape(tenant.business_name || "our team")}. We can't come to the phone right now. Please try again later.</Say><Hangup/>`,
@@ -139,6 +162,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           logId = id;
         }
 
+
+        // Close the correlation loop inline: the auto-text attempt (sent or
+        // failed) is the Activity log entry this call produced.
+        await markWebhookCorrelated(supabaseAdmin, { eventId: webhookEventId, logId });
 
         // Voicemail branch: prompt the caller and record, then hang up.
         if (tenant.voicemail_enabled) {
