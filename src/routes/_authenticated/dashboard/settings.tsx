@@ -1222,6 +1222,17 @@ function SettingsPage() {
         {statusAnnouncement}
       </div>
 
+      {logWriteViolation ? (
+        <div className="px-5 pt-4 md:px-8">
+          <LogWriteErrorAlert
+            violation={logWriteViolation}
+            onDismiss={clearLogWriteViolation}
+          />
+        </div>
+      ) : null}
+
+
+
       <div className="mono flex items-center gap-2 border-b border-border px-5 pt-5 text-[10px] uppercase tracking-widest md:px-8">
         {(["settings", "advanced"] as const).map((t) => (
           <button
