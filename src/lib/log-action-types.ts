@@ -58,7 +58,7 @@ export async function insertLog(
 
 type SelectIdBuilder = {
   insert: (rows: never) => {
-    select: (cols: "id") => { maybeSingle: () => Promise<{ data: { id: string } | null; error: unknown }> };
+    select: (cols: "id") => { maybeSingle: () => PromiseLike<{ data: unknown; error: unknown }> };
   };
 };
 
@@ -72,7 +72,8 @@ export async function insertLogReturningId(
 ) {
   assertLogActionType(row?.action_type);
   const { data, error } = await client.from("logs").insert(row as never).select("id").maybeSingle();
-  return { id: data?.id ?? null, error };
+  const id = (data as { id?: string } | null)?.id ?? null;
+  return { id, error };
 }
 
 
