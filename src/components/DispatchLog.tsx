@@ -26,17 +26,19 @@ type AffectedRef = { type: "customer" | "intake"; id: string; label: string };
 
 type LogRow = {
   id: string;
-  action_type: string;
+  action_type: LogActionType;
   message_sent: string | null;
   created_at: string;
   status: string | null;
   customer_id: string | null;
 };
 
-type RawLogRow = Omit<LogRow, "created_at"> & {
+type RawLogRow = Omit<LogRow, "created_at" | "action_type"> & {
+  action_type: string;
   created_at?: string | null;
   original_created_at?: string | null;
 };
+
 
 /** Keeps supabase-js from type-parsing the select string (build-time perf). */
 const sel = (s: string): string => s;
