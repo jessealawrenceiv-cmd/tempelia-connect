@@ -30,7 +30,24 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         if (claim.duplicate) return duplicateResponse(claim, "text");
 
         let deliveryTenantId: string | null = null;
+        // Set when a keyed log write is refused because a redelivery disagreed
+        // with the stored row: the 409 must not become this delivery's cached
+        // "successful" response.
+        let conflicted = false;
+        /**
+         * Conflict-aware log write. Returns the shared 409 conflict response
+         * (plain text here — Twilio status callbacks don't parse XML) naming the
+         * differing fields, or null when the write was accepted.
+         */
+        const writeLog = async (row: Parameters<typeof insertLog>[1]): Promise<Response | null> => {
+          const { error } = (await insertLog(supabaseAdmin, row)) as { error: unknown };
+          const conflict = asDedupeConflict(error);
+          if (!conflict) return null;
+          conflicted = true;
+          return dedupeConflictResponse(conflict, "text");
+        };
         const run = async (): Promise<Response> => {
+
         const url = new URL(request.url);
         const logId = url.searchParams.get("log_id");
         const recordingUrl = String(form.get("RecordingUrl") ?? "").trim();
