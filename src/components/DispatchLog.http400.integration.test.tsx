@@ -108,11 +108,7 @@ const { DispatchLog } = await import("./DispatchLog");
 
 /** The inline list-view error alert (there are other aria-live alerts on screen). */
 function errorAlert(): HTMLElement {
-  const match = screen
-    .getAllByRole("alert")
-    .find((el) => /record type isn’t one we track|Couldn’t load activity/i.test(el.textContent ?? ""));
-  if (!match) throw new Error("error alert not rendered");
-  return match;
+  return screen.getByTestId("log-error-alert");
 }
 
 function renderLog() {
