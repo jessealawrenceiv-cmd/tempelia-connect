@@ -31,6 +31,7 @@ export const LOG_ACTION_TYPES = [
   "opt_in_prompt",
   "opt_in_prompt_test",
   "number_provisioned",
+  "webhook_delivery_status",
 ] as const;
 
 export type LogActionType = (typeof LOG_ACTION_TYPES)[number];

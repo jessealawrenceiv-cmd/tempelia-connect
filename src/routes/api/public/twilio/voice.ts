@@ -30,10 +30,14 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { claimWebhookDelivery, completeWebhookDelivery, duplicateResponse, twilioDeliveryKey } =
           await import("@/lib/webhook-idempotency.server");
+        const { logWebhookRetryAttempt, logWebhookFailure, WEBHOOK_MAX_ATTEMPTS } = await import(
+          "@/lib/webhook-delivery-audit.server"
+        );
+        const deliveryKey = twilioDeliveryKey("missed_call", form);
         const claim = await claimWebhookDelivery(supabaseAdmin, {
           source: "twilio",
           eventKind: "missed_call",
-          deliveryKey: twilioDeliveryKey("missed_call", form),
+          deliveryKey,
         });
         if (claim.duplicate) return duplicateResponse(claim, "twiml");
 
@@ -56,6 +60,18 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           return twiml("<Say>Sorry, this line is not configured.</Say><Hangup/>");
         }
         deliveryTenantId = tenant.id;
+
+        // Reliability trail: if the provider already delivered this key before,
+        // note the retry in the Activity log so a late-landing missed call is
+        // distinguishable from a clean first-pass delivery.
+        await logWebhookRetryAttempt(supabaseAdmin, {
+          userId: tenant.id,
+          eventKind: "missed_call",
+          deliveryKey: deliveryKey,
+          attemptCount: claim.attemptCount,
+          callSid: callSid || null,
+          fromNumber: from || null,
+        });
 
         // Check exclusion list — skip auto-text if caller is excluded
         const { data: excluded } = await supabaseAdmin
@@ -141,7 +157,38 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         );
         };
 
-        const response = await run();
+        let response: Response;
+        try {
+          response = await run();
+        } catch (e) {
+          const reason = (e as Error)?.message || "unknown error";
+          const final = claim.attemptCount >= WEBHOOK_MAX_ATTEMPTS;
+          if (deliveryTenantId) {
+            await logWebhookFailure(supabaseAdmin, {
+              userId: deliveryTenantId,
+              eventKind: "missed_call",
+              deliveryKey,
+              attemptCount: claim.attemptCount,
+              callSid: String(form.get("CallSid") ?? "") || null,
+              fromNumber: String(form.get("From") ?? "") || null,
+              reason,
+              final,
+            });
+          } else {
+            console.error("missed-call webhook failed before tenant lookup", reason);
+          }
+          // Retries left → 500 so the provider re-delivers. Exhausted → inert 200
+          // so it stops, with the final failure reason already in the log.
+          if (!final) {
+            return new Response("webhook processing failed", { status: 500 });
+          }
+          return completeWebhookDelivery(supabaseAdmin, {
+            deliveryId: claim.deliveryId,
+            userId: deliveryTenantId,
+            state: "failed",
+            response: twiml("<Hangup/>"),
+          });
+        }
         return completeWebhookDelivery(supabaseAdmin, {
           deliveryId: claim.deliveryId,
           userId: deliveryTenantId,

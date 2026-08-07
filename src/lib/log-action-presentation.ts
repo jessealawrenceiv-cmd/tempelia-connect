@@ -123,6 +123,12 @@ export const LOG_ACTION_PRESENTATION: Record<LogActionType, LogActionPresentatio
     description: "Business texting number provisioned",
     dot: "bg-moss",
   },
+  [LogAction.webhook_delivery_status]: {
+    label: "WEBHOOK_DELIVERY",
+    description: "Webhook retry attempt or final delivery failure",
+    dot: "bg-violet",
+    isNew: true,
+  },
 };
 
 /** Label for any action_type string, falling back safely for unknown values. */
