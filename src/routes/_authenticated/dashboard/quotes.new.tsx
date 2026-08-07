@@ -449,13 +449,15 @@ function NewQuotePage() {
 
       // Audit trail: log when a quote overwrites an existing (different) email.
       if (emailTrim && priorEmail && priorEmail.trim().toLowerCase() !== emailTrim.toLowerCase()) {
-        await insertLog(supabase, {
+        const { error: logErr } = await insertLog(supabase, {
           user_id: u.user.id,
           customer_id: customerRow.id,
           action_type: "customer_email_updated",
           status: "overwritten_via_quote",
           message_sent: JSON.stringify({ old: priorEmail, new: emailTrim, source: "quote" }),
         });
+        if (logErr) reportLogInsertError(logErr, { attempted: "customer_email_updated", context: "email change audit" });
+
       }
 
       // Audit trail: log when a quote would have downgraded an existing
