@@ -83,12 +83,25 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
           dedupe_key: logDedupeKey(deliveryKey, LogAction.sms_inbound, status),
         });
 
+        // Every log write on this path is keyed. If a redelivery arrives with a
+        // payload that disagrees with the stored row, refuse it and answer with
+        // the shared 409 conflict envelope naming the differing fields, instead
+        // of returning a 2xx that hides the discarded row.
+        const writeLog = async (row: Parameters<typeof insertLog>[1]): Promise<Response | null> => {
+          const { error } = (await insertLog(supabaseAdmin, row)) as { error: unknown };
+          const conflict = asDedupeConflict(error);
+          if (!conflict) return null;
+          conflicted = true;
+          return dedupeConflictResponse(conflict, "twiml");
+        };
+
         if (STOP_KEYWORDS.has(keyword)) {
           if (cust) {
             await supabaseAdmin.from("customers").update({ opt_in_consent: false }).eq("id", cust.id);
           }
           await supabaseAdmin.from("sms_consent_events").insert(consentRow("opt_out"));
-          await insertLog(supabaseAdmin, logRow("opted_out"));
+          const conflict = await writeLog(logRow("opted_out"));
+          if (conflict) return conflict;
           return twiml("<Message>You've been unsubscribed. Reply START to resume.</Message>");
         }
 
@@ -97,7 +110,8 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             await supabaseAdmin.from("customers").update({ opt_in_consent: true }).eq("id", cust.id);
           }
           await supabaseAdmin.from("sms_consent_events").insert(consentRow("opt_in"));
-          await insertLog(supabaseAdmin, logRow("opted_in"));
+          const conflict = await writeLog(logRow("opted_in"));
+          if (conflict) return conflict;
           const name = escapeXml(tenant.business_name || "Temaro");
           return twiml(
             `<Message>${name}: You're opted back in to receive recurring text messages regarding your inquiry, appointment updates, and reviews. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe.</Message>`,
@@ -124,7 +138,7 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             .from("quotes")
             .update({ decline_reason: body })
             .eq("id", pendingQuote.id);
-          await insertLog(supabaseAdmin, {
+          const conflict = await writeLog({
             user_id: tenant.id,
             customer_id: pendingQuote.customer_id ?? cust?.id ?? null,
             action_type: LogAction.quote_decline_reason_captured,
@@ -133,10 +147,13 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
             twilio_message_sid: messageSid || null,
             dedupe_key: logDedupeKey(deliveryKey, LogAction.quote_decline_reason_captured),
           });
+          if (conflict) return conflict;
           return twiml("<Message>Thanks — we've passed that along.</Message>");
         }
 
-        await insertLog(supabaseAdmin, logRow("received"));
+        const conflict = await writeLog(logRow("received"));
+        if (conflict) return conflict;
+
         return twiml("");
         };
 
