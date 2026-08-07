@@ -24,7 +24,8 @@ export type LogWriteRejection = {
   userAgent: string | null;
   correlationId: string | null;
   actorUserId: string | null;
-  attemptedRow: Record<string, unknown>;
+  /** Attempted row, pretty-printed JSON (serializable across the RPC boundary). */
+  attemptedRowJson: string;
 };
 
 const reportSchema = z.object({
@@ -145,6 +146,6 @@ export const listLogWriteRejections = createServerFn({ method: "GET" })
       userAgent: r.user_agent,
       correlationId: r.correlation_id,
       actorUserId: r.actor_user_id,
-      attemptedRow: (r.attempted_row ?? {}) as Record<string, unknown>,
+      attemptedRowJson: JSON.stringify(r.attempted_row ?? {}, null, 2),
     }));
   });
