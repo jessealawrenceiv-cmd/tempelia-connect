@@ -230,12 +230,18 @@ describe("Activity log chronological ordering", () => {
     await loadedCount(PAGE * 2);
 
     await user.click(screen.getByRole("button", { name: /ACTIVE only/i }));
+    // Pagination restarts at the top of the filtered view (6 rows > one page).
+    await loadedCount(PAGE);
+    expectStrictOrder(renderedRows(), "desc");
+
+    await user.click(loadMore());
     await loadedCount(ACTIVE_ROWS.length);
 
     const rows = renderedRows();
     expect(rows.every((r) => r.action_type === "automation_status_change")).toBe(true);
     expectStrictOrder(rows, "desc");
     expect(rows[0]!.id).toBe("a0");
+    expect(rows[rows.length - 1]!.id).toBe("a5");
   });
 
   it("flips to oldest-first and keeps ascending order across pages", async () => {
