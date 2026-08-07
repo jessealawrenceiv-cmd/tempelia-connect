@@ -2,11 +2,15 @@
  * Expanded details for one Activity log row.
  *
  * Shows the raw dispatch payload (pretty-printed when it is JSON) plus the
- * related delivery/telephony fields that the one-line row can't fit.
+ * related delivery/telephony fields that the one-line row can't fit. Payloads
+ * from webhooks and status refreshes can run to dozens of keys, so a search box
+ * narrows the payload to matching lines and highlights the hits.
  */
 
-import { Copy } from "lucide-react";
+import { useId, useMemo, useState } from "react";
+import { Copy, Search, X } from "lucide-react";
 import { toast } from "sonner";
+
 
 export type DispatchLogDetailRow = {
   id: string;
@@ -35,6 +39,47 @@ export function formatDispatchPayload(message: string | null): { text: string; i
   }
 }
 
+/**
+ * Case-insensitive, substring search over the payload's lines. Returns the
+ * matching lines with their 1-based line numbers so the view can show where in
+ * the payload each hit sits.
+ */
+export function searchPayloadLines(
+  text: string,
+  query: string,
+): { line: number; content: string }[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return text
+    .split("\n")
+    .map((content, i) => ({ line: i + 1, content }))
+    .filter((l) => l.content.toLowerCase().includes(q));
+}
+
+/** Renders `text` with every case-insensitive occurrence of `query` marked. */
+const Highlight = ({ text, query }: { text: string; query: string }) => {
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  const parts: React.ReactNode[] = [];
+  const lower = text.toLowerCase();
+  const needle = q.toLowerCase();
+  let cursor = 0;
+  let at = lower.indexOf(needle);
+  while (at !== -1) {
+    if (at > cursor) parts.push(text.slice(cursor, at));
+    parts.push(
+      <mark key={`${at}`} className="rounded bg-primary/30 text-foreground">
+        {text.slice(at, at + needle.length)}
+      </mark>,
+    );
+    cursor = at + needle.length;
+    at = lower.indexOf(needle, cursor);
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return <>{parts}</>;
+};
+
+
 const FieldRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
     <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
@@ -44,6 +89,10 @@ const FieldRow = ({ label, value }: { label: string; value: string }) => (
 
 export function DispatchLogRowDetails({ row }: { row: DispatchLogDetailRow }) {
   const payload = formatDispatchPayload(row.message_sent);
+  const searchId = useId();
+  const [query, setQuery] = useState("");
+  const matches = useMemo(() => searchPayloadLines(payload.text, query), [payload.text, query]);
+
 
   const fields: { label: string; value: string | null | undefined }[] = [
     { label: "log id", value: row.id },
@@ -113,10 +162,83 @@ export function DispatchLogRowDetails({ row }: { row: DispatchLogDetailRow }) {
             </button>
           )}
         </div>
-        <pre className="max-h-72 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90">
-          {payload.text}
-        </pre>
+
+        {row.message_sent && (
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <Search
+                size={12}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                id={searchId}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && query) {
+                    e.stopPropagation();
+                    setQuery("");
+                  }
+                }}
+                placeholder="Search payload fields…"
+                aria-label="Search payload fields"
+                aria-describedby={`${searchId}-count`}
+                className="kb-focus w-full rounded border border-border bg-background py-1.5 pl-7 pr-8 font-mono text-[11px] text-foreground placeholder:text-muted-foreground"
+              />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Clear payload search"
+                  onClick={() => setQuery("")}
+                  className="kb-focus absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={12} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <span
+              id={`${searchId}-count`}
+              role="status"
+              aria-live="polite"
+              className="mono text-[10px] uppercase tracking-widest text-muted-foreground"
+            >
+              {query.trim()
+                ? matches.length === 0
+                  ? "No matching payload lines"
+                  : `${matches.length} matching line${matches.length === 1 ? "" : "s"}`
+                : ""}
+            </span>
+          </div>
+        )}
+
+        {query.trim() ? (
+          matches.length === 0 ? (
+            <p className="rounded border border-border bg-background px-3 py-2 font-mono text-[11px] text-muted-foreground">
+              Nothing in this payload matches “{query.trim()}”.
+            </p>
+          ) : (
+            <ul className="max-h-72 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90">
+              {matches.map((m) => (
+                <li key={m.line} className="flex gap-3">
+                  <span className="select-none text-right text-muted-foreground" style={{ minWidth: "2.5ch" }}>
+                    {m.line}
+                  </span>
+                  <span className="whitespace-pre-wrap break-all">
+                    <Highlight text={m.content.trimEnd()} query={query} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : (
+          <pre className="max-h-72 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90">
+            {payload.text}
+          </pre>
+        )}
       </div>
+
     </div>
   );
 }
