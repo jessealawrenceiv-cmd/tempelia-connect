@@ -1631,7 +1631,12 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
           </>
         )}
         {!isLoading && logError && filtered.length === 0 && <ErrorRetry />}
-        {!isLoading && !logError && filtered.length === 0 && (
+        {filtersBlocked && filtered.length === 0 && (
+          <div role="listitem" data-testid="log-filters-blocked" className="p-5 text-muted-foreground">
+            We didn’t search yet — fix the highlighted filters above and results will load.
+          </div>
+        )}
+        {!filtersBlocked && !isLoading && !logError && filtered.length === 0 && (
           <div role="listitem" className="p-5 text-muted-foreground">
             {hasRange
               ? "No entries in the selected date range. Try widening the range or clearing filters."
