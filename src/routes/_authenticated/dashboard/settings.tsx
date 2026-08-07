@@ -22,7 +22,8 @@ import { prefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { AutomationBadge, TooltipCloseButton } from "@/components/AutomationBadge";
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
-import { insertLog, LogAction } from "@/lib/log-action-types";
+import { LogAction } from "@/lib/log-action-types";
+import { useValidatedLogInsert } from "@/hooks/useValidatedLogInsert";
 import { reportLogInsertError } from "@/lib/log-error";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {

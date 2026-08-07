@@ -4,7 +4,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { toast } from "sonner";
-import { insertLog, LogAction } from "@/lib/log-action-types";
+import { LogAction } from "@/lib/log-action-types";
+import { useValidatedLogInsert } from "@/hooks/useValidatedLogInsert";
 import { reportLogInsertError } from "@/lib/log-error";
 import {
   DEPOSIT_SELECTIONS,
