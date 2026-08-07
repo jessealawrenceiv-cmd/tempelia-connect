@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { restoreSession } from "./support/session";
 
 /**
@@ -42,6 +42,20 @@ async function activeBadge(page: Page) {
   return trigger;
 }
 
+/**
+ * The badge opens its tooltip on focus/Enter (it is a hover+keyboard popover,
+ * not a click toggle), so drive it the same way a keyboard user would.
+ */
+async function openTooltip(page: Page, trigger: Locator) {
+  const tooltipId = await trigger.getAttribute("aria-controls");
+  await trigger.hover();
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const tooltip = page.locator(`#${tooltipId}`);
+  await expect(tooltip).toBeVisible();
+  return tooltip;
+}
+
 const themes = [
   { name: "charcoal", label: "dark" },
   { name: "paper", label: "light" },
@@ -66,10 +80,7 @@ test.describe("Visual · ACTIVE badge and status tooltip", () => {
     test(`tooltip — desktop ${theme.label}`, async ({ page }) => {
       const trigger = await activeBadge(page);
       await setTheme(page, theme.name);
-      const tooltipId = await trigger.getAttribute("aria-controls");
-      await trigger.click();
-      const tooltip = page.locator(`#${tooltipId}`);
-      await expect(tooltip).toBeVisible();
+      const tooltip = await openTooltip(page, trigger);
       await freezeMotion(page);
       await expect(tooltip).toHaveScreenshot(`tooltip-desktop-${theme.label}.png`);
     });
@@ -78,10 +89,7 @@ test.describe("Visual · ACTIVE badge and status tooltip", () => {
       await page.setViewportSize({ width: 390, height: 900 });
       const trigger = await activeBadge(page);
       await setTheme(page, theme.name);
-      const tooltipId = await trigger.getAttribute("aria-controls");
-      await trigger.click();
-      const tooltip = page.locator(`#${tooltipId}`);
-      await expect(tooltip).toBeVisible();
+      const tooltip = await openTooltip(page, trigger);
       await freezeMotion(page);
       await expect(tooltip).toHaveScreenshot(`tooltip-mobile-${theme.label}.png`);
 
@@ -95,10 +103,7 @@ test.describe("Visual · ACTIVE badge and status tooltip", () => {
     test(`tooltip surface contrasts with its text — ${theme.label}`, async ({ page }) => {
       const trigger = await activeBadge(page);
       await setTheme(page, theme.name);
-      const tooltipId = await trigger.getAttribute("aria-controls");
-      await trigger.click();
-      const tooltip = page.locator(`#${tooltipId}`);
-      await expect(tooltip).toBeVisible();
+      const tooltip = await openTooltip(page, trigger);
 
       const { bg, fg } = await tooltip.evaluate((el) => {
         const s = getComputedStyle(el);
