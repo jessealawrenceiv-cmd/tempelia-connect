@@ -16,6 +16,10 @@ import { provisionTenantNumber } from "@/lib/twilio-provision.functions";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
+  // ?logTypes=a,b keeps the Activity log's record-type filters across reloads.
+  validateSearch: (search: Record<string, unknown>) => ({
+    logTypes: typeof search["logTypes"] === "string" ? (search["logTypes"] as string) : undefined,
+  }),
   component: HomePage,
 });
 

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
@@ -79,11 +79,40 @@ const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> =
 
 const typeLabel = logActionLabel;
 
+const ALLOWED_TYPES = new Set<string>(LOG_ACTION_FILTER_ORDER);
+
+/** Reads ?logTypes=a,b — unknown or duplicate values are dropped. */
+export function parseLogTypesParam(raw: unknown): LogActionType[] {
+  if (typeof raw !== "string" || raw.trim() === "") return [];
+  const seen = new Set<LogActionType>();
+  for (const part of raw.split(",")) {
+    const value = part.trim();
+    if (ALLOWED_TYPES.has(value)) seen.add(value as LogActionType);
+  }
+  return [...seen];
+}
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
-  const [selectedTypes, setSelectedTypes] = useState<LogActionType[]>([]);
+  // Record-type filters live in the URL (?logTypes=a,b) so a reload, back/forward,
+  // or a shared link keeps the same view.
+  const navigate = useNavigate();
+  const rawLogTypes = useSearch({ strict: false, select: (s) => (s as { logTypes?: unknown }).logTypes });
+  const selectedTypes = useMemo(() => parseLogTypesParam(rawLogTypes), [rawLogTypes]);
+  const setSelectedTypes = (next: LogActionType[] | ((prev: LogActionType[]) => LogActionType[])) => {
+    const value = typeof next === "function" ? next(selectedTypes) : next;
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        logTypes: value.length > 0 ? value.join(",") : undefined,
+      }),
+      replace: true,
+      resetScroll: false,
+    });
+  };
   const [scope, setScope] = useState<"live" | "archive">("live");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
