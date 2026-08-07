@@ -652,7 +652,16 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       created_at: (r.created_at ?? r.original_created_at) as string,
       status: r.status,
       customer_id: r.customer_id,
+      recipient_phone: r.recipient_phone ?? null,
+      twilio_message_sid: r.twilio_message_sid ?? null,
+      voicemail_url: r.voicemail_url ?? null,
+      recording_sid: r.recording_sid ?? null,
+      call_sid: r.call_sid ?? null,
+      prompt_template: r.prompt_template ?? null,
+      prompt_template_hash: r.prompt_template_hash ?? null,
+      prompt_cooldown_minutes: r.prompt_cooldown_minutes ?? null,
     }));
+
 
   };
 
