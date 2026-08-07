@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { ArrowDown, ArrowUp, Download, Filter, Search, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Download, Filter, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
@@ -14,6 +14,12 @@ import {
 } from "@/lib/activity-log-csv";
 import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
+import {
+  MAX_LOG_SEARCH_LENGTH,
+  friendlyLogRequestError,
+  validateActivityLogFilters,
+} from "@/lib/activity-log-filters.schema";
+
 
 import {
   LOG_ACTION_FILTER_ORDER,
@@ -108,28 +114,44 @@ const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> =
 
 const typeLabel = logActionLabel;
 
-const ALLOWED_TYPES = new Set<string>(LOG_ACTION_FILTER_ORDER);
 
 /** Reads ?logTypes=a,b — unknown or duplicate values are dropped. */
 export function parseLogTypesParam(raw: unknown): LogActionType[] {
-  if (typeof raw !== "string" || raw.trim() === "") return [];
-  const seen = new Set<LogActionType>();
-  for (const part of raw.split(",")) {
-    const value = part.trim();
-    if (ALLOWED_TYPES.has(value)) seen.add(value as LogActionType);
-  }
-  return [...seen];
+  return validateActivityLogFilters({ logTypes: raw }).value.selectedTypes;
 }
 
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
-  // Record-type filters live in the URL (?logTypes=a,b) so a reload, back/forward,
-  // or a shared link keeps the same view.
+  const [scope, setScope] = useState<"live" | "archive">("live");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
+  const [announcement, setAnnouncement] = useState("");
+  const lastAnnouncedIdRef = useRef<string | null>(null);
+
+  // Record-type filters and sort live in the URL (?logTypes=a,b&logSort=oldest)
+  // so a reload, back/forward, or a shared link keeps the same view. Because
+  // that payload is untrusted, it is Zod-validated and any problem is surfaced
+  // to the user in plain language instead of silently dropped.
   const navigate = useNavigate();
-  const rawLogTypes = useSearch({ strict: false, select: (s) => (s as { logTypes?: unknown }).logTypes });
-  const selectedTypes = useMemo(() => parseLogTypesParam(rawLogTypes), [rawLogTypes]);
+  const rawSearch = useSearch({ strict: false }) as { logTypes?: unknown; logSort?: unknown };
+  const rawLogTypes = rawSearch.logTypes;
+  const validation = useMemo(
+    () =>
+      validateActivityLogFilters({
+        logTypes: rawLogTypes,
+        logSort: rawSearch.logSort,
+        q: searchQuery,
+        dateFrom: dateRange?.from,
+        dateTo: dateRange?.to,
+      }),
+    [rawLogTypes, rawSearch.logSort, searchQuery, dateRange?.from, dateRange?.to],
+  );
+  const filterIssues = validation.issues;
+  const selectedTypes = validation.value.selectedTypes;
+  const sortDir = validation.value.sortDir;
+
   const setSelectedTypes = (next: LogActionType[] | ((prev: LogActionType[]) => LogActionType[])) => {
     const value = typeof next === "function" ? next(selectedTypes) : next;
     void navigate({
@@ -142,10 +164,6 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       resetScroll: false,
     });
   };
-  // Sort direction also lives in the URL (?logSort=oldest) so a shared link or
-  // reload keeps the same browsing order.
-  const rawSearch = useSearch({ strict: false }) as { logSort?: unknown };
-  const sortDir: "newest" | "oldest" = rawSearch.logSort === "oldest" ? "oldest" : "newest";
   const setSortDir = (value: "newest" | "oldest") => {
     void navigate({
       to: ".",
@@ -157,21 +175,33 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       resetScroll: false,
     });
   };
-  const [scope, setScope] = useState<"live" | "archive">("live");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
-  const [announcement, setAnnouncement] = useState("");
-  const lastAnnouncedIdRef = useRef<string | null>(null);
+  /** Clears every filter, including any invalid values that came from the URL. */
+  const resetFilters = () => {
+    setStatusRefreshOnly(false);
+    setFailedOnly(false);
+    setOriginFilter("all");
+    setSearchQuery("");
+    setDateRange(undefined);
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({ ...prev, logTypes: undefined, logSort: undefined }),
+      replace: true,
+      resetScroll: false,
+    });
+  };
 
 
+
+  // Use the validated (length-capped) query, not the raw input.
+  const safeSearchQuery = validation.value.searchQuery;
   const searchTerms = useMemo(
     () =>
-      searchQuery
+      safeSearchQuery
         .trim()
         .toLowerCase()
         .split(/\s+/)
         .filter((t) => t.length > 0),
-    [searchQuery],
+    [safeSearchQuery],
   );
 
   const fromISO = dateRange?.from ? startOfDay(dateRange.from).toISOString() : undefined;
@@ -243,6 +273,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const {
     data,
     isLoading,
+    error: logError,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -361,6 +392,37 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         </div>
       </div>
 
+      {(filterIssues.length > 0 || logError) && (
+        <div
+          data-testid="log-filter-errors"
+          role="status"
+          aria-live="polite"
+          className="border-b border-border bg-destructive/10 px-5 py-3"
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-foreground">
+                {logError ? "We couldn’t load these records" : "Some filters were adjusted"}
+              </p>
+              <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                {logError && <li>{friendlyLogRequestError(logError)}</li>}
+                {filterIssues.map((issue) => (
+                  <li key={`${issue.field}-${issue.message}`}>{issue.message}</li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="kb-focus shrink-0 rounded-full bg-muted px-2.5 py-1 text-[10px] uppercase tracking-wider text-foreground hover:bg-muted/80"
+            >
+              Reset filters
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-border px-5 py-3">
         <div className="flex flex-wrap items-center gap-4">
           <span className="mono flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -376,8 +438,11 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search messages…"
               aria-label="Search activity messages"
+              aria-invalid={filterIssues.some((i) => i.field === "q") || undefined}
+              maxLength={MAX_LOG_SEARCH_LENGTH + 20}
               className="kb-focus h-7 w-40 rounded-full border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none sm:w-56"
             />
+
             {searchQuery && (
               <button
                 type="button"
