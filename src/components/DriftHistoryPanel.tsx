@@ -191,7 +191,7 @@ export function DriftHistoryPanel({
         Every recorded drift test, newest first — expand a run for the exact differences
       </p>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Filter drift runs">
         {statusPill("all", "All")}
         {statusPill("pass", "Passed")}
         {statusPill("fail", "Failed")}
@@ -210,6 +210,7 @@ export function DriftHistoryPanel({
           <button
             type="button"
             onClick={clearFilters}
+            aria-label="Clear filters"
             className="kb-focus flex items-center gap-1 rounded-full px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
           >
             <X size={11} aria-hidden="true" />
