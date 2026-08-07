@@ -19,6 +19,7 @@ import {
   downloadTextFile,
 } from "@/lib/action-type-export";
 import { DriftHistoryPanel } from "@/components/DriftHistoryPanel";
+import { LogWriteRejectionsPanel } from "@/components/LogWriteRejectionsPanel";
 import { ActionTypeCoveragePanel } from "@/components/ActionTypeCoveragePanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard/admin/log-actions")({
@@ -294,6 +295,7 @@ function AdminLogActionsPage() {
                 into the app enum.
               </p>
             </div>
+            <LogWriteRejectionsPanel />
           </>
         )}
       </div>
