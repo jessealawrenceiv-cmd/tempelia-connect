@@ -22,7 +22,8 @@ import { AutomationBadge, TooltipCloseButton } from "@/components/AutomationBadg
 import { isValidZip, sanitizeZipInput } from "@/lib/weather";
 import { toast } from "sonner";
 import { LogAction } from "@/lib/log-action-types";
-import { useValidatedLogInsert } from "@/hooks/useValidatedLogInsert";
+import { useValidatedLogInsertWithError } from "@/hooks/useValidatedLogInsert";
+import { LogWriteErrorAlert } from "@/components/LogWriteErrorAlert";
 import { reportLogInsertError } from "@/lib/log-error";
 
 const UPDATE_ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> = {
@@ -39,7 +40,11 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
-  const insertLogValidated = useValidatedLogInsert(supabase);
+  const {
+    insert: insertLogValidated,
+    violation: logWriteViolation,
+    clearViolation: clearLogWriteViolation,
+  } = useValidatedLogInsertWithError(supabase);
   const runStatusRefreshFn = useServerFn(runStatusRefresh);
 
   const { isStaff } = useTeamRole();
@@ -1216,6 +1221,17 @@ function SettingsPage() {
       >
         {statusAnnouncement}
       </div>
+
+      {logWriteViolation ? (
+        <div className="px-5 pt-4 md:px-8">
+          <LogWriteErrorAlert
+            violation={logWriteViolation}
+            onDismiss={clearLogWriteViolation}
+          />
+        </div>
+      ) : null}
+
+
 
       <div className="mono flex items-center gap-2 border-b border-border px-5 pt-5 text-[10px] uppercase tracking-widest md:px-8">
         {(["settings", "advanced"] as const).map((t) => (
