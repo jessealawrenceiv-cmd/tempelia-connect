@@ -278,7 +278,7 @@ function LogErrorRetry({
 }) {
   const info = logError ? describeLogRequestError(logError) : null;
   return (
-    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite">
+    <div className="border-b border-border px-5 py-6" role="alert" aria-live="polite" data-testid="log-error-alert">
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">{info?.title ?? "Couldn’t load activity"}</p>
