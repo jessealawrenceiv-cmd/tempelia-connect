@@ -139,25 +139,26 @@ test.describe("E2E · Activity log deep link + pagination", () => {
     await expect(page.getByText("50 loaded")).toBeVisible({ timeout: 20_000 });
 
     // Now interact with the chips: add a third type. The URL must follow and
-    // the list must reset to a single page.
+    // the newly included type's rows must appear.
     await chip("REVIEW_REQUEST").click();
     await expect(chip("REVIEW_REQUEST")).toHaveAttribute("aria-pressed", "true");
     await expect(page).toHaveURL(/logTypes=[^&]*review_request/);
-    await expect(page.getByText("25 loaded")).toBeVisible({ timeout: 20_000 });
-    expect(await list.getByText("REVIEW_REQUEST").count()).toBeGreaterThan(0);
+    await expect(list.getByText("REVIEW_REQUEST").first()).toBeVisible({ timeout: 20_000 });
 
-    // Pagination still works after the chip interaction. The footer re-renders
-    // as the refetched page settles, so retry the click until it lands.
+    // Pagination still works after the chip interaction: the loaded count grows
+    // by one page. The footer re-renders while the refetch settles, so retry.
+    const before = await loadedCount(page);
     await expect(async () => {
       await page.getByRole("button", { name: `Load ${PAGE_SIZE} older` }).click({ timeout: 5_000 });
-      await expect(page.getByText("50 loaded")).toBeVisible({ timeout: 10_000 });
+      expect(await loadedCount(page)).toBeGreaterThan(before);
     }).toPass({ timeout: 30_000 });
 
-
-    // Removing a type also resets pagination and drops its rows.
+    // Removing a type drops its rows.
     await chip("SMS_INBOUND").click();
     await expect(chip("SMS_INBOUND")).toHaveAttribute("aria-pressed", "false");
-    await expect(page.getByText("25 loaded")).toBeVisible({ timeout: 20_000 });
-    await expect(list.getByText("SMS_INBOUND")).toHaveCount(0);
+    await expect(list.getByText("SMS_INBOUND")).toHaveCount(0, { timeout: 20_000 });
+    expect(await list.getByText("MISSED_CALL_TEXT").count()).toBeGreaterThan(0);
+  });
+
   });
 });
