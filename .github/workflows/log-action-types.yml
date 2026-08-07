@@ -104,38 +104,71 @@ jobs:
       - name: Enforce Node.js 24 on all setup-node steps
         run: |
           # Parses each workflow's YAML structure (PyYAML, preinstalled on
-          # ubuntu-latest) and inspects setup-node steps' `with.node-version`
-          # value directly. Because it reads parsed YAML keys — not raw text —
+          # ubuntu-latest) via yaml.compose, which preserves start_mark.line for
+          # every key. Because it walks parsed YAML nodes — not raw text —
           # comments, examples, and inline references to this check can never
-          # cause a false positive.
+          # cause a false positive, and every offender is reported with its
+          # exact file path and line number.
           set -euo pipefail
           python3 - <<'PY'
-          import glob, sys
+          import glob, sys, yaml
+
+          def get_mapping_value(node, key):
+              if node is None or not isinstance(node, yaml.MappingNode):
+                  return None
+              for k, v in node.value:
+                  if isinstance(k, yaml.ScalarNode) and k.value == key:
+                      return v
+              return None
+
+          def scalar(node):
+              return node.value if isinstance(node, yaml.ScalarNode) else None
+
           try:
-              import yaml
+              import yaml  # noqa: F811
           except ImportError:
               print("::error::PyYAML is not available on this runner.")
               sys.exit(2)
+
           offenders = []
           for path in sorted(glob.glob(".github/workflows/*.y*ml")):
               with open(path) as fh:
-                  doc = yaml.safe_load(fh)
-              if not isinstance(doc, dict):
+                  doc = yaml.compose(fh)
+              if not isinstance(doc, yaml.MappingNode):
                   continue
-              jobs = doc.get("jobs") or {}
-              for jname, job in jobs.items():
-                  for idx, step in enumerate((job or {}).get("steps") or []):
-                      uses = (step or {}).get("uses") or ""
+              jobs = get_mapping_value(doc, "jobs")
+              if not isinstance(jobs, yaml.MappingNode):
+                  continue
+              for jkey, jval in jobs.value:
+                  jname = scalar(jkey)
+                  steps = get_mapping_value(jval, "steps")
+                  if not isinstance(steps, yaml.SequenceNode):
+                      continue
+                  for idx, step in enumerate(steps.value, start=1):
+                      if not isinstance(step, yaml.MappingNode):
+                          continue
+                      uses = scalar(get_mapping_value(step, "uses")) or ""
                       if "setup-node" not in uses:
                           continue
-                      nv = ((step or {}).get("with") or {}).get("node-version")
-                      label = f"{path} (job '{jname}', step {idx + 1}: {uses})"
-                      if nv is None:
-                          offenders.append(f"{label}: node-version key is missing")
-                      elif str(nv).strip() != "24":
-                          offenders.append(f"{label}: node-version is '{nv}', expected 24")
+                      with_node = get_mapping_value(step, "with")
+                      nv_node = (get_mapping_value(with_node, "node-version")
+                                 if isinstance(with_node, yaml.MappingNode) else None)
+                      if nv_node is None:
+                          ref_line = ((with_node.start_mark.line + 1) if with_node
+                                      else (step.start_mark.line + 1))
+                          offenders.append(
+                              f"{path}:{ref_line} (job '{jname}', step {idx}): "
+                              f"node-version key is missing")
+                      else:
+                          nv = scalar(nv_node)
+                          if str(nv).strip() != "24":
+                              offenders.append(
+                                  f"{path}:{nv_node.start_mark.line + 1} "
+                                  f"(job '{jname}', step {idx}): node-version is "
+                                  f"'{nv}', expected 24")
           if offenders:
-              print("::error::One or more setup-node steps are not pinned to Node.js 24:")
+              print("::error::One or more setup-node steps are not pinned to "
+                  "Node.js 24. Offending files and line numbers:")
               for o in offenders:
                   print(f"::error::{o}")
               sys.exit(1)
