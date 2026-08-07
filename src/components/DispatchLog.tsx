@@ -305,6 +305,33 @@ function LogErrorRetry({
               Allowed: {info.allowedTypes.join(", ")}
             </p>
           )}
+          {info?.requestId && (
+            <p
+              className="mono flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground"
+              data-testid="log-error-request-id"
+            >
+              <span>
+                Reference{" "}
+                <span className="text-foreground" data-testid="log-error-request-id-value">
+                  {info.requestId}
+                </span>
+              </span>
+              <button
+                type="button"
+                data-testid="log-error-copy-request-id"
+                onClick={() => {
+                  const id = info.requestId!;
+                  void navigator.clipboard
+                    ?.writeText(id)
+                    .then(() => toast.success(`Copied reference ${id}`))
+                    .catch(() => toast.error("Couldn’t copy the reference. Select it and copy manually."));
+                }}
+                className="kb-focus rounded-full border border-border px-2 py-0.5 uppercase tracking-wider hover:border-primary hover:text-primary"
+              >
+                Copy
+              </button>
+            </p>
+          )}
           {info?.technicalDetail && (
             <div className="pt-1">
               <button
@@ -1260,6 +1287,9 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         description: [
           info.message,
           info.technicalDetail ? `${info.status ? `HTTP ${info.status}: ` : ""}${info.technicalDetail}` : null,
+          // Same ID as the list alert and the server log line, so the user can
+          // quote it in a support message about a failed export.
+          info.requestId ? `Reference ${info.requestId}` : null,
         ]
           .filter(Boolean)
           .join(" "),
