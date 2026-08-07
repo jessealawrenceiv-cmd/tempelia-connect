@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import type { ExportContact, ExportContactLookup } from "@/lib/activity-log-csv";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
 import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronRight, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
@@ -782,6 +783,35 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [isExporting, setIsExporting] = useState(false);
 
   /** Exports every record matching the current filters (not just loaded pages). */
+  /**
+   * Looks up first name + phone for every contact referenced by the rows being
+   * exported. Batched because an export can span thousands of records; a failed
+   * lookup degrades to an empty map rather than blocking the download.
+   */
+  const fetchExportContacts = async (
+    exportRows: readonly LogRow[],
+  ): Promise<ExportContactLookup> => {
+    const ids = [...new Set(exportRows.map((r) => r.customer_id).filter((id): id is string => !!id))];
+    const map = new Map<string, ExportContact>();
+    if (ids.length === 0) return map;
+    const CHUNK = 200;
+    try {
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("id, first_name, phone_number")
+          .in("id", ids.slice(i, i + CHUNK));
+        if (error) throw error;
+        for (const c of data ?? []) {
+          map.set(c.id, { first_name: c.first_name, phone_number: c.phone_number });
+        }
+      }
+    } catch (err) {
+      console.warn("[activity-log] contact lookup for export failed", err);
+    }
+    return map;
+  };
+
   const exportCsv = async () => {
     setIsExporting(true);
     try {
@@ -790,7 +820,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         toast.info("Nothing to export for the current filters.");
         return;
       }
-      downloadCsv(buildLogCsv(all), scope);
+      // Resolve the contacts these records point at so the file answers
+      // "who was texted?" instead of just showing an opaque customer id.
+      const contacts = await fetchExportContacts(all);
+      downloadCsv(buildLogCsv(all, contacts), scope);
       toast.success(
         all.length === EXPORT_ROW_CAP
           ? `Exported the first ${EXPORT_ROW_CAP} matching records in the current sort order.`
