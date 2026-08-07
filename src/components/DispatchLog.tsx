@@ -258,6 +258,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       statusRefreshOnly,
       failedOnly,
       originFilter,
+      sortDir,
     ],
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage: LogRow[]) =>
