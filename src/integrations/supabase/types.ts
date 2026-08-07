@@ -1417,6 +1417,36 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_correlation_runs: {
+        Row: {
+          correlated_count: number
+          created_at: string
+          duration_ms: number
+          id: string
+          missing_count: number
+          not_applicable_count: number
+          ran_at: string
+        }
+        Insert: {
+          correlated_count?: number
+          created_at?: string
+          duration_ms?: number
+          id?: string
+          missing_count?: number
+          not_applicable_count?: number
+          ran_at?: string
+        }
+        Update: {
+          correlated_count?: number
+          created_at?: string
+          duration_ms?: number
+          id?: string
+          missing_count?: number
+          not_applicable_count?: number
+          ran_at?: string
+        }
+        Relationships: []
+      }
       webhook_deliveries: {
         Row: {
           attempt_count: number
@@ -1470,6 +1500,10 @@ export type Database = {
       }
       webhook_events: {
         Row: {
+          correlated_at: string | null
+          correlated_log_id: string | null
+          correlation_detail: string | null
+          correlation_state: string
           created_at: string
           event_kind: string
           from_number: string | null
@@ -1484,6 +1518,10 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          correlated_at?: string | null
+          correlated_log_id?: string | null
+          correlation_detail?: string | null
+          correlation_state?: string
           created_at?: string
           event_kind: string
           from_number?: string | null
@@ -1498,6 +1536,10 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          correlated_at?: string | null
+          correlated_log_id?: string | null
+          correlation_detail?: string | null
+          correlation_state?: string
           created_at?: string
           event_kind?: string
           from_number?: string | null
@@ -1511,7 +1553,15 @@ export type Database = {
           to_number?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_correlated_log_id_fkey"
+            columns: ["correlated_log_id"]
+            isOneToOne: false
+            referencedRelation: "logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1534,6 +1584,14 @@ export type Database = {
         Returns: number
       }
       cleanup_expired_team_invites: { Args: never; Returns: number }
+      flag_missed_call_correlation_failures: {
+        Args: { _grace?: string }
+        Returns: {
+          correlated_count: number
+          missing_count: number
+          not_applicable_count: number
+        }[]
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
@@ -1602,6 +1660,7 @@ export type Database = {
         }[]
       }
       tier_seat_limit: { Args: { _tier: string }; Returns: number }
+      webhook_correlation_runs_prune: { Args: never; Returns: undefined }
       webhook_deliveries_prune: { Args: never; Returns: undefined }
       webhook_delivery_claim: {
         Args: { _delivery_key: string; _event_kind: string; _source: string }
