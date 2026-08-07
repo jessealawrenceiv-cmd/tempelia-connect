@@ -263,7 +263,7 @@ vi.mock("@tanstack/react-router", () => ({
   },
 }));
 
-const { cleanup, render, screen, waitFor } = await import("@testing-library/react");
+const { cleanup, render, screen, waitFor, within } = await import("@testing-library/react");
 const { DispatchLog } = await import("@/components/DispatchLog");
 
 const CALL = { From: "+14155550123", To: "+14155559999", CallSid: "CA123" };
@@ -281,6 +281,13 @@ async function postMissedCall(fields: Record<string, string> = CALL) {
     body: new URLSearchParams(fields).toString(),
   });
   return handler({ request });
+}
+
+/** Scope assertions to the rendered row so filter-picker chips don't match. */
+function row(id: string) {
+  const el = document.querySelector<HTMLElement>(`#log-row-${id}`);
+  if (!el) throw new Error(`row ${id} not rendered`);
+  return within(el);
 }
 
 function renderLog() {
@@ -330,12 +337,12 @@ describe("Twilio missed-call webhook → Activity log rendering", () => {
     renderLog();
 
     await waitFor(() => expect(screen.getByText("1 loaded")).toBeTruthy());
+    const entry = row(String(logs[0]!["id"]));
     // Record type badge for the missed-call auto-reply.
-    expect(screen.getByText("MISSED_CALL_AUTOTEXT")).toBeTruthy();
+    expect(entry.getByText("MISSED_CALL_AUTOTEXT")).toBeTruthy();
     // The auto-reply copy the caller received.
-    expect(screen.getByText(/Sorry we missed you/i)).toBeTruthy();
-    expect(screen.getByText(/Temaro Test Co/)).toBeTruthy();
-    expect(document.querySelector(`#log-row-${logs[0]!["id"]}`)).toBeTruthy();
+    expect(entry.getByText(/Sorry we missed you/i)).toBeTruthy();
+    expect(entry.getByText(/Temaro Test Co/)).toBeTruthy();
   }, 30000);
 
   it("renders a failed auto-reply attempt with the failure reason", async () => {
@@ -346,8 +353,9 @@ describe("Twilio missed-call webhook → Activity log rendering", () => {
 
     renderLog();
     await waitFor(() => expect(screen.getByText("1 loaded")).toBeTruthy());
-    expect(screen.getByText("MISSED_CALL_AUTOTEXT")).toBeTruthy();
-    expect(screen.getByText(/twilio 500/)).toBeTruthy();
+    const entry = row(String(logs[0]!["id"]));
+    expect(entry.getByText("MISSED_CALL_AUTOTEXT")).toBeTruthy();
+    expect(entry.getByText(/twilio 500/)).toBeTruthy();
   }, 30000);
 
   it("renders the exclusion entry when the caller is on the exclusion list", async () => {
@@ -359,8 +367,9 @@ describe("Twilio missed-call webhook → Activity log rendering", () => {
 
     renderLog();
     await waitFor(() => expect(screen.getByText("1 loaded")).toBeTruthy());
-    expect(screen.getByText("MISSED_CALL_EXCLUDED")).toBeTruthy();
-    expect(screen.getByText(/Spam dialer/)).toBeTruthy();
+    const entry = row(String(logs[0]!["id"]));
+    expect(entry.getByText("MISSED_CALL_EXCLUDED")).toBeTruthy();
+    expect(entry.getByText(/Spam dialer/)).toBeTruthy();
   }, 30000);
 
   it("renders one entry per call across several missed calls, newest first", async () => {
