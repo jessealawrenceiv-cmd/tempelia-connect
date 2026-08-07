@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: latest
 
@@ -216,4 +216,90 @@ jobs:
               sys.exit(1)
           print("All setup-node steps are explicitly pinned to Node.js 24.x.")
           PY
+
+      - name: Enforce full commit SHA pins on third-party actions
+        run: |
+          # Supply-chain guard: any third-party action (an owner other than
+          # `actions` or `github`) referenced from `uses:` must be pinned to a
+          # full 40-character commit SHA, never a tag or branch — tags and
+          # branches are mutable and can be repointed at malicious code.
+          #
+          # Parses YAML via yaml.compose (PyYAML, preinstalled on
+          # ubuntu-latest), so comments and examples can never trigger a false
+          # positive, and every offender is reported with file path + line.
+          # Skipped: local actions (./path), docker:// references, and
+          # first-party GitHub-owned actions.
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, re, sys
+
+          try:
+              import yaml
+          except ImportError:
+              print("::error::PyYAML is not available on this runner.")
+              sys.exit(2)
+
+          FIRST_PARTY = {"actions", "github"}
+          SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+          def get(node, key):
+              if not isinstance(node, yaml.MappingNode):
+                  return None
+              for k, v in node.value:
+                  if isinstance(k, yaml.ScalarNode) and k.value == key:
+                      return v
+              return None
+
+          def scalar(node):
+              return node.value if isinstance(node, yaml.ScalarNode) else None
+
+          def check(uses, path, line, where, offenders):
+              if not uses or uses.startswith("./") or uses.startswith("docker://"):
+                  return
+              owner = uses.split("/", 1)[0]
+              if owner in FIRST_PARTY:
+                  return
+              if "@" not in uses:
+                  offenders.append(f"{path}:{line} ({where}): '{uses}' has no "
+                                   f"ref — pin to a full 40-char commit SHA")
+                  return
+              repo, ref = uses.rsplit("@", 1)
+              if not SHA_RE.match(ref):
+                  offenders.append(
+                      f"{path}:{line} ({where}): '{uses}' is pinned to "
+                      f"'{ref}' (tag or branch) — pin to a full 40-char commit "
+                      f"SHA, e.g. {repo}@<sha> # {ref}")
+
+          offenders = []
+          for path in sorted(glob.glob(".github/workflows/*.y*ml")):
+              with open(path) as fh:
+                  doc = yaml.compose(fh)
+              jobs = get(doc, "jobs")
+              if not isinstance(jobs, yaml.MappingNode):
+                  continue
+              for jkey, jval in jobs.value:
+                  jname = scalar(jkey)
+                  # Reusable-workflow call at the job level.
+                  juses = get(jval, "uses")
+                  if isinstance(juses, yaml.ScalarNode):
+                      check(juses.value, path, juses.start_mark.line + 1,
+                            f"job '{jname}'", offenders)
+                  steps = get(jval, "steps")
+                  if not isinstance(steps, yaml.SequenceNode):
+                      continue
+                  for idx, step in enumerate(steps.value, start=1):
+                      u = get(step, "uses")
+                      if isinstance(u, yaml.ScalarNode):
+                          check(u.value, path, u.start_mark.line + 1,
+                                f"job '{jname}', step {idx}", offenders)
+
+          if offenders:
+              print("::error::One or more third-party actions are not pinned to "
+                    "a full commit SHA. Offending files and line numbers:")
+              for o in offenders:
+                  print(f"::error::{o}")
+              sys.exit(1)
+          print("All third-party actions are pinned to full commit SHAs.")
+          PY
+
 
