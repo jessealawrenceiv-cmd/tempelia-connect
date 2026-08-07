@@ -177,6 +177,7 @@ describe("HTTP 400 from the logs API", () => {
     const clear = await waitFor(() => within(errorAlert()).getByRole("button", { name: /Clear filters/i }));
     fail400 = false;
     await user.click(clear);
+    console.log("SEARCH AFTER CLICK", JSON.stringify(searchState));
 
     await waitFor(() => expect(searchState.logTypes).toBeUndefined());
     await waitFor(() => expect(screen.getByText("quote row 1")).toBeTruthy());
