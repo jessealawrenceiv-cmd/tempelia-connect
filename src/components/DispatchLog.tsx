@@ -88,15 +88,21 @@ const ORIGIN_LABEL: Record<"this-device" | "other-device" | "backend", string> =
   "backend": "Backend",
 };
 
+function typeLabel(actionType: string) {
+  return LABEL[actionType] ?? actionType.toUpperCase();
+}
+
 export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [statusRefreshOnly, setStatusRefreshOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [originFilter, setOriginFilter] = useState<"all" | "active" | "this-device" | "other-device" | "backend">("all");
+  const [selectedTypes, setSelectedTypes] = useState<LogActionType[]>([]);
   const [scope, setScope] = useState<"live" | "archive">("live");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedIdRef = useRef<string | null>(null);
+
 
   const searchTerms = useMemo(
     () =>
