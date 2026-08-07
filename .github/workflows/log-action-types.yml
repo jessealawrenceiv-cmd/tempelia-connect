@@ -102,11 +102,10 @@ jobs:
 
       - name: Enforce Node.js 24 on all setup-node steps
         run: |
-          # Scans every workflow file for `node-version:` lines and fails
-          # if any are not pinned to 24. Keeps the runner from silently
-          # drifting onto a deprecated Node version.
+          # Matches only YAML keys (`^\s*node-version:`) so comment lines
+          # and inline references to this check don't false-positive.
           set -euo pipefail
-          offenders="$(grep -RIn --exclude-dir=node_modules 'node-version:' .github/workflows | grep -v 'node-version: 24' || true)"
+          offenders="$(grep -RInE --exclude-dir=node_modules '^\s*node-version:' .github/workflows | grep -v 'node-version: 24' || true)"
           if [ -n "$offenders" ]; then
             echo "::error::One or more setup-node steps are not pinned to Node.js 24:"
             echo "$offenders"
