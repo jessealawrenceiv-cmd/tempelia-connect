@@ -41,7 +41,12 @@ export const Route = createFileRoute("/api/public/twilio/sms")({
         if (claim.duplicate) return duplicateResponse(claim, "twiml");
 
         let deliveryTenantId: string | null = null;
+        // A refused (conflicting) log write must not be stored as the delivery's
+        // successful response — a corrected redelivery has to be processed, not
+        // replayed from cache.
+        let conflicted = false;
         const run = async (): Promise<Response> => {
+
         const from = String(form.get("From") ?? "").trim();
         const to = String(form.get("To") ?? "").trim();
         const body = String(form.get("Body") ?? "").trim();
