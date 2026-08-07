@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
-import { AlertTriangle, ArrowDown, ArrowUp, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Bookmark, BookmarkPlus, Copy, Download, Filter, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker, type DateRangeValue } from "@/components/DateRangePicker";
 import {
@@ -17,6 +17,13 @@ import { LogAction, type LogActionType } from "@/lib/log-action-types";
 import { parseLogRowsResponse } from "@/lib/log-action-types.schema";
 import { logActionFilterValue, logActionFilterValues, pickLogActionTypes } from "@/lib/log-action-query";
 import { phoneDigits } from "@/lib/phone";
+import {
+  MAX_LOG_PRESETS,
+  readStoredPresets,
+  summarizePreset,
+  writeStoredPresets,
+  type LogFilterPreset,
+} from "@/lib/activity-log-presets";
 import {
   MAX_LOG_SEARCH_LENGTH,
   describeLogRequestError,
@@ -236,6 +243,14 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
   const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<AutoRefreshSeconds>(0);
   useEffect(() => setAutoRefreshSeconds(readStoredAutoRefresh()), []);
 
+  // Saved filter combinations ("presets"): per-device shortcuts for the views the
+  // user keeps coming back to. Loaded after mount so SSR markup stays stable.
+  const [presets, setPresets] = useState<LogFilterPreset[]>([]);
+  const [presetName, setPresetName] = useState("");
+  const [showSavePreset, setShowSavePreset] = useState(false);
+  useEffect(() => setPresets(readStoredPresets()), []);
+
+
   // The input stays local for responsive typing and is mirrored into ?q= (see below).
   const [searchQuery, setSearchQuery] = useState(typeof rawSearch.q === "string" ? rawSearch.q : "");
   // Contact filter: an exact customer id (uuid) or a phone number. Mirrored into
@@ -324,6 +339,67 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
       resetScroll: false,
     });
   };
+
+  /** Captures the current filter bar as a named preset. */
+  const savePreset = () => {
+    const name = presetName.trim().slice(0, 40);
+    if (!name) return;
+    const next: LogFilterPreset = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      scope,
+      types: selectedTypes,
+      sort: sortDir,
+      q: searchQuery.trim(),
+      customer: customerInput.trim(),
+      ...(dateRange?.from ? { dateFrom: toDayParam(dateRange.from) } : {}),
+      ...(dateRange?.from && dateRange.to ? { dateTo: toDayParam(dateRange.to) } : {}),
+      statusRefreshOnly,
+      failedOnly,
+      origin: originFilter,
+    };
+    // Saving under an existing name overwrites it instead of piling up duplicates.
+    const others = presets.filter((p) => p.name.toLowerCase() !== name.toLowerCase());
+    const updated = [next, ...others].slice(0, MAX_LOG_PRESETS);
+    setPresets(updated);
+    writeStoredPresets(updated);
+    setPresetName("");
+    setShowSavePreset(false);
+    setAnnouncement(`Saved filter view “${name}”`);
+  };
+
+  /** Reapplies every field a preset captured, clearing anything it didn't. */
+  const applyPreset = (preset: LogFilterPreset) => {
+    setScope(preset.scope);
+    setStatusRefreshOnly(preset.statusRefreshOnly);
+    setFailedOnly(preset.failedOnly);
+    setOriginFilter(preset.origin as typeof originFilter);
+    setSearchQuery(preset.q);
+    setCustomerInput(preset.customer);
+    writeStoredTypes(preset.types);
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        logTypes: preset.types.length > 0 ? preset.types.join(",") : undefined,
+        logSort: preset.sort === "oldest" ? "oldest" : undefined,
+        q: preset.q || undefined,
+        dateFrom: preset.dateFrom ?? undefined,
+        dateTo: preset.dateTo ?? undefined,
+        logCustomer: preset.customer || undefined,
+      }),
+      resetScroll: false,
+    });
+    setAnnouncement(`Applied filter view “${preset.name}”`);
+  };
+
+  const deletePreset = (preset: LogFilterPreset) => {
+    const updated = presets.filter((p) => p.id !== preset.id);
+    setPresets(updated);
+    writeStoredPresets(updated);
+    setAnnouncement(`Removed filter view “${preset.name}”`);
+  };
+
 
   // Mirror the contact filter into ?logCustomer= so a "just this contact" view is
   // shareable. Debounced and history-replacing, like the free-text search.
@@ -1039,6 +1115,95 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               Clear filters
             </button>
           )}
+
+          {/* Saved views: one tap reapplies a whole filter combination. */}
+          <div className="flex flex-wrap items-center gap-1.5" data-testid="log-saved-views">
+            <span className="mono flex items-center gap-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <Bookmark size={11} aria-hidden="true" />
+              Saved
+            </span>
+            {presets.length === 0 && !showSavePreset && (
+              <span className="text-[10px] text-muted-foreground">none yet</span>
+            )}
+            {presets.map((preset) => (
+              <span
+                key={preset.id}
+                className="inline-flex items-center overflow-hidden rounded-full border border-border bg-background"
+              >
+                <button
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  title={summarizePreset(preset)}
+                  aria-label={`Apply saved view ${preset.name}: ${summarizePreset(preset)}`}
+                  className="kb-focus px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground transition-colors hover:text-primary"
+                >
+                  {preset.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deletePreset(preset)}
+                  aria-label={`Delete saved view ${preset.name}`}
+                  title={`Delete saved view ${preset.name}`}
+                  className="kb-focus border-l border-border px-1.5 py-0.5 text-muted-foreground transition-colors hover:text-destructive"
+                >
+                  <X size={9} aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+            {showSavePreset ? (
+              <span className="inline-flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={presetName}
+                  onChange={(e) => setPresetName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") savePreset();
+                    if (e.key === "Escape") {
+                      setShowSavePreset(false);
+                      setPresetName("");
+                    }
+                  }}
+                  maxLength={40}
+                  placeholder="Name this view"
+                  aria-label="Name for this saved filter view"
+                  className="kb-focus w-32 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-foreground placeholder:text-muted-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={savePreset}
+                  disabled={presetName.trim().length === 0}
+                  className="kb-focus rounded-full bg-primary px-2 py-0.5 text-[10px] uppercase tracking-wider text-paper disabled:opacity-50"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSavePreset(false);
+                    setPresetName("");
+                  }}
+                  className="kb-focus rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              presets.length < MAX_LOG_PRESETS && (
+                <button
+                  type="button"
+                  onClick={() => setShowSavePreset(true)}
+                  aria-label="Save the current filters as a view"
+                  title="Save the current filters as a view"
+                  className="kb-focus inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  <BookmarkPlus size={10} aria-hidden="true" />
+                  Save view
+                </button>
+              )
+            )}
+          </div>
+
+
 
           <div className="relative flex items-center">
             <Search size={12} className="pointer-events-none absolute left-2.5 text-muted-foreground" />
