@@ -131,6 +131,33 @@ export const listProvisionedNumbers = createServerFn({ method: "GET" })
     };
   });
 
+/**
+ * Hard server-side gate for operator-only routes.
+ *
+ * Called from the route's `beforeLoad`, so a user who navigates straight to an
+ * admin URL (or edits client state) is bounced before the page renders. The
+ * decision is made on the server from the caller's validated bearer token —
+ * never from client-held state — and denials are written to the admin audit log.
+ */
+export const requireAdminAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ isAdmin: true }> => {
+    const { supabase, userId } = context;
+    const { data: isAdmin, error } = await supabase.rpc("has_role", { _role: "admin" });
+    if (error) throw new Error(error.message);
+    if (!isAdmin) {
+      const { recordAdminAccess } = await import("@/lib/admin-audit.server");
+      await recordAdminAccess({
+        actorUserId: userId,
+        functionName: "requireAdminAccess",
+        outcome: "forbidden",
+        detail: "Non-admin attempted to open an operator-only route",
+      });
+      throw new Error("Forbidden");
+    }
+    return { isAdmin: true };
+  });
+
 // Lightweight role probe used by the client to decide whether to show the admin nav link.
 export const getIsAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
