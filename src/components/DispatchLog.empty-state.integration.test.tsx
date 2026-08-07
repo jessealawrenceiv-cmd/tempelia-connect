@@ -154,13 +154,21 @@ describe("DispatchLog empty state distinguishes no activity from no matches", ()
     expect(screen.getByRole("button", { name: /Clear all filters/i })).toBeTruthy();
   });
 
-  it("shows the filtered message for the Failed only quick filter", async () => {
+  it("shows the filtered message for the STATUS_REFRESH only quick filter", async () => {
     const user = userEvent.setup();
     renderLog();
     await waitFor(() => expect(screen.getByText(ROW_MESSAGE)).toBeTruthy());
 
-    await user.click(screen.getByLabelText(/Failed only/i));
-    console.log("DBG search", JSON.stringify(searchState));
+    await user.click(screen.getByLabelText(/STATUS_REFRESH only/i));
+
+    await waitFor(() => expect(screen.getByText(EMPTY_FILTERED)).toBeTruthy());
+    expect(screen.queryByText(EMPTY_ALL)).toBeNull();
+    expect(screen.getByRole("button", { name: /Clear all filters/i })).toBeTruthy();
+  });
+
+  it("shows the filtered message for the Failed only quick filter", async () => {
+    // Failed only is gated behind STATUS_REFRESH only, so arrive via the URL.
+    renderLog({ logStatusOnly: "1", logFailed: "1" });
 
     await waitFor(() => expect(screen.getByText(EMPTY_FILTERED)).toBeTruthy());
     expect(screen.queryByText(EMPTY_ALL)).toBeNull();
