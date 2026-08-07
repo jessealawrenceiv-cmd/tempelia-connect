@@ -187,6 +187,10 @@ test.describe("debug", () => {
     await expect(page.getByText("50 loaded")).toBeVisible({ timeout: 20000 });
     await page.getByRole("button", { name: /^REVIEW_REQUEST/ }).first().click();
     await page.waitForTimeout(4000);
-    console.log("FOOTER", await page.locator("div").filter({ hasText: /loaded$/ }).last().innerText());
+    const txt = await page.evaluate(() => {
+      const all = Array.from(document.querySelectorAll("span"));
+      return all.map((e) => e.textContent || "").filter((t) => /loaded|No more/.test(t)).join(" | ");
+    });
+    console.log("FOOTER", txt);
   });
 });
