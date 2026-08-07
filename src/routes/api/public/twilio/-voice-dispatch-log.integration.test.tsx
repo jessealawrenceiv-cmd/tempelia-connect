@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment node
 /**
  * End-to-end integration coverage: a Twilio missed-call webhook POST lands in
  * the `logs` table, and the Activity log (DispatchLog) renders the resulting
@@ -9,10 +9,28 @@
  * browser client — so nothing is asserted about a row the webhook did not
  * actually write.
  */
+// The route file's server handlers are stripped in the client transform, so this
+// suite runs in the server (node) environment and installs a DOM by hand for the
+// React rendering half.
+import { JSDOM } from "jsdom";
+
+const dom = new JSDOM("<!doctype html><html><body></body></html>", {
+  url: "https://example.test/dashboard",
+  pretendToBeVisual: true,
+});
+const g = globalThis as unknown as Record<string, unknown>;
+g["window"] = dom.window;
+g["document"] = dom.window.document;
+g["navigator"] = dom.window.navigator;
+for (const key of Object.getOwnPropertyNames(dom.window)) {
+  if (key.startsWith("_") || key in g) continue;
+  g[key] = (dom.window as unknown as Record<string, unknown>)[key];
+}
+g["IS_REACT_ACT_ENVIRONMENT"] = true;
+
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
 import { LOG_ACTION_TYPES } from "@/lib/log-action-types.generated";
 
 type Row = Record<string, unknown>;
@@ -242,6 +260,7 @@ vi.mock("@tanstack/react-router", () => ({
   },
 }));
 
+const { render, screen, waitFor } = await import("@testing-library/react");
 const { DispatchLog } = await import("@/components/DispatchLog");
 
 const CALL = { From: "+14155550123", To: "+14155559999", CallSid: "CA123" };
