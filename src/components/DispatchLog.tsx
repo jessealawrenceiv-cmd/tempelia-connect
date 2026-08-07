@@ -1503,7 +1503,10 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
         </div>
 
 
-        <fieldset className="mt-3 border-t border-border pt-3">
+        <fieldset
+          className="mt-3 border-t border-border pt-3"
+          aria-describedby={issueFor("logTypes") ? helpId("logTypes") : undefined}
+        >
           <legend className="mono flex items-center gap-2 px-0 text-[10px] uppercase tracking-widest text-muted-foreground">
             Record type
             {selectedTypes.length > 0 && (
@@ -1516,6 +1519,7 @@ export function DispatchLog({ limit = 25 }: { limit?: number }) {
               </button>
             )}
           </legend>
+          <FieldHelp field="logTypes" />
           {/* Compact picker for the same record types as the chips below: on a
               phone the full chip row is long, so this adds one type at a time.
               Options come from the generated enum, so the value can only ever
