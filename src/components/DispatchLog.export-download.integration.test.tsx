@@ -30,7 +30,7 @@ const ROWS = [
   {
     // Contact row is gone: the export must fall back to recipient_phone.
     id: "r2",
-    action_type: "missed_call",
+    action_type: "missed_call_autotext",
     message_sent: 'Missed call, "auto-text" fired',
     created_at: "2026-06-02T00:05:00.000Z",
     status: "sent",
