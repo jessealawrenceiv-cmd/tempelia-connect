@@ -14,6 +14,20 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         await recordWebhookEvent({ request, form, signatureValid: ok, eventKind: "recording_status" });
         if (!ok) return new Response("Forbidden", { status: 403 });
 
+        // Idempotency: recording-status callbacks retry too; without this the
+        // owner gets a second voicemail SMS and a duplicate voicemail_notify row.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { claimWebhookDelivery, completeWebhookDelivery, duplicateResponse, twilioDeliveryKey } =
+          await import("@/lib/webhook-idempotency.server");
+        const claim = await claimWebhookDelivery(supabaseAdmin, {
+          source: "twilio",
+          eventKind: "recording_status",
+          deliveryKey: twilioDeliveryKey("recording_status", form),
+        });
+        if (claim.duplicate) return duplicateResponse(claim, "text");
+
+        let deliveryTenantId: string | null = null;
+        const run = async (): Promise<Response> => {
         const url = new URL(request.url);
         const logId = url.searchParams.get("log_id");
         const recordingUrl = String(form.get("RecordingUrl") ?? "").trim();
@@ -27,8 +41,6 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         if (status !== "completed" || !recordingUrl) {
           return new Response("ok");
         }
-
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Find the matching log row (prefer logId query param, fall back to call_sid).
         let logRow: { id: string; user_id: string; customer_id: string | null } | null = null;
@@ -48,6 +60,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         const playbackUrl = recordingUrl.endsWith(".mp3") ? recordingUrl : `${recordingUrl}.mp3`;
 
         let tenantId: string | null = logRow?.user_id ?? null;
+        deliveryTenantId = tenantId;
         if (logRow) {
           await supabaseAdmin.from("logs").update({
             voicemail_url: playbackUrl,
@@ -59,6 +72,7 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
             .from("profiles").select("id").eq("twilio_phone_number", called).maybeSingle();
           if (tenant) {
             tenantId = tenant.id;
+            deliveryTenantId = tenantId;
             await insertLog(supabaseAdmin, {
               user_id: tenant.id,
               action_type: "missed_call_autotext",
@@ -107,6 +121,14 @@ export const Route = createFileRoute("/api/public/twilio/recording")({
         }
 
         return new Response("ok");
+        };
+
+        const response = await run();
+        return completeWebhookDelivery(supabaseAdmin, {
+          deliveryId: claim.deliveryId,
+          userId: deliveryTenantId,
+          response,
+        });
       },
     },
   },
